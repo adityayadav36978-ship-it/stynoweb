@@ -1,0 +1,15 @@
+platform :ios, '16.0'
+use_frameworks!
+
+target 'STYNO' do
+  # Firebase SDKs for iOS
+  pod 'Firebase/Core', '~> 10.24.0'
+  pod 'Firebase/Auth', '~> 10.24.0'
+  pod 'Firebase/Firestore', '~> 10.24.0'
+  pod 'Firebase/Storage', '~> 10.24.0'
+  pod 'GoogleSignIn', '~> 7.1.0'
+
+  target 'STYNOTests' do
+    inherit! :search_paths
+  end
+end

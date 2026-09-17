@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Styno - 0% Brokerage Accommodation | Hotels, Hostels, PGs, Rooms & Flats</title>
+  <meta name="description" content="Styno is India's premier 0% brokerage accommodation platform. Discover verified Hotels, Hostels, PGs, Independent Rooms, Flats, and Quick Stay transit pods across India.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231E40AF'><path d='M12 2L2 9.5V20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9.5L12 2zm0 3.84L18 10.3V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-8.7l6-4.46zM11 12h2v6h-2v-6z'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="styles.css">
+  <!-- Firebase App & Firestore SDKs for live real-time sync -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <aside class="announcement-bar" aria-label="Announcement">
+    <div class="container announcement-content">
+      <div class="announcement-left">
+        <span class="badge badge-emerald">0% BROKERAGE</span>
+        <span>Verified stays direct from verified owners across India. No middleman charges.</span>
+      </div>
+      <div class="announcement-right">
+        <span><span class="material-symbols-rounded">verified_user</span> Styno Verified Shield</span>
+        <span class="divider">|</span>
+        <span><span class="material-symbols-rounded">support_agent</span> 24/7 Helpline: 1800-STYNO-STAY</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Navigation Header -->
+  <header class="main-header">
+    <div class="container header-container">
+      <div class="header-left">
+        <a href="#" class="brand-logo" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
+          <div class="logo-icon">
+            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="32" height="32" rx="9" fill="url(#logo_grad)" />
+              <path d="M16 6L7 13.5V24C7 24.55 7.45 25 8 25H24C24.55 25 25 24.55 25 24V13.5L16 6Z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M13 18C13 16.34 14.34 15 16 15C17.66 15 19 16.34 19 18V25H13V18Z" fill="white"/>
+              <circle cx="16" cy="11" r="2" fill="#FBBF24"/>
+              <defs>
+                <linearGradient id="logo_grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#1E40AF" />
+                  <stop offset="1" stop-color="#2563EB" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="brand-name">STYNO</span>
+            <span class="brand-tagline">Verified Stays &bull; 0% Fee</span>
+          </div>
+        </a>
+
+        <!-- Location Selector Trigger -->
+        <button class="location-pill-btn" id="headerLocationBtn" onclick="openLocationPickerModal()">
+          <span class="material-symbols-rounded text-primary">location_on</span>
+          <div class="location-pill-text">
+            <span class="location-label">Location</span>
+            <span class="location-current" id="headerCurrentLocation">All India</span>
+          </div>
+          <span class="material-symbols-rounded chevron">expand_more</span>
+        </button>
+      </div>
+
+      <!-- Center Search Pill for Desktop -->
+      <div class="header-search-bar" id="headerSearchBar">
+        <span class="material-symbols-rounded search-icon">search</span>
+        <input type="text" id="headerSearchInput" placeholder="Search by city, locality, university, or stay name..." oninput="handleSearchInput(this.value)">
+        <button class="search-clear-btn" id="headerSearchClearBtn" onclick="clearSearch()" style="display: none;">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-right">
+        <button class="nav-btn" onclick="openBookingsModal()" title="View your confirmed bookings">
+          <span class="material-symbols-rounded">receipt_long</span>
+          <span class="nav-text">My Bookings</span>
+          <span class="nav-counter" id="bookingsCountBadge" style="display:none;">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="openSavedModal()" title="View saved stays">
+          <span class="material-symbols-rounded">favorite</span>
+          <span class="nav-text">Saved</span>
+          <span class="nav-counter" id="savedCountBadge" style="display:none;">0</span>
+        </button>
+
+        <!-- OWNER PORTAL CTA BUTTON -->
+        <button class="btn btn-owner" id="ownerPortalBtn" onclick="openOwnerPortalModal()">
+          <span class="material-symbols-rounded">add_business</span>
+          <span>Owner Portal</span>
+          <span class="owner-pill-badge">0% Brokerage</span>
+        </button>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Toggle navigation menu">
+          <span class="material-symbols-rounded" id="mobileMenuIcon">menu</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Search Row -->
+    <div class="mobile-search-wrapper">
+      <div class="header-search-bar mobile-search">
+        <span class="material-symbols-rounded search-icon">search</span>
+        <input type="text" id="mobileSearchInput" placeholder="Search city, area, hostel, PG..." oninput="handleSearchInput(this.value)">
+        <button class="search-clear-btn" id="mobileSearchClearBtn" onclick="clearSearch()" style="display: none;">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Navigation -->
+  <div class="mobile-drawer" id="mobileDrawer">
+    <div class="drawer-header">
+      <div class="brand-logo">
+        <div class="logo-icon small">
+          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M16 7L8 13.5V23H24V13.5L16 7Z" stroke="white" stroke-width="2"/><circle cx="16" cy="12" r="2" fill="#FBBF24"/></svg>
+        </div>
+        <span class="brand-name">STYNO</span>
+      </div>
+      <button class="icon-close-btn" onclick="toggleMobileMenu()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="drawer-body">
+      <button class="drawer-item" onclick="openLocationPickerModal(); toggleMobileMenu();">
+        <span class="material-symbols-rounded">explore</span>
+        <span>Select Location (36 States & UTs)</span>
+      </button>
+      <button class="drawer-item" onclick="openBookingsModal(); toggleMobileMenu();">
+        <span class="material-symbols-rounded">receipt_long</span>
+        <span>My Bookings</span>
+      </button>
+      <button class="drawer-item" onclick="openSavedModal(); toggleMobileMenu();">
+        <span class="material-symbols-rounded">favorite</span>
+        <span>Saved Stays</span>
+      </button>
+      <button class="drawer-item highlight" onclick="openOwnerPortalModal(); toggleMobileMenu();">
+        <span class="material-symbols-rounded">add_business</span>
+        <span>Owner Portal &bull; Add Listing</span>
+      </button>
+      <div class="drawer-divider"></div>
+      <div class="drawer-info">
+        <p><strong>Styno Stays</strong> &bull; India's 0% brokerage accommodation network.</p>
+        <p class="text-muted">Real-time owner-to-user live sync enabled.</p>
+      </div>
+    </div>
+  </div>
+
+  <main class="main-content">
+    
+    <!-- Hero Banner & Value Proposition -->
+    <section class="hero-section">
+      <div class="container hero-container">
+        <div class="hero-text-col">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            <span>Live Owner-to-User Sync Enabled</span>
+          </div>
+          <h1 class="hero-heading">
+            Find Your Ideal Stay with <span class="gradient-text">Zero Brokerage</span>
+          </h1>
+          <p class="hero-subheading">
+            Direct connections to verified Hotels, Hostels, PGs, Independent Rooms, and Flats. Guaranteed authentic listings from property owners with transparent pricing.
+          </p>
+          <div class="hero-stats-row">
+            <div class="stat-item">
+              <span class="stat-number">0%</span>
+              <span class="stat-label">Brokerage Fee</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">36</span>
+              <span class="stat-label">States & UTs</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">100%</span>
+              <span class="stat-label">Verified Owners</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-number">24/7</span>
+              <span class="stat-label">Live Support</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-quick-card">
+          <div class="quick-card-header">
+            <span class="material-symbols-rounded text-amber">bolt</span>
+            <div>
+              <h3>Need a Quick Hourly Stay?</h3>
+              <p>Book transit pods & rooms for 3h, 6h, 12h or 24h near transit hubs</p>
+            </div>
+          </div>
+          <div class="quick-slots-grid">
+            <button class="slot-pill" onclick="filterByQuickStayDuration('3 Hours')">
+              <span class="slot-hours">3 Hours</span>
+              <span class="slot-price">from ₹299</span>
+            </button>
+            <button class="slot-pill" onclick="filterByQuickStayDuration('6 Hours')">
+              <span class="slot-hours">6 Hours</span>
+              <span class="slot-price">from ₹499</span>
+            </button>
+            <button class="slot-pill" onclick="filterByQuickStayDuration('12 Hours')">
+              <span class="slot-hours">12 Hours</span>
+              <span class="slot-price">from ₹799</span>
+            </button>
+            <button class="slot-pill" onclick="filterByQuickStayDuration('24 Hours')">
+              <span class="slot-hours">24 Hours</span>
+              <span class="slot-price">from ₹1,299</span>
+            </button>
+          </div>
+          <button class="btn btn-quick-explore" onclick="selectCategory('QUICK_STAY')">
+            Explore All Quick Stays <span class="material-symbols-rounded">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories Navigation Bar -->
+    <section class="categories-section">
+      <div class="container">
+        <div class="categories-wrapper">
+          <div class="categories-track" id="categoriesTrack">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters and Controls Bar -->
+    <section class="filters-bar-section">
+      <div class="container filters-container">
+        <div class="active-location-indicator">
+          <span class="material-symbols-rounded text-primary">pin_drop</span>
+          <span id="activeLocationBreadcrumb">All India &bull; All Verified Stays</span>
+          <button class="text-btn" onclick="openLocationPickerModal()">Change</button>
+        </div>
+
+        <div class="filter-controls-group">
+          <!-- Gender / Occupant Filter -->
+          <div class="filter-dropdown">
+            <button class="filter-dropdown-btn" id="genderDropdownBtn" onclick="toggleDropdown('genderDropdownMenu')">
+              <span class="material-symbols-rounded">group</span>
+              <span id="genderDropdownLabel">Guest: Anyone</span>
+              <span class="material-symbols-rounded chevron">expand_more</span>
+            </button>
+            <div class="filter-dropdown-menu" id="genderDropdownMenu">
+              <button class="dropdown-item" onclick="selectGenderFilter(null)">All / Anyone</button>
+              <button class="dropdown-item" onclick="selectGenderFilter('BOYS_ONLY')">Boys Only</button>
+              <button class="dropdown-item" onclick="selectGenderFilter('GIRLS_ONLY')">Girls Only</button>
+              <button class="dropdown-item" onclick="selectGenderFilter('CO_ED')">Co-Ed</button>
+              <button class="dropdown-item" onclick="selectGenderFilter('FAMILY')">Family</button>
+            </div>
+          </div>
+
+          <!-- Price Filter Dropdown -->
+          <div class="filter-dropdown">
+            <button class="filter-dropdown-btn" id="priceDropdownBtn" onclick="toggleDropdown('priceDropdownMenu')">
+              <span class="material-symbols-rounded">currency_rupee</span>
+              <span id="priceDropdownLabel">Budget: Any</span>
+              <span class="material-symbols-rounded chevron">expand_more</span>
+            </button>
+            <div class="filter-dropdown-menu price-popover" id="priceDropdownMenu">
+              <div class="price-slider-wrapper">
+                <div class="price-slider-labels">
+                  <span>₹0</span>
+                  <span id="priceSliderValue" class="text-bold">Up to ₹30,000/mo</span>
+                </div>
+                <input type="range" id="priceRangeInput" min="500" max="35000" step="500" value="35000" oninput="handlePriceRangeChange(this.value)">
+                <div class="price-quick-tags">
+                  <button class="btn-micro" onclick="setPriceBudget(5000)">Under ₹5k</button>
+                  <button class="btn-micro" onclick="setPriceBudget(10000)">Under ₹10k</button>
+                  <button class="btn-micro" onclick="setPriceBudget(20000)">Under ₹20k</button>
+                  <button class="btn-micro" onclick="setPriceBudget(35000)">Any</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fast Amenity Chips -->
+          <div class="quick-amenity-chips">
+            <button class="chip-filter" id="chipAc" onclick="toggleAmenityFilter('AC')">
+              <span class="material-symbols-rounded">ac_unit</span> AC
+            </button>
+            <button class="chip-filter" id="chipWifi" onclick="toggleAmenityFilter('Wi-Fi')">
+              <span class="material-symbols-rounded">wifi</span> Wi-Fi
+            </button>
+            <button class="chip-filter" id="chipFood" onclick="toggleAmenityFilter('Food')">
+              <span class="material-symbols-rounded">restaurant</span> Meals
+            </button>
+            <button class="chip-filter" id="chipAttached" onclick="toggleAmenityFilter('Attached Washroom')">
+              <span class="material-symbols-rounded">bathtub</span> Attached Bath
+            </button>
+          </div>
+
+          <!-- Reset Filter Button -->
+          <button class="btn-reset-filters" id="resetFiltersBtn" onclick="resetAllFilters()" style="display:none;">
+            <span class="material-symbols-rounded">restart_alt</span> Reset
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Listings Section -->
+    <section class="listings-section">
+      <div class="container">
+        <!-- Section Header with Count & Sort -->
+        <div class="listings-header-row">
+          <div>
+            <h2 class="section-title" id="listingsSectionTitle">Verified Stays</h2>
+            <p class="section-subtitle" id="listingsCountSubtitle">Showing available accommodations</p>
+          </div>
+
+          <div class="sort-selector-wrapper">
+            <label for="sortSelect">Sort by:</label>
+            <select id="sortSelect" onchange="handleSortChange(this.value)">
+              <option value="RECOMMENDED">Recommended (Verified First)</option>
+              <option value="PRICE_LOW">Price: Low to High</option>
+              <option value="PRICE_HIGH">Price: High to Low</option>
+              <option value="RATING">Highest Rating</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sync Notification Banner when Owner makes updates -->
+        <div class="sync-banner" id="syncBanner" style="display:none;">
+          <span class="material-symbols-rounded spin">sync</span>
+          <span id="syncBannerText">Syncing listings from owner updates...</span>
+        </div>
+
+        <!-- Main Cards Grid -->
+        <div class="listings-grid" id="listingsGrid">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display:none;">
+          <div class="empty-icon-circle">
+            <span class="material-symbols-rounded">home_work</span>
+          </div>
+          <h3>No stays match your search</h3>
+          <p>Try clearing some filters or exploring a nearby city or area.</p>
+          <button class="btn btn-primary" onclick="resetAllFilters()">Clear All Filters</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why Styno Section -->
+    <section class="why-styno-section">
+      <div class="container">
+        <div class="section-badge-center">
+          <span class="badge badge-primary">THE STYNO PROMISE</span>
+        </div>
+        <h2 class="text-center section-heading-large">Why Book & Host on Styno?</h2>
+        <p class="text-center section-sub-center">Built for students, travelers, and working professionals with direct owner transparency.</p>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon bg-emerald">
+              <span class="material-symbols-rounded">money_off</span>
+            </div>
+            <h3>100% Zero Brokerage</h3>
+            <p>No agent fees, no commissions. You connect directly with verified property managers and landlords.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon bg-blue">
+              <span class="material-symbols-rounded">verified</span>
+            </div>
+            <h3>Physical Audit & Verification</h3>
+            <p>Every hostel, PG, and room is verified for hygiene, security cameras, gate curfew safety, and RO water.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon bg-amber">
+              <span class="material-symbols-rounded">schedule</span>
+            </div>
+            <h3>Flexible Stay Durations</h3>
+            <p>Hourly transit pods (3h, 6h, 12h), daily hotel rooms, weekly stays, and monthly student hostel rentals.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon bg-purple">
+              <span class="material-symbols-rounded">sync_alt</span>
+            </div>
+            <h3>Live Owner Sync</h3>
+            <p>Real-time updates! When an owner updates pricing, beds, or room availability, it reflects for users instantly.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Nationwide Geographic Coverage -->
+    <section class="coverage-section">
+      <div class="container">
+        <div class="coverage-card">
+          <div class="coverage-header">
+            <div>
+              <h3>All 36 Indian States & Union Territories Covered</h3>
+              <p>From metro tech corridors in Bengaluru and Noida to educational hubs in Kota and Patna.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="openLocationPickerModal()">
+              Browse By State <span class="material-symbols-rounded">map</span>
+            </button>
+          </div>
+          <div class="coverage-states-cloud" id="coverageStatesCloud">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Main Website Footer -->
+  <footer class="main-footer">
+    <div class="container">
+      <div class="footer-top-grid">
+        <div class="footer-brand-col">
+          <div class="brand-logo footer-logo">
+            <div class="logo-icon small">
+              <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M16 7L8 13.5V23H24V13.5L16 7Z" stroke="white" stroke-width="2"/><circle cx="16" cy="12" r="2" fill="#FBBF24"/></svg>
+            </div>
+            <span class="brand-name">STYNO</span>
+          </div>
+          <p class="footer-desc">
+            India's dedicated 0% brokerage accommodation network. Connecting verified guests and property owners directly with live inventory synchronization.
+          </p>
+          <div class="footer-badges-row">
+            <span class="footer-badge"><span class="material-symbols-rounded">shield</span> Verified Safety</span>
+            <span class="footer-badge"><span class="material-symbols-rounded">lock</span> Encrypted Payments</span>
+          </div>
+        </div>
+
+        <div class="footer-links-col">
+          <h4>Accommodation Types</h4>
+          <ul>
+            <li><a href="#" onclick="selectCategory('HOTEL'); return false;">Hotels & Boutique Stays</a></li>
+            <li><a href="#" onclick="selectCategory('HOSTEL'); return false;">Hostels (Boys & Girls)</a></li>
+            <li><a href="#" onclick="selectCategory('PG'); return false;">Paying Guest (PG) Stays</a></li>
+            <li><a href="#" onclick="selectCategory('ROOM'); return false;">Independent Rooms</a></li>
+            <li><a href="#" onclick="selectCategory('FLAT'); return false;">Furnished Flats (1/2/3 BHK)</a></li>
+            <li><a href="#" onclick="selectCategory('QUICK_STAY'); return false;">Quick Stay Transit Pods</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <h4>Popular Cities</h4>
+          <ul>
+            <li><a href="#" onclick="selectCityFilter('Noida'); return false;">Noida & Greater Noida</a></li>
+            <li><a href="#" onclick="selectCityFilter('Bengaluru'); return false;">Bengaluru (HSR & Koramangala)</a></li>
+            <li><a href="#" onclick="selectCityFilter('New Delhi'); return false;">New Delhi & NCR</a></li>
+            <li><a href="#" onclick="selectCityFilter('Gurugram'); return false;">Gurugram (Cyber City)</a></li>
+            <li><a href="#" onclick="selectCityFilter('Kota'); return false;">Kota (Coaching Hub)</a></li>
+            <li><a href="#" onclick="selectCityFilter('Patna'); return false;">Patna & Darbhanga</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <h4>For Property Owners</h4>
+          <ul>
+            <li><a href="#" onclick="openOwnerPortalModal(); return false;"><strong>List Your Property (0% Fee)</strong></a></li>
+            <li><a href="#" onclick="openOwnerPortalModal(); return false;">Manage Active Stays</a></li>
+            <li><a href="#" onclick="openOwnerPortalModal(); return false;">Instant Real-Time Sync</a></li>
+            <li><a href="#">Owner Verification Guidelines</a></li>
+            <li><a href="#">Host Community Standards</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom-bar">
+        <p>&copy; 2026 Styno Stays Technologies Pvt. Ltd. All rights reserved. Zero Brokerage Guarantee.</p>
+        <div class="footer-bottom-links">
+          <a href="#">Privacy Policy</a>
+          <span>&bull;</span>
+          <a href="#">Terms of Service</a>
+          <span>&bull;</span>
+          <a href="#">Cancellation Policy</a>
+          <span>&bull;</span>
+          <a href="#">Trust & Safety</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS & DIALOGS -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. Property Detail Modal -->
+  <div class="modal-overlay" id="propertyDetailModal" onclick="closeOnBackdrop(event, 'propertyDetailModal')">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="stay-type-badge-row">
+            <span class="badge" id="modalPropertyTypeBadge">HOSTEL</span>
+            <span class="badge badge-emerald" id="modalGenderBadge">BOYS ONLY</span>
+            <span class="badge badge-verified"><span class="material-symbols-rounded">verified</span> Styno Verified</span>
+          </div>
+          <h2 id="modalPropertyName">Styno Orchid Elite</h2>
+          <p class="modal-address" id="modalPropertyAddress"><span class="material-symbols-rounded">location_on</span> Sector 62, Noida, Uttar Pradesh</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('propertyDetailModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <div class="modal-body scrollable">
+        <!-- Image Gallery Preview -->
+        <div class="property-gallery-grid" id="modalGalleryGrid">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Key Specs Bar -->
+        <div class="stay-specs-bar">
+          <div class="spec-item">
+            <span class="spec-label">Starting Price</span>
+            <span class="spec-value text-primary" id="modalStartingPrice">₹6,500/mo</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Duration</span>
+            <span class="spec-value" id="modalDurationType">Monthly</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Rating</span>
+            <span class="spec-value text-amber" id="modalRating">&#9733; 4.8 (124 reviews)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Brokerage</span>
+            <span class="spec-value text-emerald font-bold">₹0 Free</span>
+          </div>
+        </div>
+
+        <!-- Room Options Section -->
+        <div class="detail-section">
+          <h3>Available Room Configurations</h3>
+          <div class="room-options-grid" id="modalRoomOptionsGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Amenities & Facilities -->
+        <div class="detail-section">
+          <h3>Verified Amenities & Facilities</h3>
+          <div class="amenities-tags-grid" id="modalAmenitiesGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- House Rules & Timings -->
+        <div class="detail-section">
+          <h3>House Guidelines & Timings</h3>
+          <div class="rules-grid" id="modalRulesGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Owner / Property Manager Info -->
+        <div class="detail-section">
+          <h3>Verified Host Contact</h3>
+          <div class="owner-contact-card" id="modalOwnerCard">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="footer-price-col">
+          <span class="footer-price-label">Price from</span>
+          <span class="footer-price-val" id="modalFooterPrice">₹6,500</span>
+          <span class="footer-price-sub" id="modalFooterPriceSub">per month &bull; 0% brokerage</span>
+        </div>
+        <div class="footer-actions">
+          <button class="btn btn-outline" id="modalSaveBtn" onclick="toggleSaveCurrentProperty()">
+            <span class="material-symbols-rounded">favorite_border</span> Save
+          </button>
+          <button class="btn btn-primary" onclick="proceedToBookingFromModal()">
+            <span class="material-symbols-rounded">bolt</span> Book This Stay
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Booking & Checkout Modal -->
+  <div class="modal-overlay" id="bookingModal" onclick="closeOnBackdrop(event, 'bookingModal')">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <h2>Complete Your Booking</h2>
+          <p class="modal-subtitle" id="bookingModalSubtitle">Instant direct confirmation with verified host</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('bookingModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <div class="modal-body scrollable">
+        <!-- Stay mini summary -->
+        <div class="booking-stay-mini-summary" id="bookingStayMiniSummary">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Form fields -->
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="bookingCheckInDate">Check-in Date *</label>
+            <input type="date" id="bookingCheckInDate" required>
+          </div>
+          <div class="form-group">
+            <label for="bookingDuration">Stay Duration *</label>
+            <select id="bookingDuration" onchange="recalculateBookingTotal()">
+              <option value="1">1 Month</option>
+              <option value="3">3 Months (5% Discount)</option>
+              <option value="6">6 Months (10% Discount)</option>
+              <option value="12">12 Months (15% Discount)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="bookingGuestName">Full Name of Primary Guest *</label>
+          <input type="text" id="bookingGuestName" placeholder="e.g. Rahul Sharma" required>
+        </div>
+
+        <div class="form-group-row">
+          <div class="form-group">
+            <label for="bookingGuestPhone">Mobile Number (for Passcode) *</label>
+            <input type="tel" id="bookingGuestPhone" placeholder="+91 98765 43210" required>
+          </div>
+          <div class="form-group">
+            <label for="bookingGuestEmail">Email Address *</label>
+            <input type="email" id="bookingGuestEmail" placeholder="rahul@example.com" required>
+          </div>
+        </div>
+
+        <!-- Pricing Transparency Card -->
+        <div class="checkout-breakdown-card">
+          <h4>Payment Summary</h4>
+          <div class="breakdown-row">
+            <span>Base Room Rent</span>
+            <span id="bkBaseRent">₹6,500</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="text-emerald">Styno Brokerage Fee (100% OFF)</span>
+            <span class="text-emerald font-bold">₹0 FREE</span>
+          </div>
+          <div class="breakdown-row">
+            <span>GST / Taxes (Included)</span>
+            <span id="bkTaxes">₹0</span>
+          </div>
+          <div class="breakdown-divider"></div>
+          <div class="breakdown-row total">
+            <span>Total Payable Amount</span>
+            <span class="text-primary font-bold" id="bkFinalAmount">₹6,500</span>
+          </div>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="payment-method-selector">
+          <label class="font-bold">Select Payment Mode</label>
+          <div class="payment-options-grid">
+            <label class="payment-option-card active">
+              <input type="radio" name="paymentMode" value="UPI" checked>
+              <div class="payment-opt-content">
+                <span class="material-symbols-rounded text-primary">qr_code_scanner</span>
+                <strong>Instant UPI / QR</strong>
+                <small>Google Pay, PhonePe, Paytm</small>
+              </div>
+            </label>
+
+            <label class="payment-option-card">
+              <input type="radio" name="paymentMode" value="CARD">
+              <div class="payment-opt-content">
+                <span class="material-symbols-rounded text-emerald">credit_card</span>
+                <strong>Debit / Credit Card</strong>
+                <small>Visa, Mastercard, RuPay</small>
+              </div>
+            </label>
+
+            <label class="payment-option-card">
+              <input type="radio" name="paymentMode" value="PAY_AT_STAY">
+              <div class="payment-opt-content">
+                <span class="material-symbols-rounded text-amber">storefront</span>
+                <strong>Pay at Check-In</strong>
+                <small>Zero advance required</small>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmAndExecuteBooking()">
+          <span class="material-symbols-rounded">verified</span> Confirm Booking (<span id="btnPayAmount">₹6,500</span>)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Booking Confirmation Success Modal -->
+  <div class="modal-overlay" id="bookingSuccessModal">
+    <div class="modal-card modal-sm text-center">
+      <div class="success-check-circle">
+        <span class="material-symbols-rounded">check</span>
+      </div>
+      <h2>Booking Confirmed!</h2>
+      <p class="text-muted" id="successBookingId">Booking ID: #STYNO-84920</p>
+      
+      <div class="passcode-box">
+        <span class="passcode-label">DIGITAL CHECK-IN PASSCODE</span>
+        <span class="passcode-value" id="successPasscode">STY-8924</span>
+        <span class="passcode-hint">Present this code at check-in counter</span>
+      </div>
+
+      <div class="booking-success-details" id="bookingSuccessDetails">
+        <!-- Details populated dynamically -->
+      </div>
+
+      <div class="modal-actions-stacked">
+        <button class="btn btn-primary" onclick="closeModal('bookingSuccessModal'); openBookingsModal();">
+          View In My Bookings
+        </button>
+        <button class="btn btn-outline" onclick="closeModal('bookingSuccessModal')">
+          Browse More Stays
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Location Hierarchy Selector Modal (Country -> State -> City -> Locality) -->
+  <div class="modal-overlay" id="locationPickerModal" onclick="closeOnBackdrop(event, 'locationPickerModal')">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <h2>Select Location</h2>
+          <p class="modal-subtitle">Hierarchy: Country &rsaquo; State/UT &rsaquo; City &rsaquo; Area</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('locationPickerModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <!-- Step Breadcrumb -->
+      <div class="hierarchy-step-indicator">
+        <button class="step-pill active" id="stepCountryBtn" onclick="setLocationStep('COUNTRY')">1. India</button>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <button class="step-pill" id="stepStateBtn" onclick="setLocationStep('STATE')">2. State/UT</button>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <button class="step-pill" id="stepCityBtn" onclick="setLocationStep('CITY')">3. City</button>
+        <span class="material-symbols-rounded">chevron_right</span>
+        <button class="step-pill" id="stepAreaBtn" onclick="setLocationStep('AREA')">4. Area</button>
+      </div>
+
+      <!-- Quick Search input for location items -->
+      <div class="location-search-box">
+        <span class="material-symbols-rounded">search</span>
+        <input type="text" id="locationFilterInput" placeholder="Filter states or cities..." oninput="filterLocationList(this.value)">
+      </div>
+
+      <div class="modal-body scrollable">
+        <div class="location-items-list" id="locationItemsList">
+          <!-- Populated via JS based on active step -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="resetToAllIndia()">Show All India</button>
+        <button class="btn btn-primary" onclick="closeModal('locationPickerModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. OWNER PORTAL & LISTING SYNC MODAL -->
+  <div class="modal-overlay" id="ownerPortalModal" onclick="closeOnBackdrop(event, 'ownerPortalModal')">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="owner-header-branding">
+          <div class="owner-icon-badge">
+            <span class="material-symbols-rounded">real_estate_agent</span>
+          </div>
+          <div>
+            <h2>Styno Property Owner Portal</h2>
+            <p class="modal-subtitle">Add or edit your stay listings with live real-time synchronization to users</p>
+          </div>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('ownerPortalModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <!-- Owner Tabs: My Listings vs Add New Stay -->
+      <div class="owner-tabs-bar">
+        <button class="owner-tab-btn active" id="tabOwnerListings" onclick="switchOwnerTab('LISTINGS')">
+          <span class="material-symbols-rounded">home_work</span> My Stay Listings (<span id="ownerListingsCount">0</span>)
+        </button>
+        <button class="owner-tab-btn" id="tabOwnerAdd" onclick="switchOwnerTab('ADD')">
+          <span class="material-symbols-rounded">add_circle</span> Add New Stay Listing
+        </button>
+      </div>
+
+      <div class="modal-body scrollable">
+        <!-- TAB 1: OWNER'S ACTIVE LISTINGS -->
+        <div id="ownerTabContentListings">
+          <div class="owner-actions-top-bar">
+            <span>Your listings are visible to thousands of verified guests with 0% brokerage.</span>
+            <button class="btn btn-sm btn-primary" onclick="switchOwnerTab('ADD')">
+              <span class="material-symbols-rounded">add</span> Add New Stay
+            </button>
+          </div>
+          <div class="owner-listings-table" id="ownerListingsTable">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- TAB 2: ADD / EDIT LISTING FORM -->
+        <div id="ownerTabContentAdd" style="display: none;">
+          <form id="ownerListingForm" onsubmit="handleOwnerFormSubmit(event)">
+            <input type="hidden" id="ownerPropertyId" value="">
+
+            <div class="form-section-title">1. Accommodation Category & Title</div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="ownerPropType">Category *</label>
+                <select id="ownerPropType" required onchange="handleOwnerCategoryChange(this.value)">
+                  <option value="HOTEL">Hotel (Daily / Nightly)</option>
+                  <option value="HOSTEL" selected>Hostel (Monthly)</option>
+                  <option value="PG">Paying Guest (PG)</option>
+                  <option value="ROOM">Independent Room</option>
+                  <option value="FLAT">Flat / Apartment</option>
+                  <option value="QUICK_STAY">Quick Stay (Hourly Transit Pods)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="ownerGender">Guest Suitability *</label>
+                <select id="ownerGender" required>
+                  <option value="ALL">Co-Ed / Open to All</option>
+                  <option value="BOYS_ONLY">Boys Only</option>
+                  <option value="GIRLS_ONLY">Girls Only</option>
+                  <option value="FAMILY">Family Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ownerPropName">Property Title / Name *</label>
+              <input type="text" id="ownerPropName" placeholder="e.g. Styno Comfort Boys PG & Hostel" required>
+            </div>
+
+            <div class="form-section-title">2. Location Details (Direct Indian Hierarchy)</div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="ownerState">State / Union Territory *</label>
+                <select id="ownerState" required onchange="populateCitiesForOwner(this.value)">
+                  <!-- Populated from authentic 36 states -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="ownerCity">City / Town *</label>
+                <select id="ownerCity" required onchange="populateAreasForOwner(this.value)">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="ownerArea">Area / Locality *</label>
+                <input type="text" id="ownerArea" placeholder="e.g. Sector 62 / Koramangala / Indra Vihar" required>
+              </div>
+              <div class="form-group">
+                <label for="ownerLandmark">Nearby Landmark</label>
+                <input type="text" id="ownerLandmark" placeholder="e.g. 500m from Metro Station / University Gate">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ownerAddress">Complete Street Address *</label>
+              <input type="text" id="ownerAddress" placeholder="e.g. Plot No. 42, Block C, Phase 2" required>
+            </div>
+
+            <div class="form-section-title">3. Pricing & Duration</div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="ownerStartingPrice">Base Price (₹) *</label>
+                <input type="number" id="ownerStartingPrice" placeholder="e.g. 6500" min="100" required>
+              </div>
+              <div class="form-group">
+                <label for="ownerDurationType">Duration Unit *</label>
+                <select id="ownerDurationType" required>
+                  <option value="MONTHLY">Monthly (/month)</option>
+                  <option value="DAILY">Daily (/night)</option>
+                  <option value="HOURLY">Hourly (/slot)</option>
+                  <option value="WEEKLY">Weekly (/week)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="ownerSecurityDeposit">Security Deposit (₹)</label>
+                <input type="number" id="ownerSecurityDeposit" placeholder="0 if zero deposit" value="0">
+              </div>
+            </div>
+
+            <div class="form-section-title">4. Key Amenities (Check all that apply)</div>
+            <div class="amenities-checkboxes-grid">
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="High-Speed Wi-Fi" checked> High-Speed Wi-Fi</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="Air Conditioner" checked> Air Conditioner (AC)</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="3-Time Meals" checked> 3-Time Meals / Food</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="Attached Washroom" checked> Attached Washroom</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="24/7 Power Backup" checked> 24/7 Power Backup</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="CCTV & Biometric Security" checked> CCTV & Security</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="Daily Housekeeping"> Daily Housekeeping</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="Washing Machine / Laundry"> Laundry Access</label>
+              <label class="checkbox-pill"><input type="checkbox" name="ownerAmenity" value="Covered Parking"> Covered Parking</label>
+            </div>
+
+            <div class="form-section-title">5. Owner Contact Information</div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="ownerName">Owner / Manager Name *</label>
+                <input type="text" id="ownerName" placeholder="e.g. Vikram Sharma" required>
+              </div>
+              <div class="form-group">
+                <label for="ownerPhone">Contact Phone *</label>
+                <input type="tel" id="ownerPhone" placeholder="+91 98112 34567" required>
+              </div>
+            </div>
+
+            <div class="form-submit-row">
+              <button type="button" class="btn btn-outline" onclick="switchOwnerTab('LISTINGS')">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveOwnerListing">
+                <span class="material-symbols-rounded">cloud_upload</span> Publish Stay & Sync to Users
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. My Bookings Modal -->
+  <div class="modal-overlay" id="myBookingsModal" onclick="closeOnBackdrop(event, 'myBookingsModal')">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <h2>My Bookings</h2>
+          <p class="modal-subtitle">Direct bookings with 0% brokerage and verified passcodes</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('myBookingsModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="modal-body scrollable">
+        <div class="bookings-list" id="myBookingsList">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('myBookingsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Saved Stays Modal -->
+  <div class="modal-overlay" id="savedModal" onclick="closeOnBackdrop(event, 'savedModal')">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div>
+          <h2>Saved Stays</h2>
+          <p class="modal-subtitle">Your shortlisted accommodations</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('savedModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="modal-body scrollable">
+        <div class="saved-list" id="savedList">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('savedModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application JS Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
