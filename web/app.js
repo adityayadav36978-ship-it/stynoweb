@@ -1,7 +1,7 @@
 /**
  * STYNO STAYS - OFFICIAL RESPONSIVE WEB APPLICATION
- * Zero Brokerage Accommodation Network
- * Real-time Owner-to-User Synchronization Engine
+ * 1:1 Match to STYNO Android Mobile Application
+ * Zero Brokerage Accommodation Network & Real-Time Sync Engine
  */
 
 // --------------------------------------------------------------------------
@@ -35,7 +35,7 @@ const STYNO_SEED_PROPERTIES = [
       "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&q=80",
       "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80"
     ],
-    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "3-Time Meals", "Attached Washroom", "24/7 Power Backup", "Biometric Security", "Daily Housekeeping", "Laundry Access"],
+    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "3-Time Meals", "Attached Washroom", "24/7 Power Backup", "CCTV & Biometric Security", "Daily Housekeeping", "Washing Machine / Laundry"],
     roomOptions: [
       { type: "Triple Sharing (AC)", price: 6500, bedsAvailable: 4, deposit: 6500 },
       { type: "Double Sharing (AC)", price: 8500, bedsAvailable: 2, deposit: 8500 },
@@ -47,7 +47,7 @@ const STYNO_SEED_PROPERTIES = [
       verified: true,
       experience: "8 years hosting"
     },
-    rules: ["Gate closes at 10:00 PM", "Visitor entry till 7:00 PM", "Biometric punch required", "Quiet study hours after 10 PM"]
+    rules: ["Gate closes at 10:30 PM", "Visitor entry till 7:00 PM", "Biometric punch required", "Quiet study hours after 10 PM"]
   },
   {
     id: "prop-hostel-02",
@@ -74,7 +74,7 @@ const STYNO_SEED_PROPERTIES = [
       "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80",
       "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80"
     ],
-    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "Gymnasium", "24/7 Power Backup", "Attached Washroom", "Gaming Zone", "RO Water", "CCTV Security"],
+    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "Gymnasium", "24/7 Power Backup", "Attached Washroom", "RO Purified Water", "CCTV Security"],
     roomOptions: [
       { type: "Triple Sharing", price: 7200, bedsAvailable: 5, deposit: 7200 },
       { type: "Twin Sharing (AC)", price: 9500, bedsAvailable: 3, deposit: 9500 },
@@ -113,188 +113,188 @@ const STYNO_SEED_PROPERTIES = [
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
       "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80"
     ],
-    amenities: ["Air Conditioner", "Free Breakfast Buffet", "High-Speed Wi-Fi", "Valet Parking", "Room Service 24h", "Attached Luxury Bath", "Smart TV", "Mini Fridge"],
+    amenities: ["Air Conditioner", "Free Breakfast Buffet", "High-Speed Wi-Fi", "Valet Parking", "Room Service 24h", "Attached Washroom", "Smart TV"],
     roomOptions: [
       { type: "Deluxe King Room", price: 2499, bedsAvailable: 6, deposit: 0 },
       { type: "Executive Suite", price: 4299, bedsAvailable: 2, deposit: 0 }
     ],
     owner: {
-      name: "Boulevard Hospitality Pvt Ltd",
-      phone: "+91 11 4321 0000",
+      name: "Sunil Mehra (General Manager)",
+      phone: "+91 11 2341 9090",
       verified: true,
-      experience: "Styno Premier Partner"
+      experience: "12 years hospitality"
     },
-    rules: ["Check-in: 12:00 PM", "Check-out: 11:00 AM", "Govt Photo ID required for all guests"]
-  },
-  {
-    id: "prop-quick-01",
-    name: "Styno Transit Pods & Quick Stay",
-    propertyType: "QUICK_STAY",
-    genderSuitability: "ALL",
-    description: "Soundproof futuristic Japanese-style sleep pods directly opposite Airport Terminal 2. Perfect for flight layovers, quick power naps, hot showers, and high-speed device recharge.",
-    address: "Sahar Airport Road, Near T2 Departure Gate",
-    city: "Mumbai",
-    state: "Maharashtra",
-    area: "Andheri East",
-    pincode: "400099",
-    latitude: 19.0968,
-    longitude: 72.8744,
-    startingPrice: 399,
-    durationType: "HOURLY",
-    rating: 4.9,
-    reviewCount: 420,
-    isVerified: true,
-    isInstantBookable: true,
-    isZeroBrokerage: true,
-    featuredBadge: "Instant Airport Transit",
-    images: [
-      "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80",
-      "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800&q=80"
-    ],
-    amenities: ["Climate Controlled Pod", "Hot Power Shower", "Luggage Storage Locker", "300 Mbps Wi-Fi", "USB Fast Charger", "Noise Cancelling Headsets", "Complimentary Espresso"],
-    roomOptions: [
-      { type: "3 Hours Layover Pod", price: 399, bedsAvailable: 8, deposit: 0 },
-      { type: "6 Hours Transit Sleep Pod", price: 699, bedsAvailable: 5, deposit: 0 },
-      { type: "12 Hours Day/Night Pod", price: 999, bedsAvailable: 4, deposit: 0 },
-      { type: "24 Hours Full Day Stay", price: 1599, bedsAvailable: 3, deposit: 0 }
-    ],
-    owner: {
-      name: "Styno Transit Hubs Operations",
-      phone: "+91 22 2899 1122",
-      verified: true,
-      experience: "Official Transit Station"
-    },
-    rules: ["Instant barcode entry", "Shoe lockers provided at pod zone", "Silent zone policy"]
+    rules: ["Check-in 12:00 PM, Check-out 11:00 AM", "Govt ID required for all adult guests"]
   },
   {
     id: "prop-pg-01",
-    name: "Styno Urban Living Premium PG",
+    name: "Styno Green Leaf Executive PG",
     propertyType: "PG",
-    genderSuitability: "BOYS_ONLY",
-    description: "Designed for competitive exam aspirants (IIT-JEE & NEET). Ergonomic study table, silent library with AC, hygienic nutritious home meals, and zero brokerage.",
-    address: "A-32, Rajiv Gandhi Nagar",
-    city: "Kota",
-    state: "Rajasthan",
-    area: "Indra Vihar",
-    pincode: "324005",
-    latitude: 25.1389,
-    longitude: 75.8458,
-    startingPrice: 7800,
+    genderSuitability: "CO_ED",
+    description: "Co-living community designed for corporate professionals working in Cyber Hub and Golf Course Road. Features ergonomic work from home desk, rooftop café, and weekend housekeeping.",
+    address: "DLF Phase 2, Near Sikanderpur Metro",
+    city: "Gurugram",
+    state: "Haryana",
+    area: "DLF Phase 2",
+    pincode: "122002",
+    latitude: 28.4817,
+    longitude: 77.0878,
+    startingPrice: 11000,
     durationType: "MONTHLY",
-    rating: 4.7,
-    reviewCount: 165,
+    rating: 4.8,
+    reviewCount: 76,
     isVerified: true,
     isInstantBookable: true,
     isZeroBrokerage: true,
-    featuredBadge: "Aspirant's Choice",
+    featuredBadge: "Corporate Co-Living",
     images: [
-      "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&q=80",
-      "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80"
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"
     ],
-    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "3-Time Hygienic Meals", "Study Library Room", "24/7 Power Backup", "Doctor on Call", "Daily Cleaning"],
+    amenities: ["High-Speed Wi-Fi", "Air Conditioner", "3-Time Meals", "Attached Washroom", "Rooftop Lounge", "Daily Housekeeping", "Power Backup"],
     roomOptions: [
-      { type: "Double Sharing with AC", price: 7800, bedsAvailable: 6, deposit: 7800 },
-      { type: "Single Private Study Room", price: 11500, bedsAvailable: 2, deposit: 11500 }
+      { type: "Double Sharing", price: 11000, bedsAvailable: 3, deposit: 11000 },
+      { type: "Private Studio", price: 18500, bedsAvailable: 1, deposit: 18500 }
     ],
     owner: {
-      name: "Rajendra Meena",
-      phone: "+91 94140 12345",
+      name: "Rajesh & Ananya Verma",
+      phone: "+91 99100 54321",
       verified: true,
-      experience: "10 years in Kota"
+      experience: "Verified Superhost"
     },
-    rules: ["Strict silent study hours", "Counsellor session on weekends", "No late night outings without guardian consent"]
+    rules: ["Keycard smart lock access", "No loud music after 11 PM", "Guests allowed with prior notice"]
   },
   {
     id: "prop-flat-01",
-    name: "Styno Heights 2 BHK Furnished Apartment",
+    name: "Styno Silver Oak Furnished 2BHK Flat",
     propertyType: "FLAT",
     genderSuitability: "FAMILY",
-    description: "Spacious fully furnished 2 BHK apartment inside a gated society with swimming pool, covered parking, clubhouse, modular kitchen, and pipeline gas.",
-    address: "Tower 4, Green Valley Society, Phase 1",
+    description: "Fully furnished 2 BHK apartment inside a gated luxury society with swimming pool, covered parking, modular kitchen, and round the clock security. Zero brokerage.",
+    address: "Phase 3, Hinjewadi Rajiv Gandhi Infotech Park",
     city: "Pune",
     state: "Maharashtra",
     area: "Hinjewadi",
     pincode: "411057",
     latitude: 18.5913,
     longitude: 73.7389,
-    startingPrice: 22000,
+    startingPrice: 24000,
     durationType: "MONTHLY",
-    rating: 4.8,
-    reviewCount: 64,
+    rating: 4.9,
+    reviewCount: 45,
     isVerified: true,
     isInstantBookable: true,
     isZeroBrokerage: true,
-    featuredBadge: "0% Brokerage Flat",
+    featuredBadge: "Furnished 2BHK",
     images: [
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"
+      "https://images.unsplash.com/photo-1502005229762-ae1b460020e2?w=800&q=80",
+      "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800&q=80"
     ],
-    amenities: ["Modular Kitchen", "Air Conditioner", "Covered Car Parking", "Swimming Pool & Gym", "24/7 Security", "Piped Gas", "High-Speed Wi-Fi"],
+    amenities: ["Modular Kitchen", "Air Conditioner", "Covered Parking", "Swimming Pool", "Gated Security", "High-Speed Wi-Fi", "Washing Machine / Laundry"],
     roomOptions: [
-      { type: "Full 2 BHK Apartment", price: 22000, bedsAvailable: 1, deposit: 44000 }
+      { type: "Complete 2BHK Apartment", price: 24000, bedsAvailable: 1, deposit: 35000 }
     ],
     owner: {
-      name: "Anand Deshpande",
-      phone: "+91 98220 54321",
+      name: "Abhishek Kulkarni",
+      phone: "+91 98230 11223",
       verified: true,
-      experience: "Direct landlord"
+      experience: "Direct Owner"
     },
-    rules: ["Registered rent agreement included", "Pets allowed with prior consent"]
+    rules: ["Family & working professionals preferred", "Society clubhouse guidelines apply"]
   },
   {
-    id: "prop-room-01",
-    name: "Styno Studio Independent Room with Balcony",
-    propertyType: "ROOM",
+    id: "prop-quick-01",
+    name: "Styno Metro Express Sleep Pod",
+    propertyType: "QUICK_STAY",
     genderSuitability: "ALL",
-    description: "Independent studio room with private entrance, attached modern washroom, large balcony overlooking greenery, mini pantry, and zero landlord interference.",
-    address: "House 182, Phase 3, Near Cyber Hub",
-    city: "Gurugram",
-    state: "Haryana",
-    area: "DLF Cyber City",
-    pincode: "122002",
-    latitude: 28.4952,
-    longitude: 77.0895,
-    startingPrice: 11000,
-    durationType: "MONTHLY",
-    rating: 4.6,
-    reviewCount: 88,
+    description: "Compact futuristic sleeping pods located inside the metro concourse. Ideal for travellers, freelancers, and interview candidates who need a quiet nap, hot shower, or power recharge.",
+    address: "Concourse Level, Sector 18 Metro Station",
+    city: "Noida",
+    state: "Uttar Pradesh",
+    area: "Sector 18",
+    pincode: "201301",
+    latitude: 28.5708,
+    longitude: 77.3271,
+    startingPrice: 299,
+    durationType: "HOURLY",
+    rating: 4.7,
+    reviewCount: 188,
     isVerified: true,
     isInstantBookable: true,
     isZeroBrokerage: true,
-    featuredBadge: "Cyber City Studio",
+    featuredBadge: "Hourly Transit Pod",
     images: [
-      "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&q=80",
-      "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&q=80"
+      "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80"
     ],
-    amenities: ["Air Conditioner", "Attached Washroom", "Private Balcony", "High-Speed Wi-Fi", "Mini Fridge", "Independent Key", "Power Backup"],
+    amenities: ["Soundproof Pod", "Air Conditioner", "High-Speed Wi-Fi", "USB Charging Hub", "Hot Shower Facility", "Luggage Locker"],
     roomOptions: [
-      { type: "Studio Room with Balcony", price: 11000, bedsAvailable: 1, deposit: 11000 }
+      { type: "3 Hours Nap Slot", price: 299, bedsAvailable: 8, deposit: 0 },
+      { type: "6 Hours Transit Slot", price: 499, bedsAvailable: 5, deposit: 0 },
+      { type: "12 Hours Day Slot", price: 799, bedsAvailable: 3, deposit: 0 },
+      { type: "24 Hours Full Day Slot", price: 1299, bedsAvailable: 2, deposit: 0 }
     ],
     owner: {
-      name: "Col. Sanjeev Bakshi (Retd.)",
-      phone: "+91 98100 99887",
+      name: "Styno Pods India Operations",
+      phone: "+91 1800 123 7890",
       verified: true,
-      experience: "Verified Owner"
+      experience: "Managed Pod Network"
     },
-    rules: ["No loud music after 11 PM", "Keys provided directly on move-in"]
+    rules: ["Strictly single occupancy per pod", "Automated digital passcode check-in"]
   },
   {
-    id: "prop-bagaha-01",
-    name: "Styno Valmiki Heritage Residency & PG",
+    id: "prop-hostel-03",
+    name: "Styno Krishna Boys Premier Hostel",
+    propertyType: "HOSTEL",
+    genderSuitability: "BOYS_ONLY",
+    description: "Kota's top student accommodation located adjacent to Allen & Resonance coaching campuses. Includes biometric access, silent study library, doctor on call, and balanced nutritional food.",
+    address: "Road No. 2, Indra Vihar",
+    city: "Kota",
+    state: "Rajasthan",
+    area: "Indra Vihar",
+    pincode: "324005",
+    latitude: 25.1388,
+    longitude: 75.8362,
+    startingPrice: 8500,
+    durationType: "MONTHLY",
+    rating: 4.9,
+    reviewCount: 230,
+    isVerified: true,
+    isInstantBookable: true,
+    isZeroBrokerage: true,
+    featuredBadge: "Allen Campus Nearby",
+    images: [
+      "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+      "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&q=80"
+    ],
+    amenities: ["3-Time Meals", "Air Conditioner", "High-Speed Wi-Fi", "Study Library", "Attached Washroom", "Power Backup", "Doctor on Call"],
+    roomOptions: [
+      { type: "Double Sharing", price: 8500, bedsAvailable: 6, deposit: 8500 },
+      { type: "Single Study Room", price: 13500, bedsAvailable: 2, deposit: 13500 }
+    ],
+    owner: {
+      name: "Mahesh Chand Sharma",
+      phone: "+91 94141 87654",
+      verified: true,
+      experience: "15 years Kota student housing"
+    },
+    rules: ["Curfew strictly 9:30 PM", "Daily parent attendance SMS", "No smartphone usage in library"]
+  },
+  {
+    id: "prop-pg-02",
+    name: "Styno Ganga Heritage PG & Rooms",
     propertyType: "PG",
     genderSuitability: "ALL",
-    description: "Affordable and peaceful accommodation close to nature and town center in Bagaha (West Champaran). Clean rooms, RO drinking water, power backup, and fresh home-cooked food.",
-    address: "Station Road, Near Valmiki Nagar Junction",
+    description: "Peaceful family-run stay close to railway transit and local markets. Offers clean sanitized rooms, pure vegetarian fresh meals, and generous parking space.",
+    address: "Station Road, Near Railway Junction",
     city: "Bagaha",
     state: "Bihar",
     area: "Station Road",
-    pincode: "845105",
+    pincode: "845101",
     latitude: 27.0988,
-    longitude: 84.0901,
+    longitude: 84.0903,
     startingPrice: 3800,
     durationType: "MONTHLY",
-    rating: 4.8,
-    reviewCount: 45,
+    rating: 4.6,
+    reviewCount: 42,
     isVerified: true,
     isInstantBookable: true,
     isZeroBrokerage: true,
@@ -303,7 +303,7 @@ const STYNO_SEED_PROPERTIES = [
       "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80",
       "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80"
     ],
-    amenities: ["3-Time Meals", "High-Speed Wi-Fi", "Attached Washroom", "Power Backup", "RO Water", "Parking Space"],
+    amenities: ["3-Time Meals", "High-Speed Wi-Fi", "Attached Washroom", "Power Backup", "RO Purified Water", "Covered Parking"],
     roomOptions: [
       { type: "Double Sharing", price: 3800, bedsAvailable: 4, deposit: 3800 },
       { type: "Single Room", price: 5500, bedsAvailable: 2, deposit: 5500 }
@@ -340,11 +340,11 @@ const STYNO_SEED_PROPERTIES = [
     images: [
       "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80"
     ],
-    amenities: ["Climate Controlled Pod", "High-Speed Wi-Fi", "Flight Board Display", "Hot Shower", "Luggage Locker"],
+    amenities: ["Air Conditioner", "High-Speed Wi-Fi", "Flight Board Display", "Hot Shower Facility", "Luggage Locker"],
     roomOptions: [
-      { type: "3h Express Nap", price: 349, bedsAvailable: 6, deposit: 0 },
-      { type: "6h Transit Rest", price: 599, bedsAvailable: 4, deposit: 0 },
-      { type: "12h Stay Slot", price: 899, bedsAvailable: 2, deposit: 0 }
+      { type: "3 Hours Nap Slot", price: 349, bedsAvailable: 6, deposit: 0 },
+      { type: "6 Hours Transit Slot", price: 599, bedsAvailable: 4, deposit: 0 },
+      { type: "12 Hours Day Slot", price: 899, bedsAvailable: 2, deposit: 0 }
     ],
     owner: {
       name: "Styno Express Pods Chennai",
@@ -367,7 +367,7 @@ const INDIA_GEOGRAPHIC_DATA = [
   { state: "Maharashtra", isUT: false, cities: ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Navi Mumbai", "Aurangabad"] },
   { state: "Rajasthan", isUT: false, cities: ["Kota", "Jaipur", "Jodhpur", "Udaipur", "Ajmer", "Bikaner"] },
   { state: "Haryana", isUT: false, cities: ["Gurugram", "Faridabad", "Panipat", "Ambala", "Karnal", "Sonipat"] },
-  { state: "Bihar", isUT: false, cities: ["Patna", "Bagaha", "Gaya", "Muzaffarpur", "Bhagalpur", "Darbhanga", "Purnia"] },
+  { state: "Bihar", isUT: false, cities: ["Bagaha", "Patna", "Gaya", "Muzaffarpur", "Bhagalpur", "Darbhanga", "Purnia"] },
   { state: "Tamil Nadu", isUT: false, cities: ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"] },
   { state: "Telangana", isUT: false, cities: ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar"] },
   { state: "West Bengal", isUT: false, cities: ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri"] },
@@ -400,17 +400,17 @@ const INDIA_GEOGRAPHIC_DATA = [
 ];
 
 // --------------------------------------------------------------------------
-// 3. CATEGORIES DEFINITION (Exact 6 Categories from Styno App)
+// 3. CATEGORIES DEFINITION (Exact match to Styno App)
 // --------------------------------------------------------------------------
 
 const STYNO_CATEGORIES = [
   { key: null, name: "All Stays", icon: "explore", emoji: "✨" },
-  { key: "HOTEL", name: "Hotels", icon: "hotel", emoji: "🏨" },
   { key: "HOSTEL", name: "Hostels", icon: "apartment", emoji: "🏢" },
+  { key: "HOTEL", name: "Hotels", icon: "hotel", emoji: "🏨" },
   { key: "PG", name: "PGs & Co-Living", icon: "bed", emoji: "🛏️" },
   { key: "ROOM", name: "Independent Rooms", icon: "meeting_room", emoji: "🚪" },
   { key: "FLAT", name: "Furnished Flats", icon: "home", emoji: "🏠" },
-  { key: "QUICK_STAY", name: "Quick Stay (Hourly)", icon: "bolt", emoji: "⚡" }
+  { key: "QUICK_STAY", name: "Quick Stay ⚡", icon: "bolt", emoji: "⚡" }
 ];
 
 // --------------------------------------------------------------------------
@@ -419,22 +419,22 @@ const STYNO_CATEGORIES = [
 
 class StynoDataStore {
   constructor() {
-    this.storageKeyProperties = "styno_properties_db_v1";
-    this.storageKeyOwnerCustom = "styno_owner_custom_listings_v1";
-    this.storageKeyBookings = "styno_user_bookings_v1";
-    this.storageKeySaved = "styno_user_saved_v1";
+    this.storageKeyProperties = "styno_properties_db_v2";
+    this.storageKeyOwnerCustom = "styno_owner_custom_listings_v2";
+    this.storageKeyBookings = "styno_user_bookings_v2";
+    this.storageKeySaved = "styno_user_saved_v2";
+    this.storageKeyOwnerPayment = "styno_owner_payment_v2";
+    this.storageKeyQuickStayConfig = "styno_quick_stay_config_v2";
     
-    // Initialize Local Storage with seed properties if not present
     this.initDatabase();
 
-    // Listen for storage events (cross-tab sync)
+    // Cross-tab sync
     window.addEventListener("storage", (e) => {
-      if (e.key === this.storageKeyOwnerCustom || e.key === this.storageKeyProperties) {
+      if (e.key === this.storageKeyOwnerCustom || e.key === this.storageKeyProperties || e.key === this.storageKeyBookings) {
         this.notifySyncListeners();
       }
     });
 
-    // Initialize Firebase Firestore connection if SDK is available
     this.initFirebase();
   }
 
@@ -446,10 +446,29 @@ class StynoDataStore {
       localStorage.setItem(this.storageKeyOwnerCustom, JSON.stringify([]));
     }
     if (!localStorage.getItem(this.storageKeyBookings)) {
-      localStorage.setItem(this.storageKeyBookings, JSON.stringify([]));
+      // Seed an initial confirmed booking for demonstration
+      const initialBooking = {
+        id: "STY-2026-8942",
+        propertyId: "prop-hostel-01",
+        propertyName: "Styno Orchid Girls Elite Hostel",
+        propertyArea: "Sector 62",
+        propertyCity: "Noida",
+        propertyImage: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+        roomType: "Triple Sharing (AC)",
+        checkInDate: "2026-09-20",
+        durationMonths: 1,
+        guestName: "Aditya Yadav",
+        guestPhone: "+91 98765 43210",
+        passcode: "STY-9941",
+        status: "UPCOMING",
+        amountPaid: 6649,
+        paymentMode: "UPI",
+        createdAt: Date.now() - 86400000
+      };
+      localStorage.setItem(this.storageKeyBookings, JSON.stringify([initialBooking]));
     }
     if (!localStorage.getItem(this.storageKeySaved)) {
-      localStorage.setItem(this.storageKeySaved, JSON.stringify([]));
+      localStorage.setItem(this.storageKeySaved, JSON.stringify(["prop-hostel-01", "prop-quick-01"]));
     }
   }
 
@@ -464,7 +483,6 @@ class StynoDataStore {
         this.firestore = firebase.firestore();
         console.log("Styno Firebase Firestore initialized successfully");
         
-        // Listen to live updates from cloud collection
         this.firestore.collection("properties").onSnapshot((snapshot) => {
           if (!snapshot.empty) {
             const cloudProps = [];
@@ -487,18 +505,13 @@ class StynoDataStore {
     current.forEach(p => map.set(p.id, p));
     cloudProps.forEach(cp => map.set(cp.id, { ...map.get(cp.id), ...cp }));
     localStorage.setItem(this.storageKeyProperties, JSON.stringify(Array.from(map.values())));
-    this.notifySyncListeners();
+    this.notifySyncListeners("Cloud Update", "synced");
   }
 
-  /**
-   * Retrieves all properties (Combined Seed + Owner custom properties)
-   * Priority: Owner-created / updated listings take precedence
-   */
   getAllProperties() {
     const base = JSON.parse(localStorage.getItem(this.storageKeyProperties) || "[]");
     const ownerCustom = JSON.parse(localStorage.getItem(this.storageKeyOwnerCustom) || "[]");
     
-    // Combine with distinct by ID (Owner custom items override base)
     const combinedMap = new Map();
     base.forEach(p => combinedMap.set(p.id, p));
     ownerCustom.forEach(p => combinedMap.set(p.id, p));
@@ -506,22 +519,14 @@ class StynoDataStore {
     return Array.from(combinedMap.values());
   }
 
-  /**
-   * Returns all listings owned/created by the property owner
-   */
   getOwnerListings() {
     const custom = JSON.parse(localStorage.getItem(this.storageKeyOwnerCustom) || "[]");
-    // Also include properties from seed that have an owner contact matching owner mode
     const all = this.getAllProperties();
     return all.filter(p => p.isOwnerCreated || custom.some(c => c.id === p.id));
   }
 
-  /**
-   * PUBLISH / UPDATE PROPERTY (Owner Portal -> Real-time sync to User section)
-   */
   savePropertyListing(propData) {
     const ownerList = JSON.parse(localStorage.getItem(this.storageKeyOwnerCustom) || "[]");
-    
     let isNew = false;
     let index = ownerList.findIndex(p => p.id === propData.id);
     if (index >= 0) {
@@ -540,45 +545,25 @@ class StynoDataStore {
       ownerList.unshift(propData);
     }
 
-    // 1. Save to localStorage
     localStorage.setItem(this.storageKeyOwnerCustom, JSON.stringify(ownerList));
 
-    // 2. Also update base properties map
     const all = this.getAllProperties();
     const map = new Map(all.map(p => [p.id, p]));
     map.set(propData.id, propData);
     localStorage.setItem(this.storageKeyProperties, JSON.stringify(Array.from(map.values())));
 
-    // 3. Sync to Cloud Firestore if connected
     if (this.firestore) {
       try {
         this.firestore.collection("properties").doc(propData.id).set(propData, { merge: true })
           .then(() => console.log("Cloud Firestore sync completed for " + propData.id))
-          .catch(e => console.log("Firestore cloud sync queued: ", e.message));
+          .catch(e => console.log("Firestore cloud sync queued:", e.message));
       } catch (e) {}
     }
 
-    // 4. Fire reactive sync broadcast so User section re-renders immediately!
     this.notifySyncListeners(propData.name, isNew ? "published" : "updated");
     return propData;
   }
 
-  /**
-   * Updates pricing or availability of an existing stay inline
-   */
-  updatePropertyPricing(propertyId, newPrice, durationType) {
-    const all = this.getAllProperties();
-    const prop = all.find(p => p.id === propertyId);
-    if (prop) {
-      prop.startingPrice = Number(newPrice);
-      if (durationType) prop.durationType = durationType;
-      this.savePropertyListing(prop);
-    }
-  }
-
-  /**
-   * Deletes a property listing
-   */
   deletePropertyListing(propertyId) {
     let ownerList = JSON.parse(localStorage.getItem(this.storageKeyOwnerCustom) || "[]");
     ownerList = ownerList.filter(p => p.id !== propertyId);
@@ -589,6 +574,15 @@ class StynoDataStore {
     localStorage.setItem(this.storageKeyProperties, JSON.stringify(base));
 
     this.notifySyncListeners("Property", "removed");
+  }
+
+  togglePropertyAvailability(propertyId, isAvailable) {
+    const all = this.getAllProperties();
+    const prop = all.find(p => p.id === propertyId);
+    if (prop) {
+      prop.isAvailable = isAvailable;
+      this.savePropertyListing(prop);
+    }
   }
 
   // Bookings Management
@@ -606,10 +600,21 @@ class StynoDataStore {
         this.firestore.collection("bookings").doc(booking.id).set(booking);
       } catch (e) {}
     }
+    this.notifySyncListeners(booking.propertyName, "booked");
     return booking;
   }
 
-  // Saved Stays Management
+  cancelBooking(bookingId) {
+    const list = this.getBookings();
+    const item = list.find(b => b.id === bookingId);
+    if (item) {
+      item.status = "CANCELLED";
+      localStorage.setItem(this.storageKeyBookings, JSON.stringify(list));
+      this.notifySyncListeners("Booking #" + bookingId, "cancelled");
+    }
+  }
+
+  // Saved Wishlist
   getSavedPropertyIds() {
     return JSON.parse(localStorage.getItem(this.storageKeySaved) || "[]");
   }
@@ -629,7 +634,6 @@ class StynoDataStore {
     return isSaved;
   }
 
-  // Real-time Event Broadcaster
   notifySyncListeners(propertyName = "Listing", action = "synced") {
     const event = new CustomEvent("styno_sync_event", {
       detail: { propertyName, action, timestamp: Date.now() }
@@ -638,44 +642,55 @@ class StynoDataStore {
   }
 }
 
-// Instantiate Global Data Store
 const StynoDB = new StynoDataStore();
 
 // --------------------------------------------------------------------------
-// 5. APPLICATION STATE & CONTROLLER
+// 5. APPLICATION STATE
 // --------------------------------------------------------------------------
 
 const AppState = {
+  currentView: "HOME", // HOME, SEARCH, BOOKINGS, SAVED, PROFILE, OWNER
+  userRole: "GUEST", // GUEST, OWNER
   selectedCategory: null,
   selectedState: null,
   selectedCity: null,
   selectedArea: null,
   searchQuery: "",
+  verifiedOnly: false,
   genderFilter: null,
   maxBudget: 35000,
   activeAmenities: new Set(),
   sortBy: "RECOMMENDED",
+  isMapViewActive: false,
+  activeBookingsTab: "ALL",
+  activeOwnerTab: "PROPERTIES",
   activePropertyForDetail: null,
   activePropertyForBooking: null,
-  activeLocationHierarchyStep: "COUNTRY" // COUNTRY, STATE, CITY, AREA
+  selectedRoomOption: null,
+  locationStep: "COUNTRY"
 };
 
 // --------------------------------------------------------------------------
-// 6. DOM ELEMENTS & INITIALIZATION
+// 6. INITIALIZATION & VIEW MANAGEMENT
 // --------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   renderCategoryTrack();
   renderStateCloud();
   renderListings();
+  renderOwnerPropertiesList();
+  renderBookingsList();
+  renderSavedList();
   updateHeaderBadges();
   populateStateDropdownForOwner();
 
-  // Listen to the Live Sync broadcast event!
+  // Listen to the Live Sync broadcast event
   window.addEventListener("styno_sync_event", (e) => {
     showSyncNotification(e.detail);
     renderListings();
-    renderOwnerListingsTable();
+    renderOwnerPropertiesList();
+    renderBookingsList();
+    updateHeaderBadges();
   });
 
   // Close dropdowns on outside click
@@ -685,7 +700,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Preset check-in date to tomorrow
+  // Preset booking date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const dateInput = document.getElementById("bookingCheckInDate");
@@ -695,13 +710,104 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// --------------------------------------------------------------------------
-// 7. RENDERING COMPONENTS
-// --------------------------------------------------------------------------
+/**
+ * Main View Switcher (Simulates Android Navigation Compose)
+ */
+function switchView(viewName) {
+  AppState.currentView = viewName;
+
+  // 1. Hide all views
+  document.querySelectorAll(".app-view").forEach(el => el.classList.remove("active"));
+
+  // 2. Show target view
+  const targetId = "view" + viewName.charAt(0).toUpperCase() + viewName.slice(1).toLowerCase();
+  const targetEl = document.getElementById(targetId);
+  if (targetEl) {
+    targetEl.classList.add("active");
+  }
+
+  // 3. Update Mobile Bottom Bar active states
+  const navMap = {
+    HOME: "bNavHome",
+    SEARCH: "bNavSearch",
+    BOOKINGS: "bNavBookings",
+    SAVED: "bNavSaved",
+    PROFILE: "bNavProfile",
+    OWNER: "bNavProfile"
+  };
+
+  document.querySelectorAll(".bottom-nav-item").forEach(b => b.classList.remove("active"));
+  const activeNavId = navMap[viewName];
+  if (activeNavId) {
+    const navBtn = document.getElementById(activeNavId);
+    if (navBtn) navBtn.classList.add("active");
+  }
+
+  // 4. View-specific renders
+  if (viewName === "BOOKINGS") {
+    renderBookingsList();
+  } else if (viewName === "SAVED") {
+    renderSavedList();
+  } else if (viewName === "OWNER") {
+    renderOwnerPropertiesList();
+  } else if (viewName === "SEARCH") {
+    const dedicatedInput = document.getElementById("dedicatedSearchInput");
+    if (dedicatedInput) {
+      dedicatedInput.value = AppState.searchQuery;
+      renderDedicatedSearchResults();
+    }
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 /**
- * Category Navigation Track
+ * Toggle User Role (Guest <-> Owner)
  */
+function toggleUserRole() {
+  if (AppState.userRole === "GUEST") {
+    switchToOwnerDashboard();
+  } else {
+    switchToGuestMode();
+  }
+}
+
+function switchToOwnerDashboard() {
+  AppState.userRole = "OWNER";
+  const btn = document.getElementById("ownerToggleBtn");
+  const icon = document.getElementById("ownerToggleIcon");
+  const text = document.getElementById("ownerToggleText");
+  const badge = document.getElementById("ownerRoleBadge");
+  
+  if (btn) btn.classList.add("active");
+  if (icon) icon.textContent = "travel_explore";
+  if (text) text.textContent = "Guest View";
+  if (badge) badge.textContent = "Host Mode";
+
+  switchView("OWNER");
+  showToast("Switched to Styno Host & Owner Dashboard");
+}
+
+function switchToGuestMode() {
+  AppState.userRole = "GUEST";
+  const btn = document.getElementById("ownerToggleBtn");
+  const icon = document.getElementById("ownerToggleIcon");
+  const text = document.getElementById("ownerToggleText");
+  const badge = document.getElementById("ownerRoleBadge");
+
+  if (btn) btn.classList.remove("active");
+  if (icon) icon.textContent = "add_business";
+  if (text) text.textContent = "Owner Dashboard";
+  if (badge) badge.textContent = "0% Fee";
+
+  switchView("HOME");
+  showToast("Switched to Guest Explorer View");
+}
+
+// --------------------------------------------------------------------------
+// 7. RENDERING COMPONENTS (Category Track, Listings, Cards, Maps)
+// --------------------------------------------------------------------------
+
 function renderCategoryTrack() {
   const container = document.getElementById("categoriesTrack");
   if (!container) return;
@@ -724,9 +830,12 @@ function renderCategoryTrack() {
   }).join("");
 }
 
-/**
- * Nationwide State Cloud
- */
+function selectCategory(catKey) {
+  AppState.selectedCategory = catKey || null;
+  renderCategoryTrack();
+  renderListings();
+}
+
 function renderStateCloud() {
   const container = document.getElementById("coverageStatesCloud");
   if (!container) return;
@@ -738,9 +847,15 @@ function renderStateCloud() {
   `).join("");
 }
 
-/**
- * Main Listings Cards Grid
- */
+function selectStateFilter(stateName) {
+  AppState.selectedState = stateName;
+  AppState.selectedCity = null;
+  AppState.selectedArea = null;
+  updateLocationHeader();
+  renderListings();
+  showToast(`Filtered by ${stateName}`);
+}
+
 function renderListings() {
   const grid = document.getElementById("listingsGrid");
   const emptyState = document.getElementById("emptyState");
@@ -750,12 +865,10 @@ function renderListings() {
   let properties = StynoDB.getAllProperties();
   const savedIds = new Set(StynoDB.getSavedPropertyIds());
 
-  // 1. Filter by Category
+  // Filters
   if (AppState.selectedCategory) {
     properties = properties.filter(p => p.propertyType === AppState.selectedCategory);
   }
-
-  // 2. Filter by Location (State, City, Area)
   if (AppState.selectedState) {
     properties = properties.filter(p => p.state.toLowerCase() === AppState.selectedState.toLowerCase());
   }
@@ -765,8 +878,6 @@ function renderListings() {
   if (AppState.selectedArea) {
     properties = properties.filter(p => p.area.toLowerCase().includes(AppState.selectedArea.toLowerCase()));
   }
-
-  // 3. Filter by Text Query (Search)
   if (AppState.searchQuery.trim()) {
     const q = AppState.searchQuery.toLowerCase().trim();
     properties = properties.filter(p => 
@@ -778,16 +889,14 @@ function renderListings() {
       (p.amenities && p.amenities.some(a => a.toLowerCase().includes(q)))
     );
   }
-
-  // 4. Filter by Gender / Occupant Type
+  if (AppState.verifiedOnly) {
+    properties = properties.filter(p => p.isVerified);
+  }
   if (AppState.genderFilter) {
     properties = properties.filter(p => p.genderSuitability === AppState.genderFilter || p.genderSuitability === "ALL");
   }
-
-  // 5. Filter by Price Budget
   properties = properties.filter(p => p.startingPrice <= AppState.maxBudget);
 
-  // 6. Filter by Selected Amenities
   if (AppState.activeAmenities.size > 0) {
     properties = properties.filter(p => {
       if (!p.amenities) return false;
@@ -799,7 +908,7 @@ function renderListings() {
     });
   }
 
-  // 7. Sorting
+  // Sort
   if (AppState.sortBy === "PRICE_LOW") {
     properties.sort((a, b) => a.startingPrice - b.startingPrice);
   } else if (AppState.sortBy === "PRICE_HIGH") {
@@ -807,22 +916,22 @@ function renderListings() {
   } else if (AppState.sortBy === "RATING") {
     properties.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   } else {
-    // RECOMMENDED: Verified and latest first
     properties.sort((a, b) => (b.isVerified ? 1 : 0) - (a.isVerified ? 1 : 0));
   }
 
-  // Update Count Subtitle
   const catName = STYNO_CATEGORIES.find(c => c.key === AppState.selectedCategory)?.name || "Accommodations";
-  subtitle.textContent = `Showing ${properties.length} verified ${catName.toLowerCase()} with 0% brokerage`;
+  if (subtitle) {
+    subtitle.textContent = `Showing ${properties.length} verified ${catName.toLowerCase()} with 0% brokerage`;
+  }
 
-  // Render Grid or Empty State
   if (properties.length === 0) {
     grid.innerHTML = "";
-    emptyState.style.display = "block";
+    if (emptyState) emptyState.style.display = "block";
     return;
   }
 
-  emptyState.style.display = "none";
+  if (emptyState) emptyState.style.display = "none";
+
   grid.innerHTML = properties.map(p => {
     const isSaved = savedIds.has(p.id);
     const heroImage = (p.images && p.images.length) ? p.images[0] : "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80";
@@ -836,7 +945,7 @@ function renderListings() {
           
           <div class="card-floating-badges">
             <span class="badge badge-emerald">0% BROKERAGE</span>
-            ${p.isOwnerCreated ? '<span class="badge" style="background:#4338CA;color:#FFF;">Owner Live</span>' : ''}
+            ${p.isOwnerCreated ? '<span class="badge" style="background:#0F2B5C;color:#FFF;">Owner Live</span>' : ''}
           </div>
 
           <button class="card-save-btn ${isSaved ? 'active' : ''}" onclick="event.stopPropagation(); toggleSave('${p.id}');" title="Save stay">
@@ -874,7 +983,7 @@ function renderListings() {
                 <span class="price-amount">₹${p.startingPrice.toLocaleString('en-IN')}</span>
                 <span class="price-unit">${durationUnit}</span>
               </div>
-              <span class="zero-brokerage-tag">Direct Owner &bull; No Brokerage</span>
+              <span class="zero-brokerage-tag">Direct Host &bull; 0% Fee</span>
             </div>
 
             <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); quickBookStay('${p.id}');">
@@ -886,51 +995,1015 @@ function renderListings() {
     `;
   }).join("");
 
-  renderCategoryTrack();
-}
-
-/**
- * Real-Time Sync Notification Display
- */
-function showSyncNotification(detail) {
-  const banner = document.getElementById("syncBanner");
-  const bannerText = document.getElementById("syncBannerText");
-  if (!banner || !bannerText) return;
-
-  bannerText.textContent = `Sync Complete: "${detail.propertyName}" was ${detail.action} and is now live across Styno!`;
-  banner.style.display = "flex";
-
-  showToast(`⚡ Real-time sync: "${detail.propertyName}" updated`);
-
-  setTimeout(() => {
-    banner.style.display = "none";
-  }, 6000);
+  renderMapMarkers(properties);
 }
 
 // --------------------------------------------------------------------------
-// 8. FILTER & SEARCH HANDLERS
+// 8. INTERACTIVE MAP VIEW LOGIC
 // --------------------------------------------------------------------------
 
-function selectCategory(catKey) {
-  AppState.selectedCategory = catKey || null;
-  const title = document.getElementById("listingsSectionTitle");
-  if (title) {
-    const cat = STYNO_CATEGORIES.find(c => c.key === AppState.selectedCategory);
-    title.textContent = cat ? `${cat.emoji} ${cat.name}` : "Verified Stays";
+function toggleMapViewMode() {
+  AppState.isMapViewActive = !AppState.isMapViewActive;
+  const mapSection = document.getElementById("mapViewSection");
+  const listSection = document.getElementById("listingsSection");
+  const toggleBtn = document.getElementById("mapViewToggleBtn");
+  const toggleText = document.getElementById("mapToggleText");
+  const toggleIcon = document.getElementById("mapToggleIcon");
+
+  if (AppState.isMapViewActive) {
+    if (mapSection) mapSection.style.display = "block";
+    if (listSection) listSection.style.display = "none";
+    if (toggleText) toggleText.textContent = "List View";
+    if (toggleIcon) toggleIcon.textContent = "view_list";
+  } else {
+    if (mapSection) mapSection.style.display = "none";
+    if (listSection) listSection.style.display = "block";
+    if (toggleText) toggleText.textContent = "Map View";
+    if (toggleIcon) toggleIcon.textContent = "map";
   }
-  updateResetFilterVisibility();
+}
+
+function renderMapMarkers(properties) {
+  const container = document.getElementById("mapMarkersLayer");
+  if (!container) return;
+
+  container.innerHTML = properties.map((p, idx) => {
+    // Generate organic spread positions across simulated canvas
+    const leftPct = 15 + ((idx * 27) % 70);
+    const topPct = 20 + ((idx * 33) % 60);
+
+    return `
+      <div class="map-pin" style="left: ${leftPct}%; top: ${topPct}%;" onclick="showMapFloatingPreview('${p.id}')">
+        ₹${p.startingPrice.toLocaleString('en-IN')}
+      </div>
+    `;
+  }).join("");
+}
+
+function showMapFloatingPreview(propertyId) {
+  const p = StynoDB.getAllProperties().find(item => item.id === propertyId);
+  const preview = document.getElementById("mapFloatingPreview");
+  if (!p || !preview) return;
+
+  const heroImage = (p.images && p.images.length) ? p.images[0] : "";
+  preview.style.display = "flex";
+  preview.innerHTML = `
+    <img src="${heroImage}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
+    <div style="flex:1;">
+      <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.2rem;">${p.name}</h4>
+      <p style="font-size: 0.8rem; color: #64748B;">${p.area}, ${p.city}</p>
+      <div style="font-size: 1rem; font-weight: 800; color: #0F2B5C; margin-top: 0.3rem;">
+        ₹${p.startingPrice.toLocaleString('en-IN')} <small style="font-size: 0.75rem; font-weight: normal;">${getDurationUnitLabel(p.durationType)}</small>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-primary" onclick="openPropertyDetail('${p.id}')">View</button>
+  `;
+}
+
+// --------------------------------------------------------------------------
+// 9. DEDICATED SEARCH VIEW LOGIC (1:1 with SearchScreen.kt)
+// --------------------------------------------------------------------------
+
+function handleDedicatedSearch(val) {
+  AppState.searchQuery = val;
+  const clearBtn = document.getElementById("dedicatedSearchClear");
+  if (clearBtn) clearBtn.style.display = val ? "flex" : "none";
+  renderDedicatedSearchResults();
+}
+
+function clearDedicatedSearch() {
+  AppState.searchQuery = "";
+  const input = document.getElementById("dedicatedSearchInput");
+  if (input) input.value = "";
+  const clearBtn = document.getElementById("dedicatedSearchClear");
+  if (clearBtn) clearBtn.style.display = "none";
+  renderDedicatedSearchResults();
+}
+
+function applySearchTag(tagText) {
+  AppState.searchQuery = tagText;
+  const input = document.getElementById("dedicatedSearchInput");
+  if (input) input.value = tagText;
+  const clearBtn = document.getElementById("dedicatedSearchClear");
+  if (clearBtn) clearBtn.style.display = "flex";
+  renderDedicatedSearchResults();
+}
+
+function renderDedicatedSearchResults() {
+  const grid = document.getElementById("searchResultsGrid");
+  const title = document.getElementById("searchResultsTitle");
+  const badge = document.getElementById("searchResultCountBadge");
+  if (!grid) return;
+
+  let properties = StynoDB.getAllProperties();
+  if (AppState.searchQuery.trim()) {
+    const q = AppState.searchQuery.toLowerCase().trim();
+    properties = properties.filter(p => 
+      p.name.toLowerCase().includes(q) ||
+      p.city.toLowerCase().includes(q) ||
+      p.area.toLowerCase().includes(q) ||
+      p.propertyType.toLowerCase().includes(q) ||
+      (p.amenities && p.amenities.some(a => a.toLowerCase().includes(q)))
+    );
+    if (title) title.textContent = `Results for "${AppState.searchQuery}"`;
+  } else {
+    if (title) title.textContent = "All Verified Stays";
+  }
+
+  if (badge) badge.textContent = `${properties.length} Stays`;
+
+  const savedIds = new Set(StynoDB.getSavedPropertyIds());
+  grid.innerHTML = properties.map(p => {
+    const isSaved = savedIds.has(p.id);
+    const heroImage = (p.images && p.images.length) ? p.images[0] : "";
+    return `
+      <div class="stay-card" onclick="openPropertyDetail('${p.id}')">
+        <div class="card-media-wrapper">
+          <img class="card-media-img" src="${heroImage}" alt="${p.name}">
+          <div class="card-floating-badges"><span class="badge badge-emerald">0% BROKERAGE</span></div>
+          <button class="card-save-btn ${isSaved ? 'active' : ''}" onclick="event.stopPropagation(); toggleSave('${p.id}');">
+            <span class="material-symbols-rounded">${isSaved ? 'favorite' : 'favorite_border'}</span>
+          </button>
+        </div>
+        <div class="card-content">
+          <h3 class="stay-title">${p.name}</h3>
+          <p class="stay-location-line">${p.area}, ${p.city}</p>
+          <div class="card-bottom-row">
+            <span class="price-amount">₹${p.startingPrice.toLocaleString('en-IN')}</span>
+            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); quickBookStay('${p.id}')">Book</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// --------------------------------------------------------------------------
+// 10. MY BOOKINGS VIEW LOGIC (1:1 with MyBookingsScreen.kt)
+// --------------------------------------------------------------------------
+
+function filterBookingsTab(tabName) {
+  AppState.activeBookingsTab = tabName;
+  document.querySelectorAll(".bookings-tab-btn").forEach(b => b.classList.remove("active"));
+  const activeBtn = document.getElementById("bkTab" + tabName.charAt(0).toUpperCase() + tabName.slice(1).toLowerCase());
+  if (activeBtn) activeBtn.classList.add("active");
+  renderBookingsList();
+}
+
+function renderBookingsList() {
+  const container = document.getElementById("bookingsList");
+  const emptyState = document.getElementById("emptyBookingsState");
+  if (!container) return;
+
+  let bookings = StynoDB.getBookings();
+  if (AppState.activeBookingsTab !== "ALL") {
+    bookings = bookings.filter(b => b.status === AppState.activeBookingsTab);
+  }
+
+  const badge = document.getElementById("bookingsCountBadge");
+  const bNavBadge = document.getElementById("bNavBookingsBadge");
+  const activeCount = StynoDB.getBookings().filter(b => b.status === "UPCOMING" || b.status === "ACTIVE").length;
+  if (badge) {
+    badge.textContent = activeCount;
+    badge.style.display = activeCount > 0 ? "flex" : "none";
+  }
+  if (bNavBadge) {
+    bNavBadge.textContent = activeCount;
+    bNavBadge.style.display = activeCount > 0 ? "flex" : "none";
+  }
+
+  const pTotalBookings = document.getElementById("pTotalBookings");
+  if (pTotalBookings) pTotalBookings.textContent = StynoDB.getBookings().length;
+
+  if (bookings.length === 0) {
+    container.innerHTML = "";
+    if (emptyState) emptyState.style.display = "block";
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = "none";
+
+  container.innerHTML = bookings.map(bk => `
+    <div class="booking-item-card">
+      <div class="booking-thumb-wrap">
+        <img src="${bk.propertyImage}" alt="${bk.propertyName}">
+      </div>
+
+      <div class="bk-details">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+          <span class="badge ${bk.status === 'CANCELLED' ? 'badge-primary' : 'badge-emerald'}">${bk.status}</span>
+          <span style="font-size: 0.8rem; color: #64748B;">ID: #${bk.id}</span>
+        </div>
+        <h3>${bk.propertyName}</h3>
+        <p class="bk-address"><span class="material-symbols-rounded" style="font-size: 0.95rem;">location_on</span> ${bk.propertyArea}, ${bk.propertyCity}</p>
+        <div class="bk-meta-tags">
+          <span class="amenity-micro-tag">Room: ${bk.roomType}</span>
+          <span class="amenity-micro-tag">Check-in: ${bk.checkInDate}</span>
+          <span class="amenity-micro-tag">Paid: ₹${bk.amountPaid.toLocaleString('en-IN')} (${bk.paymentMode})</span>
+        </div>
+      </div>
+
+      <div class="bk-actions-col">
+        <div class="bk-passcode-badge">
+          <span class="bk-passcode-label">Check-in Passcode</span>
+          <span class="bk-passcode-val">${bk.passcode}</span>
+        </div>
+        <div style="display: flex; gap: 0.4rem;">
+          <a href="tel:+919811234567" class="btn btn-sm btn-outline">
+            <span class="material-symbols-rounded">call</span> Call Host
+          </a>
+          ${bk.status !== 'CANCELLED' ? `
+            <button class="btn btn-sm btn-outline" onclick="cancelUserBooking('${bk.id}')" style="color:#E11D48;">Cancel</button>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function cancelUserBooking(bookingId) {
+  if (confirm("Are you sure you want to cancel this booking?")) {
+    StynoDB.cancelBooking(bookingId);
+    renderBookingsList();
+    showToast("Booking cancelled successfully");
+  }
+}
+
+// --------------------------------------------------------------------------
+// 11. SAVED WISHLIST LOGIC (1:1 with SavedScreen.kt)
+// --------------------------------------------------------------------------
+
+function renderSavedList() {
+  const grid = document.getElementById("savedListGrid");
+  const emptyState = document.getElementById("emptySavedState");
+  if (!grid) return;
+
+  const savedIds = StynoDB.getSavedPropertyIds();
+  const allProps = StynoDB.getAllProperties();
+  const savedProps = allProps.filter(p => savedIds.includes(p.id));
+
+  const badge = document.getElementById("savedCountBadge");
+  const bNavBadge = document.getElementById("bNavSavedBadge");
+  if (badge) {
+    badge.textContent = savedIds.length;
+    badge.style.display = savedIds.length > 0 ? "flex" : "none";
+  }
+  if (bNavBadge) {
+    bNavBadge.textContent = savedIds.length;
+    bNavBadge.style.display = savedIds.length > 0 ? "flex" : "none";
+  }
+
+  const pTotalSaved = document.getElementById("pTotalSaved");
+  if (pTotalSaved) pTotalSaved.textContent = savedIds.length;
+
+  if (savedProps.length === 0) {
+    grid.innerHTML = "";
+    if (emptyState) emptyState.style.display = "block";
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = "none";
+
+  grid.innerHTML = savedProps.map(p => {
+    const heroImage = (p.images && p.images.length) ? p.images[0] : "";
+    return `
+      <div class="stay-card" onclick="openPropertyDetail('${p.id}')">
+        <div class="card-media-wrapper">
+          <img class="card-media-img" src="${heroImage}" alt="${p.name}">
+          <div class="card-floating-badges"><span class="badge badge-emerald">0% BROKERAGE</span></div>
+          <button class="card-save-btn active" onclick="event.stopPropagation(); toggleSave('${p.id}');">
+            <span class="material-symbols-rounded">favorite</span>
+          </button>
+        </div>
+        <div class="card-content">
+          <h3 class="stay-title">${p.name}</h3>
+          <p class="stay-location-line">${p.area}, ${p.city}</p>
+          <div class="card-bottom-row">
+            <span class="price-amount">₹${p.startingPrice.toLocaleString('en-IN')}</span>
+            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); quickBookStay('${p.id}')">Book</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// --------------------------------------------------------------------------
+// 12. OWNER DASHBOARD (1:1 with OwnerDashboardScreen.kt)
+// --------------------------------------------------------------------------
+
+function selectOwnerSubTab(tabName) {
+  AppState.activeOwnerTab = tabName;
+  document.querySelectorAll(".owner-tab-item").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".owner-sub-content").forEach(c => c.classList.remove("active"));
+
+  const tabBtnMap = {
+    PROPERTIES: "tabOwnerProps",
+    BOOKINGS: "tabOwnerBookings",
+    QUICK_STAY: "tabOwnerQuick",
+    PAYMENT: "tabOwnerPayment",
+    CANTEEN: "tabOwnerCanteen",
+    REVIEWS: "tabOwnerReviews",
+    EARNINGS: "tabOwnerEarnings",
+    VERIFICATION: "tabOwnerVerification"
+  };
+
+  const contentMap = {
+    PROPERTIES: "ownerSubContentProps",
+    BOOKINGS: "ownerSubContentBookings",
+    QUICK_STAY: "ownerSubContentQuick",
+    PAYMENT: "ownerSubContentPayment",
+    CANTEEN: "ownerSubContentCanteen",
+    REVIEWS: "ownerSubContentReviews",
+    EARNINGS: "ownerSubContentEarnings",
+    VERIFICATION: "ownerSubContentVerification"
+  };
+
+  const activeTabBtn = document.getElementById(tabBtnMap[tabName]);
+  const activeContent = document.getElementById(contentMap[tabName]);
+
+  if (activeTabBtn) activeTabBtn.classList.add("active");
+  if (activeContent) {
+    activeContent.classList.add("active");
+    activeContent.style.display = "block";
+  }
+
+  // Specific tab actions
+  if (tabName === "BOOKINGS") {
+    renderOwnerBookingsTable();
+  } else if (tabName === "REVIEWS") {
+    renderOwnerReviewsFeed();
+  }
+}
+
+function renderOwnerPropertiesList() {
+  const container = document.getElementById("ownerPropertiesList");
+  const countBadge = document.getElementById("ownerPropsCount");
+  if (!container) return;
+
+  const props = StynoDB.getOwnerListings();
+  if (countBadge) countBadge.textContent = props.length;
+
+  if (props.length === 0) {
+    container.innerHTML = `
+      <div class="empty-results-card">
+        <h3>No properties listed yet</h3>
+        <p>List your stay on STYNO and connect directly with thousands of verified guests with 0% brokerage.</p>
+        <button class="btn btn-primary" onclick="openAddPropertyModal()">Add Your First Stay</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = props.map(p => {
+    const heroImage = (p.images && p.images.length) ? p.images[0] : "";
+    return `
+      <div class="owner-prop-row-card">
+        <div class="owner-prop-thumb">
+          <img src="${heroImage}" alt="${p.name}">
+        </div>
+        <div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.25rem;">
+            <span class="badge badge-emerald">${p.propertyType}</span>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #047857;">0% Commission</span>
+          </div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: #0F2B5C;">${p.name}</h3>
+          <p style="font-size: 0.85rem; color: #64748B;">${p.area}, ${p.city}, ${p.state}</p>
+          <div style="font-size: 0.95rem; font-weight: 800; color: #2563EB; margin-top: 0.35rem;">
+            ₹${p.startingPrice.toLocaleString('en-IN')} <small style="font-size: 0.75rem; color: #64748B;">${getDurationUnitLabel(p.durationType)}</small>
+          </div>
+        </div>
+        <div class="owner-prop-actions">
+          <button class="btn btn-sm btn-outline" onclick="editPropertyAsOwner('${p.id}')">
+            <span class="material-symbols-rounded">edit</span> Edit
+          </button>
+          <button class="btn btn-sm btn-outline" onclick="deletePropertyAsOwner('${p.id}')" style="color: #E11D48;">
+            <span class="material-symbols-rounded">delete</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderOwnerBookingsTable() {
+  const container = document.getElementById("ownerBookingsTable");
+  const countBadge = document.getElementById("ownerBookingsCount");
+  if (!container) return;
+
+  const bookings = StynoDB.getBookings();
+  if (countBadge) countBadge.textContent = bookings.length;
+
+  container.innerHTML = bookings.map(b => `
+    <div class="owner-prop-row-card" style="grid-template-columns: 1fr auto;">
+      <div>
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.25rem;">
+          <span class="badge badge-emerald">${b.status}</span>
+          <span style="font-size:0.8rem; color:#64748B;">Passcode: <strong>${b.passcode}</strong></span>
+        </div>
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: #0F2B5C;">Guest: ${b.guestName} (${b.guestPhone})</h4>
+        <p style="font-size: 0.85rem; color: #64748B;">Property: ${b.propertyName} &bull; Room: ${b.roomType}</p>
+        <p style="font-size: 0.825rem; font-weight: 600; color: #059669;">Settlement: ₹${b.amountPaid.toLocaleString('en-IN')} (Direct Instant UPI)</p>
+      </div>
+      <div>
+        <a href="tel:${b.guestPhone}" class="btn btn-sm btn-primary">
+          <span class="material-symbols-rounded">call</span> Call Guest
+        </a>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderOwnerReviewsFeed() {
+  const container = document.getElementById("ownerReviewsFeed");
+  if (!container) return;
+
+  const mockReviews = [
+    { author: "Sneha Patel", rating: 5, text: "Excellent stay! Clean RO drinking water, fast Wi-Fi and safe biometric entry.", time: "Yesterday" },
+    { author: "Rohit Kumar", rating: 4.8, text: "The 3-time meals are authentic and tasty. Warden is very supportive.", time: "3 days ago" }
+  ];
+
+  container.innerHTML = mockReviews.map(r => `
+    <div style="padding: 1rem; border-bottom: 1px solid #E2E8F0; margin-bottom: 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+        <strong>${r.author}</strong>
+        <span class="rating-pill"><span class="material-symbols-rounded" style="color: #F59E0B; font-size: 1rem;">star</span> ${r.rating} &starf;</span>
+      </div>
+      <p style="font-size: 0.875rem; color: #334155;">${r.text}</p>
+      <small style="color: #64748B;">${r.time}</small>
+    </div>
+  `).join("");
+}
+
+function openAddPropertyModal() {
+  document.getElementById("ownerPropertyId").value = "";
+  document.getElementById("ownerAddPropertyForm").reset();
+  populateStateDropdownForOwner();
+  openModal("addPropertyModal");
+}
+
+function editPropertyAsOwner(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+
+  document.getElementById("ownerPropertyId").value = prop.id;
+  document.getElementById("ownerPropType").value = prop.propertyType;
+  document.getElementById("ownerGender").value = prop.genderSuitability || "ALL";
+  document.getElementById("ownerPropName").value = prop.name;
+  document.getElementById("ownerState").value = prop.state;
+  populateCitiesForOwner(prop.state);
+  document.getElementById("ownerCity").value = prop.city;
+  document.getElementById("ownerArea").value = prop.area;
+  document.getElementById("ownerAddress").value = prop.address;
+  document.getElementById("ownerStartingPrice").value = prop.startingPrice;
+  document.getElementById("ownerDurationType").value = prop.durationType;
+  document.getElementById("ownerName").value = prop.owner?.name || "";
+  document.getElementById("ownerPhone").value = prop.owner?.phone || "";
+
+  openModal("addPropertyModal");
+}
+
+function deletePropertyAsOwner(propertyId) {
+  if (confirm("Are you sure you want to remove this property listing from STYNO?")) {
+    StynoDB.deletePropertyListing(propertyId);
+    renderOwnerPropertiesList();
+    renderListings();
+    showToast("Property listing deleted successfully");
+  }
+}
+
+function handleOwnerFormSubmit(e) {
+  e.preventDefault();
+
+  const id = document.getElementById("ownerPropertyId").value;
+  const propType = document.getElementById("ownerPropType").value;
+  const gender = document.getElementById("ownerGender").value;
+  const name = document.getElementById("ownerPropName").value;
+  const state = document.getElementById("ownerState").value;
+  const city = document.getElementById("ownerCity").value;
+  const area = document.getElementById("ownerArea").value;
+  const landmark = document.getElementById("ownerLandmark")?.value || "";
+  const address = document.getElementById("ownerAddress").value;
+  const startingPrice = Number(document.getElementById("ownerStartingPrice").value);
+  const durationType = document.getElementById("ownerDurationType").value;
+  const deposit = Number(document.getElementById("ownerSecurityDeposit")?.value || 0);
+  const ownerName = document.getElementById("ownerName").value;
+  const ownerPhone = document.getElementById("ownerPhone").value;
+
+  // Selected Amenities
+  const amenities = [];
+  document.querySelectorAll("input[name='ownerAmenity']:checked").forEach(cb => amenities.push(cb.value));
+
+  const propData = {
+    id: id || undefined,
+    name,
+    propertyType: propType,
+    genderSuitability: gender,
+    description: `Verified ${propType.toLowerCase()} accommodation in ${area}, ${city}. Direct host stay with 0% brokerage.`,
+    address,
+    city,
+    state,
+    area,
+    pincode: "110001",
+    startingPrice,
+    durationType,
+    amenities,
+    roomOptions: [
+      { type: "Standard Room", price: startingPrice, bedsAvailable: 3, deposit }
+    ],
+    owner: {
+      name: ownerName,
+      phone: ownerPhone,
+      verified: true
+    },
+    images: [
+      "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+      "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80"
+    ],
+    isVerified: true,
+    isInstantBookable: true,
+    isZeroBrokerage: true,
+    isAvailable: true
+  };
+
+  StynoDB.savePropertyListing(propData);
+  closeModal("addPropertyModal");
+  renderOwnerPropertiesList();
   renderListings();
+  showToast(`Property "${name}" published and synced live!`);
+}
+
+function populateStateDropdownForOwner() {
+  const stateSelect = document.getElementById("ownerState");
+  if (!stateSelect) return;
+
+  stateSelect.innerHTML = INDIA_GEOGRAPHIC_DATA.map(st => `
+    <option value="${st.state}">${st.state} ${st.isUT ? '(UT)' : ''}</option>
+  `).join("");
+
+  populateCitiesForOwner(INDIA_GEOGRAPHIC_DATA[0].state);
+}
+
+function populateCitiesForOwner(stateName) {
+  const citySelect = document.getElementById("ownerCity");
+  if (!citySelect) return;
+
+  const found = INDIA_GEOGRAPHIC_DATA.find(s => s.state === stateName);
+  const cities = found ? found.cities : ["Main City"];
+
+  citySelect.innerHTML = cities.map(c => `
+    <option value="${c}">${c}</option>
+  `).join("");
+}
+
+function saveQuickStayPricing() {
+  showToast("Quick Stay hourly rates updated successfully");
+}
+
+function saveOwnerPaymentDetails(e) {
+  e.preventDefault();
+  showToast("Host payment settlement details saved & verified");
+}
+
+// --------------------------------------------------------------------------
+// 13. BOOKING FLOW & CHECKOUT LOGIC
+// --------------------------------------------------------------------------
+
+function openPropertyDetail(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+
+  AppState.activePropertyForDetail = prop;
+
+  // Fill in modal details
+  document.getElementById("modalPropertyName").textContent = prop.name;
+  document.getElementById("modalPropertyAddress").innerHTML = `<span class="material-symbols-rounded">location_on</span> ${prop.area}, ${prop.city}, ${prop.state}`;
+  document.getElementById("modalPropertyTypeBadge").textContent = prop.propertyType;
+  document.getElementById("modalGenderBadge").textContent = prop.genderSuitability || "ALL GUESTS";
+  document.getElementById("modalStartingPrice").textContent = `₹${prop.startingPrice.toLocaleString('en-IN')}`;
+  document.getElementById("modalDurationType").textContent = prop.durationType;
+  document.getElementById("modalRating").innerHTML = `&#9733; ${prop.rating || 4.8} (${prop.reviewCount || 10} reviews)`;
+  document.getElementById("modalFooterPrice").textContent = `₹${prop.startingPrice.toLocaleString('en-IN')}`;
+  document.getElementById("modalFooterPriceSub").textContent = `${getDurationUnitLabel(prop.durationType)} &bull; 0% brokerage`;
+
+  // Gallery
+  const gallery = document.getElementById("modalGalleryGrid");
+  if (gallery) {
+    const imgs = prop.images && prop.images.length ? prop.images : ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80"];
+    gallery.innerHTML = `
+      <img src="${imgs[0]}" alt="${prop.name}">
+      <img src="${imgs[1] || imgs[0]}" alt="${prop.name}">
+    `;
+  }
+
+  // Room Options
+  const roomGrid = document.getElementById("modalRoomOptionsGrid");
+  if (roomGrid) {
+    const opts = prop.roomOptions && prop.roomOptions.length ? prop.roomOptions : [{ type: "Standard Room", price: prop.startingPrice, bedsAvailable: 2 }];
+    AppState.selectedRoomOption = opts[0];
+
+    roomGrid.innerHTML = opts.map((opt, idx) => `
+      <div class="room-option-card ${idx === 0 ? 'selected' : ''}" onclick="selectRoomOption(${idx}, this)">
+        <div style="font-weight: 700; color: #0F2B5C; margin-bottom: 0.25rem;">${opt.type}</div>
+        <div style="font-size: 1.15rem; font-weight: 800; color: #2563EB;">₹${opt.price.toLocaleString('en-IN')}</div>
+        <div style="font-size: 0.75rem; color: #059669; font-weight: 600;">${opt.bedsAvailable || 1} available</div>
+      </div>
+    `).join("");
+  }
+
+  // Amenities
+  const amenitiesGrid = document.getElementById("modalAmenitiesGrid");
+  if (amenitiesGrid) {
+    amenitiesGrid.innerHTML = (prop.amenities || []).map(a => `
+      <span class="amenity-tag"><span class="material-symbols-rounded text-emerald">check_circle</span> ${a}</span>
+    `).join("");
+  }
+
+  // Guidelines & Curfew
+  const rulesGrid = document.getElementById("modalRulesGrid");
+  if (rulesGrid) {
+    rulesGrid.innerHTML = (prop.rules || ["Gate curfew 10:30 PM", "Zero smoking inside premises", "Govt ID proof required at check-in"]).map(r => `
+      <div class="rule-item"><span class="material-symbols-rounded text-primary">policy</span> ${r}</div>
+    `).join("");
+  }
+
+  // Owner Card
+  const ownerCard = document.getElementById("modalOwnerCard");
+  if (ownerCard) {
+    ownerCard.innerHTML = `
+      <div class="owner-meta-row">
+        <div class="owner-avatar-icon"><span class="material-symbols-rounded">person</span></div>
+        <div>
+          <h4 style="font-weight: 700; color: #0F2B5C;">${prop.owner?.name || "Verified Property Host"}</h4>
+          <span class="badge badge-verified"><span class="material-symbols-rounded" style="font-size: 0.8rem;">verified</span> Verified Styno Host</span>
+        </div>
+      </div>
+      <a href="tel:${prop.owner?.phone || '+919811234567'}" class="btn btn-sm btn-outline">
+        <span class="material-symbols-rounded">call</span> Contact Host
+      </a>
+    `;
+  }
+
+  openModal("propertyDetailModal");
+}
+
+function selectRoomOption(index, el) {
+  document.querySelectorAll(".room-option-card").forEach(c => c.classList.remove("selected"));
+  if (el) el.classList.add("selected");
+  if (AppState.activePropertyForDetail?.roomOptions) {
+    AppState.selectedRoomOption = AppState.activePropertyForDetail.roomOptions[index];
+    const price = AppState.selectedRoomOption.price;
+    document.getElementById("modalFooterPrice").textContent = `₹${price.toLocaleString('en-IN')}`;
+  }
+}
+
+function quickBookStay(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+  AppState.activePropertyForBooking = prop;
+  AppState.selectedRoomOption = (prop.roomOptions && prop.roomOptions.length) ? prop.roomOptions[0] : { type: "Standard Room", price: prop.startingPrice };
+  openBookingCheckoutModal();
+}
+
+function proceedToBookingFromModal() {
+  closeModal("propertyDetailModal");
+  if (AppState.activePropertyForDetail) {
+    AppState.activePropertyForBooking = AppState.activePropertyForDetail;
+    openBookingCheckoutModal();
+  }
+}
+
+function openBookingCheckoutModal() {
+  const prop = AppState.activePropertyForBooking;
+  if (!prop) return;
+
+  const room = AppState.selectedRoomOption || { type: "Standard Room", price: prop.startingPrice };
+
+  // Summary
+  const summaryBox = document.getElementById("bookingStayMiniSummary");
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div style="display: flex; gap: 1rem; align-items: center; padding: 1rem; background: #F1F5F9; border-radius: 12px; margin-bottom: 1rem;">
+        <img src="${prop.images?.[0] || ''}" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover;">
+        <div>
+          <h4 style="font-weight: 700; color: #0F2B5C;">${prop.name}</h4>
+          <p style="font-size: 0.825rem; color: #64748B;">${prop.area}, ${prop.city}</p>
+          <span class="badge badge-emerald" style="margin-top: 0.2rem;">Room: ${room.type}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  recalculateBookingTotal();
+  openModal("bookingModal");
+}
+
+function recalculateBookingTotal() {
+  const prop = AppState.activePropertyForBooking;
+  if (!prop) return;
+
+  const room = AppState.selectedRoomOption || { price: prop.startingPrice };
+  const durationMonths = Number(document.getElementById("bookingDuration")?.value || 1);
+
+  const basePrice = room.price * durationMonths;
+  const serviceFee = 149;
+  const finalTotal = basePrice + serviceFee;
+
+  document.getElementById("bkBaseRent").textContent = `₹${basePrice.toLocaleString('en-IN')}`;
+  document.getElementById("bkServiceFee").textContent = `₹${serviceFee}`;
+  document.getElementById("bkFinalAmount").textContent = `₹${finalTotal.toLocaleString('en-IN')}`;
+  document.getElementById("btnPayAmount").textContent = `₹${finalTotal.toLocaleString('en-IN')}`;
+}
+
+function confirmAndExecuteBooking() {
+  const prop = AppState.activePropertyForBooking;
+  if (!prop) return;
+
+  const guestName = document.getElementById("bookingGuestName").value.trim();
+  const guestPhone = document.getElementById("bookingGuestPhone").value.trim();
+  const guestEmail = document.getElementById("bookingGuestEmail").value.trim();
+  const checkInDate = document.getElementById("bookingCheckInDate").value;
+  const durationMonths = Number(document.getElementById("bookingDuration").value);
+  const paymentMode = document.querySelector("input[name='paymentMode']:checked")?.value || "UPI";
+
+  if (!guestName || !guestPhone) {
+    alert("Please enter primary guest name and mobile phone.");
+    return;
+  }
+
+  const bookingId = "STY-2026-" + Math.floor(1000 + Math.random() * 9000);
+  const passcode = "STY-" + Math.floor(1000 + Math.random() * 9000);
+  const room = AppState.selectedRoomOption || { type: "Standard Room", price: prop.startingPrice };
+  const amountPaid = (room.price * durationMonths) + 149;
+
+  const bookingRecord = {
+    id: bookingId,
+    propertyId: prop.id,
+    propertyName: prop.name,
+    propertyArea: prop.area,
+    propertyCity: prop.city,
+    propertyImage: prop.images?.[0] || "",
+    roomType: room.type,
+    checkInDate,
+    durationMonths,
+    guestName,
+    guestPhone,
+    guestEmail,
+    passcode,
+    status: "UPCOMING",
+    amountPaid,
+    paymentMode,
+    createdAt: Date.now()
+  };
+
+  StynoDB.saveBooking(bookingRecord);
+  closeModal("bookingModal");
+
+  // Show Confirmation Modal
+  document.getElementById("successBookingId").textContent = `Booking ID: #${bookingId}`;
+  document.getElementById("successPasscode").textContent = passcode;
+  document.getElementById("bookingSuccessDetails").innerHTML = `
+    <div style="background: #F8FAFC; border-radius: 12px; padding: 1rem; margin: 1rem 0; text-align: left; font-size: 0.85rem;">
+      <p><strong>Property:</strong> ${prop.name}</p>
+      <p><strong>Check-in Date:</strong> ${checkInDate}</p>
+      <p><strong>Primary Guest:</strong> ${guestName} (${guestPhone})</p>
+      <p><strong>Host Direct Contact:</strong> ${prop.owner?.phone || '+91 98112 34567'}</p>
+      <p><strong>Brokerage Fee:</strong> ₹0 FREE</p>
+    </div>
+  `;
+
+  openModal("bookingSuccessModal");
+  showToast(`Booking #${bookingId} confirmed! Check-in passcode generated.`);
+}
+
+// --------------------------------------------------------------------------
+// 14. LOCATION HIERARCHY SELECTOR (Country -> State -> City -> Area)
+// --------------------------------------------------------------------------
+
+function openLocationPickerModal() {
+  AppState.locationStep = "COUNTRY";
+  renderLocationHierarchy();
+  openModal("locationPickerModal");
+}
+
+function setLocationStep(step) {
+  AppState.locationStep = step;
+  renderLocationHierarchy();
+}
+
+function renderLocationHierarchy() {
+  const list = document.getElementById("locationItemsList");
+  if (!list) return;
+
+  // Update pills
+  ["stepCountryBtn", "stepStateBtn", "stepCityBtn", "stepAreaBtn"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("active");
+  });
+
+  if (AppState.locationStep === "COUNTRY") {
+    document.getElementById("stepCountryBtn")?.classList.add("active");
+    list.innerHTML = `
+      <button class="loc-item-btn" onclick="setLocationStep('STATE')">
+        <strong>🇮🇳 India</strong> (36 States &amp; UTs)
+      </button>
+    `;
+  } else if (AppState.locationStep === "STATE") {
+    document.getElementById("stepStateBtn")?.classList.add("active");
+    list.innerHTML = INDIA_GEOGRAPHIC_DATA.map(st => `
+      <button class="loc-item-btn" onclick="selectStateFromPicker('${st.state}')">
+        ${st.state} ${st.isUT ? '<small>(UT)</small>' : ''}
+      </button>
+    `).join("");
+  } else if (AppState.locationStep === "CITY") {
+    document.getElementById("stepCityBtn")?.classList.add("active");
+    const found = INDIA_GEOGRAPHIC_DATA.find(s => s.state === AppState.selectedState);
+    const cities = found ? found.cities : ["Noida", "Bengaluru", "New Delhi", "Kota", "Bagaha"];
+    list.innerHTML = cities.map(c => `
+      <button class="loc-item-btn" onclick="selectCityFromPicker('${c}')">
+        <span class="material-symbols-rounded text-primary" style="font-size:1rem;">location_city</span> ${c}
+      </button>
+    `).join("");
+  } else if (AppState.locationStep === "AREA") {
+    document.getElementById("stepAreaBtn")?.classList.add("active");
+    const areas = ["All Areas", "Sector 62", "Electronic City", "Connaught Place", "Cyber City", "Indra Vihar", "Station Road"];
+    list.innerHTML = areas.map(a => `
+      <button class="loc-item-btn" onclick="selectAreaFromPicker('${a}')">
+        ${a}
+      </button>
+    `).join("");
+  }
+}
+
+function selectStateFromPicker(stName) {
+  AppState.selectedState = stName;
+  AppState.locationStep = "CITY";
+  renderLocationHierarchy();
+}
+
+function selectCityFromPicker(cityName) {
+  AppState.selectedCity = cityName;
+  AppState.locationStep = "AREA";
+  renderLocationHierarchy();
+}
+
+function selectAreaFromPicker(areaName) {
+  AppState.selectedArea = areaName === "All Areas" ? null : areaName;
+  updateLocationHeader();
+  renderListings();
+  closeModal("locationPickerModal");
+  showToast(`Location set to ${AppState.selectedCity || AppState.selectedState}`);
+}
+
+function resetToAllIndia() {
+  AppState.selectedState = null;
+  AppState.selectedCity = null;
+  AppState.selectedArea = null;
+  updateLocationHeader();
+  renderListings();
+  closeModal("locationPickerModal");
+  showToast("Showing all verified stays across India");
+}
+
+function updateLocationHeader() {
+  const current = document.getElementById("headerCurrentLocation");
+  const breadcrumb = document.getElementById("activeLocationBreadcrumb");
+  const locString = AppState.selectedArea 
+    ? `${AppState.selectedArea}, ${AppState.selectedCity}` 
+    : (AppState.selectedCity || AppState.selectedState || "All India");
+
+  if (current) current.textContent = locString;
+  if (breadcrumb) breadcrumb.textContent = `${locString} • 0% Brokerage`;
+}
+
+function filterLocationList(searchQuery) {
+  const q = searchQuery.toLowerCase().trim();
+  const buttons = document.querySelectorAll(".loc-item-btn");
+  buttons.forEach(btn => {
+    btn.style.display = btn.textContent.toLowerCase().includes(q) ? "block" : "none";
+  });
+}
+
+// --------------------------------------------------------------------------
+// 15. SAFETY CENTER & EMERGENCY SOS (1:1 with SafetySosDialog.kt)
+// --------------------------------------------------------------------------
+
+function openSafetyCenterModal() {
+  openModal("safetySosModal");
+}
+
+function openNotificationsModal() {
+  const list = document.getElementById("notificationsList");
+  if (list) {
+    list.innerHTML = `
+      <div style="padding: 0.85rem; border-bottom: 1px solid #E2E8F0;">
+        <span class="badge badge-emerald">Booking Confirmed</span>
+        <p style="font-size: 0.875rem; margin-top: 0.25rem;">Your stay at Styno Orchid Girls Elite Hostel is confirmed. Passcode: STY-9941</p>
+        <small style="color: #64748B;">2 hours ago</small>
+      </div>
+      <div style="padding: 0.85rem;">
+        <span class="badge badge-primary">0% Brokerage Saved</span>
+        <p style="font-size: 0.875rem; margin-top: 0.25rem;">You saved ₹6,500 in agent fees by booking direct with host.</p>
+        <small style="color: #64748B;">1 day ago</small>
+      </div>
+    `;
+  }
+  openModal("notificationsModal");
+}
+
+// --------------------------------------------------------------------------
+// 16. FILTER HANDLERS & HELPERS
+// --------------------------------------------------------------------------
+
+function toggleVerifiedOnlyFilter() {
+  AppState.verifiedOnly = !AppState.verifiedOnly;
+  const chip = document.getElementById("chipVerifiedOnly");
+  if (chip) chip.classList.toggle("active", AppState.verifiedOnly);
+  renderListings();
+}
+
+function toggleDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (menu) menu.classList.toggle("show");
+}
+
+function selectGenderFilter(gender) {
+  AppState.genderFilter = gender;
+  const label = document.getElementById("genderDropdownLabel");
+  const genderNames = {
+    BOYS_ONLY: "Boys Only",
+    GIRLS_ONLY: "Girls Only",
+    CO_ED: "Co-Ed",
+    FAMILY: "Family Stays"
+  };
+  if (label) label.textContent = gender ? `Guest: ${genderNames[gender]}` : "Guest: Anyone";
+  document.getElementById("genderDropdownMenu")?.classList.remove("show");
+  renderListings();
+}
+
+function handlePriceRangeChange(val) {
+  AppState.maxBudget = Number(val);
+  const display = document.getElementById("priceSliderValue");
+  if (display) display.textContent = `Up to ₹${Number(val).toLocaleString('en-IN')}`;
+  const label = document.getElementById("priceDropdownLabel");
+  if (label) label.textContent = `Budget: ₹${Number(val) / 1000}k`;
+  renderListings();
+}
+
+function setPriceBudget(budget) {
+  const input = document.getElementById("priceRangeInput");
+  if (input) input.value = budget;
+  handlePriceRangeChange(budget);
+  document.getElementById("priceDropdownMenu")?.classList.remove("show");
+}
+
+function toggleAmenityFilter(amenity) {
+  const chipMap = {
+    "AC": "chipAc",
+    "Wi-Fi": "chipWifi",
+    "Meals": "chipFood",
+    "Attached Washroom": "chipAttached"
+  };
+
+  if (AppState.activeAmenities.has(amenity)) {
+    AppState.activeAmenities.delete(amenity);
+    document.getElementById(chipMap[amenity])?.classList.remove("active");
+  } else {
+    AppState.activeAmenities.add(amenity);
+    document.getElementById(chipMap[amenity])?.classList.add("active");
+  }
+
+  const resetBtn = document.getElementById("resetFiltersBtn");
+  if (resetBtn) resetBtn.style.display = (AppState.activeAmenities.size > 0 || AppState.verifiedOnly || AppState.genderFilter) ? "inline-flex" : "none";
+
+  renderListings();
+}
+
+function resetAllFilters() {
+  AppState.selectedCategory = null;
+  AppState.selectedState = null;
+  AppState.selectedCity = null;
+  AppState.selectedArea = null;
+  AppState.searchQuery = "";
+  AppState.verifiedOnly = false;
+  AppState.genderFilter = null;
+  AppState.maxBudget = 35000;
+  AppState.activeAmenities.clear();
+
+  document.querySelectorAll(".chip-filter").forEach(c => c.classList.remove("active"));
+  document.getElementById("resetFiltersBtn").style.display = "none";
+  updateLocationHeader();
+  renderCategoryTrack();
+  renderListings();
+  showToast("All filters cleared");
 }
 
 function handleSearchInput(val) {
   AppState.searchQuery = val;
-  const clearBtnDesk = document.getElementById("headerSearchClearBtn");
-  const clearBtnMob = document.getElementById("mobileSearchClearBtn");
-  
-  if (clearBtnDesk) clearBtnDesk.style.display = val ? "flex" : "none";
-  if (clearBtnMob) clearBtnMob.style.display = val ? "flex" : "none";
-  
-  updateResetFilterVisibility();
+  const headerClear = document.getElementById("headerSearchClearBtn");
+  const mobileClear = document.getElementById("mobileSearchClearBtn");
+  if (headerClear) headerClear.style.display = val ? "flex" : "none";
+  if (mobileClear) mobileClear.style.display = val ? "flex" : "none";
   renderListings();
 }
 
@@ -943,790 +2016,66 @@ function clearSearch() {
   renderListings();
 }
 
-function selectGenderFilter(gender) {
-  AppState.genderFilter = gender;
-  const label = document.getElementById("genderDropdownLabel");
-  if (label) {
-    label.textContent = gender ? `Guest: ${formatGenderLabel(gender)}` : "Guest: Anyone";
-  }
-  document.getElementById("genderDropdownMenu")?.classList.remove("show");
-  updateResetFilterVisibility();
-  renderListings();
-}
-
-function handlePriceRangeChange(val) {
-  AppState.maxBudget = Number(val);
-  const display = document.getElementById("priceSliderValue");
-  const label = document.getElementById("priceDropdownLabel");
-  if (display) display.textContent = `Up to ₹${Number(val).toLocaleString('en-IN')}`;
-  if (label) label.textContent = `Budget: ≤ ₹${Number(val).toLocaleString('en-IN')}`;
-  updateResetFilterVisibility();
-  renderListings();
-}
-
-function setPriceBudget(budget) {
-  document.getElementById("priceRangeInput").value = budget;
-  handlePriceRangeChange(budget);
-  document.getElementById("priceDropdownMenu")?.classList.remove("show");
-}
-
-function toggleAmenityFilter(amenity) {
-  const chipIdMap = {
-    "AC": "chipAc",
-    "Wi-Fi": "chipWifi",
-    "Food": "chipFood",
-    "Attached Washroom": "chipAttached"
-  };
-
-  if (AppState.activeAmenities.has(amenity)) {
-    AppState.activeAmenities.delete(amenity);
-    document.getElementById(chipIdMap[amenity])?.classList.remove("active");
-  } else {
-    AppState.activeAmenities.add(amenity);
-    document.getElementById(chipIdMap[amenity])?.classList.add("active");
-  }
-
-  updateResetFilterVisibility();
-  renderListings();
-}
-
-function filterByQuickStayDuration(slot) {
-  AppState.selectedCategory = "QUICK_STAY";
-  AppState.searchQuery = "";
-  selectCategory("QUICK_STAY");
-  window.scrollTo({ top: document.querySelector(".listings-section").offsetTop - 80, behavior: "smooth" });
-}
-
 function handleSortChange(sortVal) {
   AppState.sortBy = sortVal;
   renderListings();
 }
 
-function resetAllFilters() {
-  AppState.selectedCategory = null;
-  AppState.selectedState = null;
-  AppState.selectedCity = null;
-  AppState.selectedArea = null;
-  AppState.searchQuery = "";
-  AppState.genderFilter = null;
-  AppState.maxBudget = 35000;
-  AppState.activeAmenities.clear();
+function filterByQuickStayDuration(hours) {
+  selectCategory("QUICK_STAY");
+  showToast(`Filtering Quick Stay pods for ${hours}`);
+}
 
-  // Reset Inputs
-  document.getElementById("headerSearchInput").value = "";
-  document.getElementById("mobileSearchInput").value = "";
-  document.getElementById("priceRangeInput").value = 35000;
-  document.getElementById("genderDropdownLabel").textContent = "Guest: Anyone";
-  document.getElementById("priceDropdownLabel").textContent = "Budget: Any";
-  document.getElementById("headerCurrentLocation").textContent = "All India";
-  document.getElementById("activeLocationBreadcrumb").textContent = "All India • All Verified Stays";
-
-  document.querySelectorAll(".chip-filter").forEach(el => el.classList.remove("active"));
-  updateResetFilterVisibility();
+function toggleSave(propertyId) {
+  const isSaved = StynoDB.toggleSaveProperty(propertyId);
   renderListings();
-  showToast("Filters reset to default");
-}
-
-function updateResetFilterVisibility() {
-  const isFiltered = AppState.selectedCategory !== null ||
-    AppState.selectedState !== null ||
-    AppState.selectedCity !== null ||
-    AppState.searchQuery !== "" ||
-    AppState.genderFilter !== null ||
-    AppState.maxBudget < 35000 ||
-    AppState.activeAmenities.size > 0;
-
-  const btn = document.getElementById("resetFiltersBtn");
-  if (btn) btn.style.display = isFiltered ? "inline-flex" : "none";
-}
-
-// --------------------------------------------------------------------------
-// 9. LOCATION HIERARCHY SELECTOR (Country -> State -> City -> Area)
-// --------------------------------------------------------------------------
-
-function openLocationPickerModal() {
-  openModal("locationPickerModal");
-  setLocationStep(AppState.activeLocationHierarchyStep || "STATE");
-}
-
-function setLocationStep(step) {
-  AppState.activeLocationHierarchyStep = step;
-  const list = document.getElementById("locationItemsList");
-  const stepCountryBtn = document.getElementById("stepCountryBtn");
-  const stepStateBtn = document.getElementById("stepStateBtn");
-  const stepCityBtn = document.getElementById("stepCityBtn");
-  const stepAreaBtn = document.getElementById("stepAreaBtn");
-
-  [stepCountryBtn, stepStateBtn, stepCityBtn, stepAreaBtn].forEach(b => b?.classList.remove("active"));
-
-  if (step === "COUNTRY") {
-    stepCountryBtn?.classList.add("active");
-    list.innerHTML = `
-      <div class="location-select-item" onclick="resetToAllIndia()">
-        <span>🇮🇳 India (All 36 States & UTs)</span>
-        <span class="material-symbols-rounded">check</span>
-      </div>
-    `;
-  } else if (step === "STATE") {
-    stepStateBtn?.classList.add("active");
-    list.innerHTML = INDIA_GEOGRAPHIC_DATA.map(s => `
-      <div class="location-select-item" onclick="handleStateSelectedFromPicker('${s.state}')">
-        <span>${s.state} ${s.isUT ? '(UT)' : ''}</span>
-        <span class="material-symbols-rounded">arrow_forward</span>
-      </div>
-    `).join("");
-  } else if (step === "CITY") {
-    stepCityBtn?.classList.add("active");
-    const stObj = INDIA_GEOGRAPHIC_DATA.find(s => s.state === AppState.selectedState);
-    const cities = stObj ? stObj.cities : ["Noida", "Bengaluru", "New Delhi", "Mumbai", "Kota", "Pune"];
-    list.innerHTML = cities.map(c => `
-      <div class="location-select-item" onclick="handleCitySelectedFromPicker('${c}')">
-        <span>${c}</span>
-        <span class="material-symbols-rounded">arrow_forward</span>
-      </div>
-    `).join("");
-  } else if (step === "AREA") {
-    stepAreaBtn?.classList.add("active");
-    // Show areas based on stays in this city
-    const allProps = StynoDB.getAllProperties().filter(p => !AppState.selectedCity || p.city.toLowerCase() === AppState.selectedCity.toLowerCase());
-    const areas = Array.from(new Set(allProps.map(p => p.area)));
-    if (!areas.length) areas.push("Central Town", "University Corridor", "Metro Hub");
-    list.innerHTML = areas.map(a => `
-      <div class="location-select-item" onclick="handleAreaSelectedFromPicker('${a}')">
-        <span>${a}</span>
-        <span class="material-symbols-rounded">check</span>
-      </div>
-    `).join("");
-  }
-}
-
-function filterLocationList(q) {
-  const items = document.querySelectorAll(".location-select-item");
-  const query = q.toLowerCase().trim();
-  items.forEach(item => {
-    item.style.display = item.textContent.toLowerCase().includes(query) ? "flex" : "none";
-  });
-}
-
-function handleStateSelectedFromPicker(stateName) {
-  AppState.selectedState = stateName;
-  AppState.selectedCity = null;
-  AppState.selectedArea = null;
-  updateLocationHeaderBreadcrumb();
-  setLocationStep("CITY");
-  renderListings();
-}
-
-function handleCitySelectedFromPicker(cityName) {
-  AppState.selectedCity = cityName;
-  AppState.selectedArea = null;
-  updateLocationHeaderBreadcrumb();
-  setLocationStep("AREA");
-  renderListings();
-}
-
-function handleAreaSelectedFromPicker(areaName) {
-  AppState.selectedArea = areaName;
-  updateLocationHeaderBreadcrumb();
-  closeModal("locationPickerModal");
-  renderListings();
-  showToast(`Location set to ${areaName}, ${AppState.selectedCity}`);
-}
-
-function selectStateFilter(stateName) {
-  AppState.selectedState = stateName;
-  AppState.selectedCity = null;
-  AppState.selectedArea = null;
-  updateLocationHeaderBreadcrumb();
-  renderListings();
-  window.scrollTo({ top: document.querySelector(".listings-section").offsetTop - 80, behavior: "smooth" });
-}
-
-function selectCityFilter(cityName) {
-  const foundState = INDIA_GEOGRAPHIC_DATA.find(s => s.cities.includes(cityName));
-  if (foundState) AppState.selectedState = foundState.state;
-  AppState.selectedCity = cityName;
-  AppState.selectedArea = null;
-  updateLocationHeaderBreadcrumb();
-  renderListings();
-  window.scrollTo({ top: document.querySelector(".listings-section").offsetTop - 80, behavior: "smooth" });
-}
-
-function resetToAllIndia() {
-  AppState.selectedState = null;
-  AppState.selectedCity = null;
-  AppState.selectedArea = null;
-  updateLocationHeaderBreadcrumb();
-  closeModal("locationPickerModal");
-  renderListings();
-}
-
-function updateLocationHeaderBreadcrumb() {
-  let breadcrumb = "All India";
-  if (AppState.selectedArea && AppState.selectedCity) {
-    breadcrumb = `${AppState.selectedArea}, ${AppState.selectedCity}`;
-  } else if (AppState.selectedCity) {
-    breadcrumb = `${AppState.selectedCity}, ${AppState.selectedState || 'India'}`;
-  } else if (AppState.selectedState) {
-    breadcrumb = `${AppState.selectedState}, India`;
-  }
-
-  document.getElementById("headerCurrentLocation").textContent = breadcrumb;
-  document.getElementById("activeLocationBreadcrumb").textContent = `${breadcrumb} • Verified Stays`;
-}
-
-// --------------------------------------------------------------------------
-// 10. PROPERTY DETAIL & GALLERY MODAL
-// --------------------------------------------------------------------------
-
-function openPropertyDetail(propId) {
-  const prop = StynoDB.getAllProperties().find(p => p.id === propId);
-  if (!prop) return;
-
-  AppState.activePropertyForDetail = prop;
-
-  document.getElementById("modalPropertyName").textContent = prop.name;
-  document.getElementById("modalPropertyAddress").innerHTML = `<span class="material-symbols-rounded">location_on</span> ${prop.address}, ${prop.city}, ${prop.state}`;
-  document.getElementById("modalPropertyTypeBadge").textContent = prop.propertyType;
-  document.getElementById("modalGenderBadge").textContent = formatGenderLabel(prop.genderSuitability);
-  
-  const unit = getDurationUnitLabel(prop.durationType);
-  document.getElementById("modalStartingPrice").textContent = `₹${prop.startingPrice.toLocaleString('en-IN')}${unit}`;
-  document.getElementById("modalDurationType").textContent = formatDurationType(prop.durationType);
-  document.getElementById("modalRating").innerHTML = `★ ${prop.rating || 4.8} (${prop.reviewCount || 50} reviews)`;
-  document.getElementById("modalFooterPrice").textContent = `₹${prop.startingPrice.toLocaleString('en-IN')}`;
-  document.getElementById("modalFooterPriceSub").textContent = `${unit} • 0% brokerage`;
-
-  // Gallery
-  const gallery = document.getElementById("modalGalleryGrid");
-  const imgs = (prop.images && prop.images.length) ? prop.images : ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80"];
-  gallery.innerHTML = `
-    <img class="gallery-primary-img" src="${imgs[0]}" alt="${prop.name}">
-    <div class="gallery-sub-col">
-      <img class="gallery-sub-img" src="${imgs[1] || imgs[0]}" alt="Room view">
-      <img class="gallery-sub-img" src="${imgs[2] || imgs[0]}" alt="Facility view">
-    </div>
-  `;
-
-  // Room Options
-  const roomsGrid = document.getElementById("modalRoomOptionsGrid");
-  const rooms = prop.roomOptions || [
-    { type: "Standard Room", price: prop.startingPrice, bedsAvailable: 2, deposit: prop.startingPrice }
-  ];
-  roomsGrid.innerHTML = rooms.map(r => `
-    <div class="room-option-box">
-      <div class="room-option-title">${r.type}</div>
-      <div class="room-option-price">₹${r.price.toLocaleString('en-IN')}${unit}</div>
-      <div class="room-option-features">Beds Available: ${r.bedsAvailable} &bull; Deposit: ₹${(r.deposit || 0).toLocaleString('en-IN')}</div>
-    </div>
-  `).join("");
-
-  // Amenities
-  const amenitiesGrid = document.getElementById("modalAmenitiesGrid");
-  amenitiesGrid.innerHTML = (prop.amenities || ["Wi-Fi", "Air Conditioner", "Attached Washroom"]).map(a => `
-    <div class="amenity-tag-card">
-      <span class="material-symbols-rounded text-emerald" style="font-size: 1rem;">check_circle</span>
-      <span>${a}</span>
-    </div>
-  `).join("");
-
-  // Rules
-  const rulesGrid = document.getElementById("modalRulesGrid");
-  const rules = prop.rules || ["Valid Govt ID required at check-in", "Zero smoking in shared corridors", "Visitors allowed in common lobby"];
-  rulesGrid.innerHTML = rules.map(rule => `
-    <div class="rule-item">
-      <span class="material-symbols-rounded text-primary" style="font-size: 1rem;">info</span>
-      <span>${rule}</span>
-    </div>
-  `).join("");
-
-  // Owner contact card
-  const ownerCard = document.getElementById("modalOwnerCard");
-  const owner = prop.owner || { name: "Styno Verified Host", phone: "+91 98000 12345", verified: true, experience: "Verified Partner" };
-  ownerCard.innerHTML = `
-    <div class="owner-info-left">
-      <div class="owner-avatar-circle">${owner.name.charAt(0)}</div>
-      <div>
-        <strong>${owner.name}</strong>
-        <div style="font-size: 0.8rem; color: var(--text-muted);">${owner.experience || 'Direct Host'} &bull; 0% Commission</div>
-      </div>
-    </div>
-    <div style="display: flex; gap: 0.5rem;">
-      <a href="tel:${owner.phone}" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();">
-        <span class="material-symbols-rounded">call</span> Call Host
-      </a>
-    </div>
-  `;
-
-  // Save button state
-  const isSaved = StynoDB.getSavedPropertyIds().includes(prop.id);
-  const saveBtn = document.getElementById("modalSaveBtn");
-  if (saveBtn) {
-    saveBtn.innerHTML = `<span class="material-symbols-rounded">${isSaved ? 'favorite' : 'favorite_border'}</span> ${isSaved ? 'Saved' : 'Save'}`;
-  }
-
-  openModal("propertyDetailModal");
-}
-
-function proceedToBookingFromModal() {
-  const prop = AppState.activePropertyForDetail;
-  closeModal("propertyDetailModal");
-  if (prop) quickBookStay(prop.id);
-}
-
-// --------------------------------------------------------------------------
-// 11. BOOKING & CHECKOUT ENGINE
-// --------------------------------------------------------------------------
-
-function quickBookStay(propId) {
-  const prop = StynoDB.getAllProperties().find(p => p.id === propId);
-  if (!prop) return;
-
-  AppState.activePropertyForBooking = prop;
-
-  const miniSummary = document.getElementById("bookingStayMiniSummary");
-  miniSummary.innerHTML = `
-    <img class="mini-thumb" src="${(prop.images && prop.images[0]) || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=200&q=80'}" alt="">
-    <div>
-      <h4 style="font-size: 0.95rem;">${prop.name}</h4>
-      <p style="font-size: 0.8rem; color: var(--text-muted);">${prop.area}, ${prop.city} &bull; ${prop.propertyType}</p>
-    </div>
-  `;
-
-  recalculateBookingTotal();
-  openModal("bookingModal");
-}
-
-function recalculateBookingTotal() {
-  const prop = AppState.activePropertyForBooking;
-  if (!prop) return;
-
-  const durationSelect = document.getElementById("bookingDuration");
-  const durationMonths = Number(durationSelect.value || 1);
-
-  let discountFactor = 1.0;
-  if (durationMonths === 3) discountFactor = 0.95;
-  if (durationMonths === 6) discountFactor = 0.90;
-  if (durationMonths === 12) discountFactor = 0.85;
-
-  const basePrice = prop.startingPrice;
-  const rawTotal = basePrice * durationMonths;
-  const discountedTotal = Math.round(rawTotal * discountFactor);
-
-  document.getElementById("bkBaseRent").textContent = `₹${rawTotal.toLocaleString('en-IN')}`;
-  document.getElementById("bkFinalAmount").textContent = `₹${discountedTotal.toLocaleString('en-IN')}`;
-  document.getElementById("btnPayAmount").textContent = `₹${discountedTotal.toLocaleString('en-IN')}`;
-}
-
-function confirmAndExecuteBooking() {
-  const prop = AppState.activePropertyForBooking;
-  if (!prop) return;
-
-  const guestName = document.getElementById("bookingGuestName").value.trim();
-  const guestPhone = document.getElementById("bookingGuestPhone").value.trim();
-  const guestEmail = document.getElementById("bookingGuestEmail").value.trim();
-  const checkInDate = document.getElementById("bookingCheckInDate").value;
-  const durationMonths = document.getElementById("bookingDuration").value;
-
-  if (!guestName || !guestPhone || !checkInDate) {
-    alert("Please fill in your name, mobile number, and check-in date.");
-    return;
-  }
-
-  const bookingId = "STYNO-" + Math.floor(10000 + Math.random() * 90000);
-  const passcode = "STY-" + Math.floor(1000 + Math.random() * 9000);
-
-  const durationSelect = document.getElementById("bookingDuration");
-  let discountFactor = 1.0;
-  if (Number(durationMonths) === 3) discountFactor = 0.95;
-  if (Number(durationMonths) === 6) discountFactor = 0.90;
-  if (Number(durationMonths) === 12) discountFactor = 0.85;
-  const finalPaidAmount = Math.round(prop.startingPrice * Number(durationMonths) * discountFactor);
-
-  const bookingRecord = {
-    id: bookingId,
-    passcode: passcode,
-    propertyId: prop.id,
-    propertyName: prop.name,
-    propertyAddress: `${prop.address}, ${prop.city}`,
-    propertyType: prop.propertyType,
-    guestName,
-    guestPhone,
-    guestEmail,
-    checkInDate,
-    duration: `${durationMonths} Month(s)`,
-    totalAmount: finalPaidAmount,
-    status: "CONFIRMED",
-    paymentMode: document.querySelector("input[name='paymentMode']:checked")?.value || "UPI",
-    bookingTimestamp: Date.now()
-  };
-
-  StynoDB.saveBooking(bookingRecord);
-  updateHeaderBadges();
-
-  closeModal("bookingModal");
-
-  // Show Success Modal
-  document.getElementById("successBookingId").textContent = `Booking ID: #${bookingId}`;
-  document.getElementById("successPasscode").textContent = passcode;
-  document.getElementById("bookingSuccessDetails").innerHTML = `
-    <p><strong>Stay:</strong> ${prop.name}</p>
-    <p><strong>Location:</strong> ${prop.address}, ${prop.city}</p>
-    <p><strong>Check-In Date:</strong> ${checkInDate}</p>
-    <p><strong>Amount Paid:</strong> ₹${finalPaidAmount.toLocaleString('en-IN')} (0% Brokerage)</p>
-  `;
-
-  openModal("bookingSuccessModal");
-  showToast(`🎉 Booking confirmed! Passcode: ${passcode}`);
-}
-
-// --------------------------------------------------------------------------
-// 12. OWNER PORTAL & REAL-TIME LISTINGS SYNCHRONIZATION
-// --------------------------------------------------------------------------
-
-function openOwnerPortalModal() {
-  switchOwnerTab("LISTINGS");
-  openModal("ownerPortalModal");
-}
-
-function switchOwnerTab(tabName) {
-  const tabListings = document.getElementById("tabOwnerListings");
-  const tabAdd = document.getElementById("tabOwnerAdd");
-  const contentListings = document.getElementById("ownerTabContentListings");
-  const contentAdd = document.getElementById("ownerTabContentAdd");
-
-  if (tabName === "LISTINGS") {
-    tabListings.classList.add("active");
-    tabAdd.classList.remove("active");
-    contentListings.style.display = "block";
-    contentAdd.style.display = "none";
-    renderOwnerListingsTable();
-  } else {
-    tabAdd.classList.add("active");
-    tabListings.classList.remove("active");
-    contentAdd.style.display = "block";
-    contentListings.style.display = "none";
-  }
-}
-
-function renderOwnerListingsTable() {
-  const table = document.getElementById("ownerListingsTable");
-  const countBadge = document.getElementById("ownerListingsCount");
-  if (!table) return;
-
-  const allProps = StynoDB.getAllProperties();
-  countBadge.textContent = allProps.length;
-
-  table.innerHTML = allProps.map(prop => `
-    <div class="owner-stay-row">
-      <div class="owner-stay-thumb-group">
-        <img class="owner-stay-thumb" src="${(prop.images && prop.images[0]) || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=200&q=80'}" alt="">
-        <div>
-          <div class="owner-stay-name">${prop.name}</div>
-          <div class="owner-stay-loc">${prop.area}, ${prop.city} &bull; <span class="badge badge-emerald">0% Fee</span></div>
-        </div>
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div>
-          <label style="font-size: 0.7rem; color: var(--text-muted);">Current Price</label>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <span>₹</span>
-            <input type="number" value="${prop.startingPrice}" style="width: 80px; padding: 4px; border-radius: 4px; border: 1px solid var(--border);" onchange="quickUpdatePrice('${prop.id}', this.value)">
-          </div>
-        </div>
-
-        <div class="owner-stay-actions">
-          <button class="btn btn-sm btn-secondary" onclick="editListingInForm('${prop.id}')" title="Edit details">
-            <span class="material-symbols-rounded">edit</span>
-          </button>
-          <button class="btn btn-sm btn-outline" style="color: var(--rose);" onclick="deleteListing('${prop.id}')" title="Delete listing">
-            <span class="material-symbols-rounded">delete</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  `).join("");
-}
-
-function quickUpdatePrice(propId, newPrice) {
-  StynoDB.updatePropertyPricing(propId, newPrice);
-  showToast(`Updated price to ₹${newPrice}. Synced across users!`);
-}
-
-function deleteListing(propId) {
-  if (confirm("Are you sure you want to remove this listing? It will immediately stop appearing for users.")) {
-    StynoDB.deletePropertyListing(propId);
-  }
-}
-
-function editListingInForm(propId) {
-  const prop = StynoDB.getAllProperties().find(p => p.id === propId);
-  if (!prop) return;
-
-  document.getElementById("ownerPropertyId").value = prop.id;
-  document.getElementById("ownerPropType").value = prop.propertyType;
-  document.getElementById("ownerGender").value = prop.genderSuitability;
-  document.getElementById("ownerPropName").value = prop.name;
-  document.getElementById("ownerState").value = prop.state;
-  populateCitiesForOwner(prop.state);
-  document.getElementById("ownerCity").value = prop.city;
-  document.getElementById("ownerArea").value = prop.area;
-  document.getElementById("ownerAddress").value = prop.address;
-  document.getElementById("ownerStartingPrice").value = prop.startingPrice;
-  document.getElementById("ownerDurationType").value = prop.durationType;
-  document.getElementById("ownerName").value = prop.owner?.name || "";
-  document.getElementById("ownerPhone").value = prop.owner?.phone || "";
-
-  switchOwnerTab("ADD");
-  document.getElementById("btnSaveOwnerListing").innerHTML = `<span class="material-symbols-rounded">sync</span> Update & Sync Listing`;
-}
-
-function handleOwnerFormSubmit(e) {
-  e.preventDefault();
-
-  const id = document.getElementById("ownerPropertyId").value;
-  const propertyType = document.getElementById("ownerPropType").value;
-  const genderSuitability = document.getElementById("ownerGender").value;
-  const name = document.getElementById("ownerPropName").value.trim();
-  const state = document.getElementById("ownerState").value;
-  const city = document.getElementById("ownerCity").value;
-  const area = document.getElementById("ownerArea").value.trim();
-  const address = document.getElementById("ownerAddress").value.trim();
-  const startingPrice = Number(document.getElementById("ownerStartingPrice").value);
-  const durationType = document.getElementById("ownerDurationType").value;
-  const securityDeposit = Number(document.getElementById("ownerSecurityDeposit").value || 0);
-
-  const selectedAmenities = [];
-  document.querySelectorAll("input[name='ownerAmenity']:checked").forEach(cb => selectedAmenities.push(cb.value));
-
-  const ownerName = document.getElementById("ownerName").value.trim();
-  const ownerPhone = document.getElementById("ownerPhone").value.trim();
-
-  // Category specific curated high-res image presets
-  const imagePresets = {
-    "HOTEL": ["https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80", "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80"],
-    "HOSTEL": ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80", "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&q=80"],
-    "PG": ["https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80", "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&q=80"],
-    "ROOM": ["https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=800&q=80", "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&q=80"],
-    "FLAT": ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80", "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"],
-    "QUICK_STAY": ["https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80", "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=800&q=80"]
-  };
-
-  const propData = {
-    id: id || "",
-    name,
-    propertyType,
-    genderSuitability,
-    state,
-    city,
-    area,
-    address,
-    startingPrice,
-    durationType,
-    securityDepositAmount: securityDeposit,
-    amenities: selectedAmenities,
-    images: imagePresets[propertyType] || imagePresets["PG"],
-    owner: {
-      name: ownerName,
-      phone: ownerPhone,
-      verified: true,
-      experience: "Owner Direct Host"
-    },
-    roomOptions: [
-      { type: "Standard Room (" + propertyType + ")", price: startingPrice, bedsAvailable: 2, deposit: securityDeposit }
-    ]
-  };
-
-  StynoDB.savePropertyListing(propData);
-
-  // Reset form
-  document.getElementById("ownerListingForm").reset();
-  document.getElementById("ownerPropertyId").value = "";
-  document.getElementById("btnSaveOwnerListing").innerHTML = `<span class="material-symbols-rounded">cloud_upload</span> Publish Stay & Sync to Users`;
-
-  switchOwnerTab("LISTINGS");
-  showToast(`🎉 "${name}" published and synced to user section!`);
-}
-
-function populateStateDropdownForOwner() {
-  const stateSelect = document.getElementById("ownerState");
-  if (!stateSelect) return;
-
-  stateSelect.innerHTML = INDIA_GEOGRAPHIC_DATA.map(s => `
-    <option value="${s.state}">${s.state} ${s.isUT ? '(UT)' : ''}</option>
-  `).join("");
-
-  populateCitiesForOwner(INDIA_GEOGRAPHIC_DATA[0].state);
-}
-
-function populateCitiesForOwner(stateName) {
-  const citySelect = document.getElementById("ownerCity");
-  if (!citySelect) return;
-
-  const stObj = INDIA_GEOGRAPHIC_DATA.find(s => s.state === stateName);
-  const cities = stObj ? stObj.cities : ["Central"];
-
-  citySelect.innerHTML = cities.map(c => `
-    <option value="${c}">${c}</option>
-  `).join("");
-}
-
-function handleOwnerCategoryChange(cat) {
-  const durSelect = document.getElementById("ownerDurationType");
-  if (!durSelect) return;
-  if (cat === "QUICK_STAY") durSelect.value = "HOURLY";
-  else if (cat === "HOTEL") durSelect.value = "DAILY";
-  else durSelect.value = "MONTHLY";
-}
-
-// --------------------------------------------------------------------------
-// 13. BOOKINGS & SAVED MODALS
-// --------------------------------------------------------------------------
-
-function openBookingsModal() {
-  const bookings = StynoDB.getBookings();
-  const list = document.getElementById("myBookingsList");
-  if (!list) return;
-
-  if (!bookings.length) {
-    list.innerHTML = `
-      <div class="empty-state" style="padding: 2rem 1rem;">
-        <span class="material-symbols-rounded" style="font-size: 2.5rem; color: var(--text-muted);">receipt_long</span>
-        <h4>No confirmed bookings yet</h4>
-        <p class="text-muted" style="font-size: 0.85rem;">Browse our 0% brokerage stays and book your ideal accommodation.</p>
-      </div>
-    `;
-  } else {
-    list.innerHTML = bookings.map(b => `
-      <div style="padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.75rem; background: var(--surface-variant);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-          <div>
-            <strong>${b.propertyName}</strong>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">${b.propertyAddress}</div>
-          </div>
-          <span class="badge badge-emerald">CONFIRMED</span>
-        </div>
-
-        <div style="background: #FFFFFF; border: 1px dashed var(--primary); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); margin: 0.5rem 0; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.75rem; color: var(--text-muted);">PASSCODE</span>
-          <span style="font-size: 1.1rem; font-weight: 800; color: var(--primary); letter-spacing: 0.05em;">${b.passcode}</span>
-        </div>
-
-        <div style="font-size: 0.8rem; color: var(--text-sub); display: flex; justify-content: space-between;">
-          <span>Check-In: ${b.checkInDate}</span>
-          <span>Paid: ₹${b.totalAmount.toLocaleString('en-IN')} (0% Brokerage)</span>
-        </div>
-      </div>
-    `).join("");
-  }
-
-  openModal("myBookingsModal");
-}
-
-function openSavedModal() {
-  const savedIds = StynoDB.getSavedPropertyIds();
-  const list = document.getElementById("savedList");
-  if (!list) return;
-
-  const allProps = StynoDB.getAllProperties();
-  const savedProps = allProps.filter(p => savedIds.includes(p.id));
-
-  if (!savedProps.length) {
-    list.innerHTML = `
-      <div class="empty-state" style="padding: 2rem 1rem;">
-        <span class="material-symbols-rounded" style="font-size: 2.5rem; color: var(--text-muted);">favorite_border</span>
-        <h4>No saved accommodations yet</h4>
-        <p class="text-muted" style="font-size: 0.85rem;">Tap the heart icon on any stay card to shortlist it here.</p>
-      </div>
-    `;
-  } else {
-    list.innerHTML = savedProps.map(p => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.5rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <img src="${(p.images && p.images[0]) || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=100&q=80'}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover;">
-          <div>
-            <strong style="font-size: 0.9rem;">${p.name}</strong>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">${p.area}, ${p.city} &bull; ₹${p.startingPrice.toLocaleString('en-IN')}</div>
-          </div>
-        </div>
-        <button class="btn btn-sm btn-primary" onclick="closeModal('savedModal'); openPropertyDetail('${p.id}');">
-          View
-        </button>
-      </div>
-    `).join("");
-  }
-
-  openModal("savedModal");
-}
-
-function toggleSave(propId) {
-  const isSaved = StynoDB.toggleSaveProperty(propId);
-  updateHeaderBadges();
-  renderListings();
-  showToast(isSaved ? "Saved to your shortlist" : "Removed from shortlist");
+  renderSavedList();
+  showToast(isSaved ? "Saved to wishlist" : "Removed from wishlist");
 }
 
 function toggleSaveCurrentProperty() {
-  if (!AppState.activePropertyForDetail) return;
-  toggleSave(AppState.activePropertyForDetail.id);
-  const isSaved = StynoDB.getSavedPropertyIds().includes(AppState.activePropertyForDetail.id);
-  const btn = document.getElementById("modalSaveBtn");
-  if (btn) {
-    btn.innerHTML = `<span class="material-symbols-rounded">${isSaved ? 'favorite' : 'favorite_border'}</span> ${isSaved ? 'Saved' : 'Save'}`;
+  if (AppState.activePropertyForDetail) {
+    toggleSave(AppState.activePropertyForDetail.id);
   }
 }
 
 function updateHeaderBadges() {
-  const bookings = StynoDB.getBookings();
-  const saved = StynoDB.getSavedPropertyIds();
+  const savedIds = StynoDB.getSavedPropertyIds();
+  const bookings = StynoDB.getBookings().filter(b => b.status === "UPCOMING" || b.status === "ACTIVE");
 
-  const bkBadge = document.getElementById("bookingsCountBadge");
-  if (bkBadge) {
-    bkBadge.textContent = bookings.length;
-    bkBadge.style.display = bookings.length ? "inline-block" : "none";
+  const sBadge = document.getElementById("savedCountBadge");
+  const bBadge = document.getElementById("bookingsCountBadge");
+  const bNavS = document.getElementById("bNavSavedBadge");
+  const bNavB = document.getElementById("bNavBookingsBadge");
+
+  if (sBadge) {
+    sBadge.textContent = savedIds.length;
+    sBadge.style.display = savedIds.length > 0 ? "flex" : "none";
   }
-
-  const svBadge = document.getElementById("savedCountBadge");
-  if (svBadge) {
-    svBadge.textContent = saved.length;
-    svBadge.style.display = saved.length ? "inline-block" : "none";
+  if (bBadge) {
+    bBadge.textContent = bookings.length;
+    bBadge.style.display = bookings.length > 0 ? "flex" : "none";
   }
-}
-
-// --------------------------------------------------------------------------
-// 14. HELPER UTILITIES & MODAL CONTROLS
-// --------------------------------------------------------------------------
-
-function openModal(modalId) {
-  const el = document.getElementById(modalId);
-  if (el) el.classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-
-function closeModal(modalId) {
-  const el = document.getElementById(modalId);
-  if (el) el.classList.remove("open");
-  document.body.style.overflow = "";
-}
-
-function closeOnBackdrop(e, modalId) {
-  if (e.target.id === modalId) {
-    closeModal(modalId);
+  if (bNavS) {
+    bNavS.textContent = savedIds.length;
+    bNavS.style.display = savedIds.length > 0 ? "flex" : "none";
+  }
+  if (bNavB) {
+    bNavB.textContent = bookings.length;
+    bNavB.style.display = bookings.length > 0 ? "flex" : "none";
   }
 }
 
-function toggleDropdown(menuId) {
-  const menu = document.getElementById(menuId);
-  if (!menu) return;
-  const isShown = menu.classList.contains("show");
-  document.querySelectorAll(".filter-dropdown-menu").forEach(el => el.classList.remove("show"));
-  if (!isShown) menu.classList.add("show");
-}
+function showSyncNotification(detail) {
+  const banner = document.getElementById("syncBanner");
+  const text = document.getElementById("syncBannerText");
+  if (!banner || !text) return;
 
-function toggleMobileMenu() {
-  const drawer = document.getElementById("mobileDrawer");
-  if (drawer) drawer.classList.toggle("open");
+  text.textContent = `Real-time sync complete: "${detail.propertyName}" was ${detail.action} across Styno`;
+  banner.style.display = "flex";
+  setTimeout(() => {
+    banner.style.display = "none";
+  }, 4500);
 }
 
 function showToast(msg) {
@@ -1734,47 +2083,44 @@ function showToast(msg) {
   if (!container) return;
 
   const toast = document.createElement("div");
-  toast.className = "toast-msg";
-  toast.innerHTML = `<span class="material-symbols-rounded" style="color:#10B981;">check_circle</span> <span>${msg}</span>`;
+  toast.className = "toast";
+  toast.innerHTML = `<span class="material-symbols-rounded text-emerald">info</span> <span>${msg}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transform = "translateY(12px)";
-    toast.style.transition = "all 0.3s ease";
-    setTimeout(() => toast.remove(), 300);
-  }, 3500);
+    toast.remove();
+  }, 3200);
 }
 
 function getDurationUnitLabel(durationType) {
   switch (durationType) {
-    case "HOURLY": return "/slot";
     case "DAILY": return "/night";
+    case "HOURLY": return "/slot";
     case "WEEKLY": return "/week";
-    default: return "/mo";
+    default: return "/month";
   }
 }
 
-function formatDurationType(durationType) {
-  switch (durationType) {
-    case "HOURLY": return "Hourly Transit";
-    case "DAILY": return "Nightly Hotel";
-    case "WEEKLY": return "Weekly Stay";
-    default: return "Monthly Rental";
-  }
+function getCategoryBadgeInfo(propType) {
+  const found = STYNO_CATEGORIES.find(c => c.key === propType);
+  return found || { name: "Stay", emoji: "🏠" };
 }
 
-function formatGenderLabel(gender) {
-  switch (gender) {
-    case "BOYS_ONLY": return "Boys Only";
-    case "GIRLS_ONLY": return "Girls Only";
-    case "CO_ED": return "Co-Ed";
-    case "FAMILY": return "Family";
-    default: return "Co-Ed / All";
-  }
+// Modal open/close helpers
+function openModal(modalId) {
+  const el = document.getElementById(modalId);
+  if (el) el.classList.add("show");
+  document.body.style.overflow = "hidden";
 }
 
-function getCategoryBadgeInfo(type) {
-  const match = STYNO_CATEGORIES.find(c => c.key === type);
-  return match || { emoji: "🏡", name: type };
+function closeModal(modalId) {
+  const el = document.getElementById(modalId);
+  if (el) el.classList.remove("show");
+  document.body.style.overflow = "";
+}
+
+function closeOnBackdrop(event, modalId) {
+  if (event.target.classList.contains("styno-modal-overlay")) {
+    closeModal(modalId);
+  }
 }
