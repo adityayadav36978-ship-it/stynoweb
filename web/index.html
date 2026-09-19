@@ -48,21 +48,7 @@
       <!-- Brand Logo & Tagline -->
       <div class="header-left">
         <a href="#" class="brand-logo" onclick="switchView('HOME'); return false;" aria-label="STYNO Home">
-          <div class="logo-icon">
-            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="36" height="36" rx="10" fill="url(#styno_logo_grad)" />
-              <path d="M18 7L8 15.5V28C8 28.55 8.45 29 9 29H27C27.55 29 28 28.55 28 28V15.5L18 7Z" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>
-              <path d="M15 20C15 18.34 16.34 17 18 17C19.66 17 21 18.34 21 20V29H15V20Z" fill="white"/>
-              <circle cx="18" cy="12.5" r="2.5" fill="#F59E0B"/>
-              <defs>
-                <linearGradient id="styno_logo_grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#0F2B5C" />
-                  <stop offset="0.5" stop-color="#1E3A8A" />
-                  <stop offset="1" stop-color="#2563EB" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
+          <img src="assets/styno_logo.jpg" alt="STYNO Official Logo" class="styno-official-logo">
           <div class="logo-text">
             <div class="brand-title-row">
               <span class="brand-name">STYNO</span>
@@ -126,10 +112,13 @@
           <span class="role-pill-badge" id="ownerRoleBadge">0% Fee</span>
         </button>
 
-        <!-- User Profile Avatar -->
-        <button class="user-avatar-btn" onclick="switchView('PROFILE')" title="User Profile">
-          <span class="avatar-initials">AY</span>
-        </button>
+        <!-- Dynamic User Auth Container (Sign In / User Profile Pill) -->
+        <div class="header-auth-group" id="headerAuthContainer">
+          <button class="btn-auth-login" id="btnHeaderSignIn" onclick="openAuthModal('PHONE_OTP')">
+            <span class="material-symbols-rounded">login</span>
+            <span>Sign In</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -591,15 +580,23 @@
         <!-- Profile Card -->
         <div class="profile-hero-card">
           <div class="profile-avatar-large">
-            <span>AY</span>
+            <span id="profileAvatarInitials">AY</span>
           </div>
           <div class="profile-info-col">
             <div class="profile-name-row">
-              <h2>Aditya Yadav</h2>
-              <span class="badge badge-verified"><span class="material-symbols-rounded">verified</span> Verified Guest</span>
+              <h2 id="profileFullName">Aditya Yadav</h2>
+              <span class="badge badge-verified" id="profileVerifiedBadge"><span class="material-symbols-rounded">verified</span> Verified Guest</span>
             </div>
-            <p class="profile-contact-line">adityayadav36978@gmail.com &bull; +91 98765 43210</p>
-            <p class="profile-tagline">STYNO Gold Member &bull; 0% Brokerage Advantage</p>
+            <p class="profile-contact-line" id="profileContactLine">adityayadav36978@gmail.com &bull; +91 98765 43210</p>
+            <p class="profile-tagline">STYNO Member &bull; 0% Brokerage Advantage</p>
+          </div>
+          <div class="profile-actions-col">
+            <button class="btn btn-sm btn-outline" onclick="openEditProfileModal()">
+              <span class="material-symbols-rounded">edit</span> Edit Profile
+            </button>
+            <button class="btn btn-sm btn-outline text-rose" onclick="logoutUser()">
+              <span class="material-symbols-rounded">logout</span> Sign Out
+            </button>
           </div>
         </div>
 
@@ -614,12 +611,12 @@
             <span class="p-stat-label">Saved Stays</span>
           </div>
           <div class="p-stat-card">
-            <span class="p-stat-number text-emerald">₹14,500</span>
+            <span class="p-stat-number text-emerald" id="pBrokerageSaved">₹14,500</span>
             <span class="p-stat-label">Brokerage Saved</span>
           </div>
           <div class="p-stat-card">
-            <span class="p-stat-number text-primary">100%</span>
-            <span class="p-stat-label">Verified Hosts</span>
+            <span class="p-stat-number text-primary" id="pKycStatusText">Verified</span>
+            <span class="p-stat-label">KYC Verification</span>
           </div>
         </div>
 
@@ -637,41 +634,178 @@
           </button>
         </div>
 
-        <!-- Safety Center Card -->
-        <div class="profile-section-card">
-          <div class="section-card-head">
-            <span class="material-symbols-rounded text-rose">shield</span>
-            <div>
-              <h3>STYNO Safety Center</h3>
-              <p>Emergency assistance, gate curfew protocols, and verified audits</p>
-            </div>
-          </div>
-          <div class="safety-features-grid">
-            <div class="safety-feature-item">
-              <span class="material-symbols-rounded text-emerald">local_police</span>
-              <div>
-                <strong>Police Helpline 112</strong>
-                <p>Direct emergency SOS</p>
+        <!-- USER SECTION: ALL PREFERENCES & MODULES -->
+        <div class="user-options-container">
+          
+          <!-- 1. KYC Identity Verification Option -->
+          <div class="user-pref-card">
+            <div class="user-pref-header">
+              <div class="user-pref-title-group">
+                <div class="user-pref-icon emerald">
+                  <span class="material-symbols-rounded">badge</span>
+                </div>
+                <div>
+                  <h3>KYC &amp; Government ID Verification</h3>
+                  <p>Verified status grants instant check-in access without paperwork at reception</p>
+                </div>
               </div>
+              <button class="btn btn-sm btn-outline" onclick="openKycModal()">
+                <span class="material-symbols-rounded">upload_file</span> Update ID Proof
+              </button>
             </div>
-            <div class="safety-feature-item">
-              <span class="material-symbols-rounded text-rose">emergency</span>
-              <div>
-                <strong>Medical Helpline 108</strong>
-                <p>24/7 Ambulance response</p>
+            <div class="audit-checklist-grid">
+              <div class="audit-item done">
+                <span class="material-symbols-rounded text-emerald">check_circle</span>
+                <span id="kycDocLabel">Aadhaar Card (UIDAI Verified &bull; **** 4819)</span>
               </div>
-            </div>
-            <div class="safety-feature-item">
-              <span class="material-symbols-rounded text-primary">support_agent</span>
-              <div>
-                <strong>Styno 24/7 Safety Desk</strong>
-                <p>+91 1800-STYNO-SAFE</p>
+              <div class="audit-item done">
+                <span class="material-symbols-rounded text-emerald">check_circle</span>
+                <span>Phone OTP &amp; Email Confirmed</span>
               </div>
             </div>
           </div>
-          <button class="btn btn-outline btn-sos-trigger" onclick="openSafetyCenterModal()">
-            <span class="material-symbols-rounded">crisis_alert</span> Trigger Emergency SOS
-          </button>
+
+          <!-- 2. Food & Mess Preferences Option (1:1 with FoodMenu.kt) -->
+          <div class="user-pref-card">
+            <div class="user-pref-header">
+              <div class="user-pref-title-group">
+                <div class="user-pref-icon amber">
+                  <span class="material-symbols-rounded">restaurant</span>
+                </div>
+                <div>
+                  <h3>Food &amp; Mess Preferences</h3>
+                  <p>Help hostel &amp; PG kitchens customize your daily meal subscriptions</p>
+                </div>
+              </div>
+            </div>
+            <form onsubmit="saveFoodPreferences(event)">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="userDietType">Dietary Category *</label>
+                  <select id="userDietType">
+                    <option value="PURE_VEG" selected>Pure Vegetarian (No Onion/Garlic option)</option>
+                    <option value="VEG_EGG">Vegetarian + Eggs</option>
+                    <option value="NON_VEG">Non-Vegetarian (Chicken / Fish)</option>
+                    <option value="JAIN">Jain Food</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="userMessPreference">Mess Inclusion *</label>
+                  <select id="userMessPreference">
+                    <option value="ALL_MEALS" selected>3 Meals (Breakfast, Lunch &amp; Dinner)</option>
+                    <option value="TWO_MEALS">2 Meals (Breakfast &amp; Dinner)</option>
+                    <option value="NO_MESS">No Mess / Self Cooking</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="userFoodNotes">Special Dietary Notes or Allergies</label>
+                <input type="text" id="userFoodNotes" placeholder="e.g. Peanut allergy, low spice preferred">
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary">Save Food Preferences</button>
+            </form>
+          </div>
+
+          <!-- 3. Stay & Room Sharing Preferences Option -->
+          <div class="user-pref-card">
+            <div class="user-pref-header">
+              <div class="user-pref-title-group">
+                <div class="user-pref-icon">
+                  <span class="material-symbols-rounded">meeting_room</span>
+                </div>
+                <div>
+                  <h3>Stay &amp; Room Sharing Preferences</h3>
+                  <p>Pre-configure your ideal room filters and gate curfew timings</p>
+                </div>
+              </div>
+            </div>
+            <form onsubmit="saveStayPreferences(event)">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="userRoomPref">Preferred Sharing Type *</label>
+                  <select id="userRoomPref">
+                    <option value="ANY">Any Available Sharing</option>
+                    <option value="SINGLE">Single Private Room</option>
+                    <option value="DOUBLE" selected>Double / Twin Sharing</option>
+                    <option value="TRIPLE">Triple Sharing (Budget Friendly)</option>
+                    <option value="FLAT">Full 1BHK / 2BHK Flat</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="userCurfewPref">Gate Curfew Tolerance *</label>
+                  <select id="userCurfewPref">
+                    <option value="NO_CURFEW">24/7 Open Gate (No Curfew)</option>
+                    <option value="MODERATE" selected>Moderate (10:30 PM - 11:00 PM)</option>
+                    <option value="STRICT">Strict (Before 9:30 PM)</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary">Save Stay Preferences</button>
+            </form>
+          </div>
+
+          <!-- 4. Helpdesk, Grievances & Complaints Option -->
+          <div class="user-pref-card">
+            <div class="user-pref-header">
+              <div class="user-pref-title-group">
+                <div class="user-pref-icon rose">
+                  <span class="material-symbols-rounded">report_problem</span>
+                </div>
+                <div>
+                  <h3>Helpdesk, Grievances &amp; Complaints</h3>
+                  <p>Direct escalations to STYNO Safety &amp; Quality Audit Desk</p>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline text-rose" onclick="openComplaintModal()">
+                <span class="material-symbols-rounded">add_alert</span> File a Complaint
+              </button>
+            </div>
+            <div class="complaints-list-grid" id="userComplaintsList">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- 5. Safety Center Card -->
+          <div class="user-pref-card">
+            <div class="user-pref-header">
+              <div class="user-pref-title-group">
+                <div class="user-pref-icon rose">
+                  <span class="material-symbols-rounded">shield</span>
+                </div>
+                <div>
+                  <h3>STYNO Safety Center &amp; Helplines</h3>
+                  <p>Emergency assistance, gate curfew protocols, and verified audits</p>
+                </div>
+              </div>
+            </div>
+            <div class="safety-features-grid">
+              <div class="safety-feature-item">
+                <span class="material-symbols-rounded text-emerald">local_police</span>
+                <div>
+                  <strong>Police Helpline 112</strong>
+                  <p>Direct emergency SOS</p>
+                </div>
+              </div>
+              <div class="safety-feature-item">
+                <span class="material-symbols-rounded text-rose">emergency</span>
+                <div>
+                  <strong>Medical Helpline 108</strong>
+                  <p>24/7 Ambulance response</p>
+                </div>
+              </div>
+              <div class="safety-feature-item">
+                <span class="material-symbols-rounded text-primary">support_agent</span>
+                <div>
+                  <strong>Styno 24/7 Safety Desk</strong>
+                  <p>+91 1800-STYNO-SAFE</p>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sos-trigger" onclick="openSafetyCenterModal()" style="margin-top: 1rem;">
+              <span class="material-symbols-rounded">crisis_alert</span> Trigger Emergency SOS
+            </button>
+          </div>
+
         </div>
       </div>
     </section>
@@ -753,6 +887,21 @@
           <div class="owner-table-top-bar">
             <span>Incoming guest reservations with instant direct host settlement.</span>
           </div>
+
+          <!-- Passcode Verification & Fast Check-In Tool -->
+          <div class="owner-checkin-tool-card">
+            <div>
+              <strong>Fast Reception Check-In Tool</strong>
+              <p class="text-muted" style="font-size:0.8rem;">Enter guest's digital check-in passcode to verify and check in immediately.</p>
+            </div>
+            <div class="checkin-tool-input-row">
+              <input type="text" id="ownerPasscodeInput" placeholder="Enter STY-XXXX" maxlength="8">
+              <button class="btn btn-sm btn-primary" onclick="verifyPasscodeInOwnerDashboard()">
+                <span class="material-symbols-rounded">check</span> Verify &amp; Check In
+              </button>
+            </div>
+          </div>
+
           <div class="owner-bookings-table" id="ownerBookingsTable">
             <!-- Populated dynamically via JS -->
           </div>
@@ -1001,9 +1150,7 @@
       <div class="footer-top-grid">
         <div class="footer-brand-col">
           <div class="brand-logo footer-logo">
-            <div class="logo-icon small">
-              <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#2563EB"/><path d="M16 7L8 13.5V23H24V13.5L16 7Z" stroke="white" stroke-width="2"/><circle cx="16" cy="12" r="2" fill="#FBBF24"/></svg>
-            </div>
+            <img src="assets/styno_logo.jpg" alt="STYNO Official Logo" class="styno-official-logo small">
             <span class="brand-name">STYNO</span>
           </div>
           <p class="footer-desc">
@@ -1220,6 +1367,16 @@
             <option value="Passport">Passport</option>
             <option value="Voter ID">Voter ID</option>
           </select>
+        </div>
+
+        <!-- Discount Coupon / Voucher Code -->
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label for="bookingCouponCode">Promo Code / Voucher</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="bookingCouponCode" placeholder="e.g. STYNOFIRST or ZEROFEE" style="text-transform: uppercase;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="applyDiscountCoupon()">Apply</button>
+          </div>
+          <small id="couponMessage" class="text-emerald" style="font-weight: 600; display: none; margin-top: 0.25rem;"></small>
         </div>
 
         <!-- Pricing Transparency Card (1:1 with Android App Checkout) -->
@@ -1552,6 +1709,304 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" onclick="closeModal('notificationsModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Complete Authentication Modal (1:1 with AuthenticationScreen.kt) -->
+  <div class="styno-modal-overlay" id="authModal" onclick="closeOnBackdrop(event, 'authModal')">
+    <div class="auth-modal-card">
+      <div class="auth-header">
+        <button class="icon-close-btn" onclick="closeModal('authModal')"><span class="material-symbols-rounded">close</span></button>
+        <img src="assets/styno_logo.jpg" alt="STYNO Official Logo" class="styno-official-logo large">
+        <h2 id="authModalTitle">Welcome to STYNO</h2>
+        <p id="authModalSubtitle">India's Dedicated 0% Brokerage Accommodation Network</p>
+      </div>
+
+      <div class="auth-tabs-row" id="authTabsRow">
+        <button class="auth-tab-btn active" id="btnTabPhone" onclick="switchAuthMode('PHONE_OTP')">Phone OTP</button>
+        <button class="auth-tab-btn" id="btnTabSignIn" onclick="switchAuthMode('SIGN_IN')">Sign In</button>
+        <button class="auth-tab-btn" id="btnTabSignUp" onclick="switchAuthMode('SIGN_UP')">Sign Up</button>
+      </div>
+
+      <div class="auth-body">
+        
+        <!-- MODE 1: PHONE OTP FLOW -->
+        <div class="auth-panel" id="authPanelPhone">
+          <div id="phoneInputStep">
+            <div class="form-group">
+              <label for="authPhoneNumber">Indian Mobile Number *</label>
+              <div class="mobile-search-inner" style="border: 1.5px solid var(--border-strong); padding: 0.25rem 0.75rem; border-radius: var(--radius-md);">
+                <span class="text-bold text-sub" style="font-size: 0.9rem; margin-right: 0.4rem;">+91</span>
+                <input type="tel" id="authPhoneNumber" placeholder="Enter 10-digit mobile number" maxlength="10" value="9876543210" style="border: none; outline: none; width: 100%; font-size: 0.95rem; font-weight: 600;">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="sendPhoneOtp()">
+              <span class="material-symbols-rounded">sms</span> Send Verification OTP
+            </button>
+          </div>
+
+          <div id="otpVerifyStep" style="display: none;">
+            <div class="otp-simulation-alert">
+              <span class="material-symbols-rounded">mark_email_read</span>
+              <span>STYNO Security OTP: <strong id="simulatedOtpCode">482910</strong> (Simulated SMS)</span>
+            </div>
+
+            <p class="text-muted" style="font-size: 0.825rem; text-align: center;">Enter the 6-digit code sent to +91 <span id="displayOtpPhone">9876543210</span></p>
+
+            <div class="otp-inputs-grid">
+              <input type="text" class="otp-box" maxlength="1" id="otp1" oninput="handleOtpInput(this, 'otp2')" onkeydown="handleOtpKey(event, this, null)">
+              <input type="text" class="otp-box" maxlength="1" id="otp2" oninput="handleOtpInput(this, 'otp3')" onkeydown="handleOtpKey(event, this, 'otp1')">
+              <input type="text" class="otp-box" maxlength="1" id="otp3" oninput="handleOtpInput(this, 'otp4')" onkeydown="handleOtpKey(event, this, 'otp2')">
+              <input type="text" class="otp-box" maxlength="1" id="otp4" oninput="handleOtpInput(this, 'otp5')" onkeydown="handleOtpKey(event, this, 'otp3')">
+              <input type="text" class="otp-box" maxlength="1" id="otp5" oninput="handleOtpInput(this, 'otp6')" onkeydown="handleOtpKey(event, this, 'otp4')">
+              <input type="text" class="otp-box" maxlength="1" id="otp6" oninput="handleOtpInput(this, null)" onkeydown="handleOtpKey(event, this, 'otp5')">
+            </div>
+
+            <div class="otp-resend-row">
+              <button class="btn-text-link" onclick="resetOtpStep()">Change Number</button>
+              <button class="otp-resend-btn" id="btnResendOtp" onclick="sendPhoneOtp()" disabled>Resend OTP (<span id="otpTimerCount">45</span>s)</button>
+            </div>
+
+            <button type="button" class="btn btn-primary" style="width: 100%;" onclick="verifyPhoneOtp()">
+              <span class="material-symbols-rounded">verified</span> Verify &amp; Continue
+            </button>
+          </div>
+        </div>
+
+        <!-- MODE 2: EMAIL SIGN IN -->
+        <div class="auth-panel" id="authPanelSignIn" style="display: none;">
+          <form onsubmit="handleEmailSignIn(event)">
+            <div class="form-group">
+              <label for="signInEmail">Email Address *</label>
+              <input type="email" id="signInEmail" placeholder="e.g. aditya@example.com" value="adityayadav36978@gmail.com" required>
+            </div>
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between;">
+                <label for="signInPassword">Password *</label>
+                <button type="button" class="btn-text-link" onclick="switchAuthMode('FORGOT_PASSWORD')">Forgot?</button>
+              </div>
+              <div class="password-input-wrap">
+                <input type="password" id="signInPassword" placeholder="Enter your password" value="StynoPass@2026" required>
+                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signInPassword', this)">
+                  <span class="material-symbols-rounded">visibility</span>
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+              Sign In to STYNO
+            </button>
+          </form>
+        </div>
+
+        <!-- MODE 3: SIGN UP -->
+        <div class="auth-panel" id="authPanelSignUp" style="display: none;">
+          <form onsubmit="handleEmailSignUp(event)">
+            <div class="form-group">
+              <label for="signUpFullName">Full Name *</label>
+              <input type="text" id="signUpFullName" placeholder="e.g. Aditya Yadav" required>
+            </div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="signUpEmail">Email Address *</label>
+                <input type="email" id="signUpEmail" placeholder="name@domain.com" required>
+              </div>
+              <div class="form-group">
+                <label for="signUpPhone">Mobile Phone *</label>
+                <input type="tel" id="signUpPhone" placeholder="+91 98765 43210" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="signUpRole">I am registering as: *</label>
+              <select id="signUpRole" required>
+                <option value="GUEST" selected>Guest / Tenant (Looking for Hostel, PG, Hotel, Room)</option>
+                <option value="OWNER">Property Owner / Host (Listing My Accommodations)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="signUpPassword">Create Password *</label>
+              <div class="password-input-wrap">
+                <input type="password" id="signUpPassword" placeholder="Minimum 8 characters" required minlength="6">
+                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signUpPassword', this)">
+                  <span class="material-symbols-rounded">visibility</span>
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+              Create STYNO Account
+            </button>
+          </form>
+        </div>
+
+        <!-- MODE 4: FORGOT PASSWORD -->
+        <div class="auth-panel" id="authPanelForgot" style="display: none;">
+          <form onsubmit="handleForgotPassword(event)">
+            <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">
+              Enter your registered email address. We'll send you an instant reset link.
+            </p>
+            <div class="form-group">
+              <label for="forgotEmail">Registered Email *</label>
+              <input type="email" id="forgotEmail" placeholder="e.g. name@domain.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              Send Reset Link
+            </button>
+            <div style="text-align: center; margin-top: 1rem;">
+              <button type="button" class="btn-text-link" onclick="switchAuthMode('SIGN_IN')">Back to Sign In</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Social Logins Divider -->
+        <div class="auth-divider">
+          <span>or continue with</span>
+        </div>
+
+        <!-- Social Logins -->
+        <div class="auth-social-row">
+          <button type="button" class="btn-social" onclick="handleSocialLogin('Google')">
+            <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.27 21.43 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.13z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.57 1.25 6.58l4.03 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/></svg>
+            Continue with Google
+          </button>
+          <button type="button" class="btn-social" onclick="handleSocialLogin('Apple')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.38c.62-.75 1.04-1.8 1.01-2.85-.92.04-2.03.62-2.69 1.38-.58.67-.99 1.74-.96 2.8 1.02.08 2.02-.58 2.64-1.33z"/></svg>
+            Continue with Apple
+          </button>
+        </div>
+
+        <p class="auth-terms-note">
+          By continuing, you agree to STYNO's <a href="#">Terms of Service</a> &bull; <a href="#">Privacy Policy</a> &bull; Zero Brokerage Code.
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. KYC Identity Verification Modal -->
+  <div class="styno-modal-overlay" id="kycModal" onclick="closeOnBackdrop(event, 'kycModal')">
+    <div class="styno-modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h2>Government ID &amp; KYC</h2>
+          <p class="modal-subtitle">Instant verified check-in badge across all stays</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('kycModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="modal-body scrollable">
+        <form onsubmit="submitKycForm(event)">
+          <div class="form-group">
+            <label for="kycDocType">Select Government ID Type *</label>
+            <select id="kycDocType" required>
+              <option value="Aadhaar Card (UIDAI)" selected>Aadhaar Card (12-Digit UIDAI)</option>
+              <option value="College / University Student ID">College / University Student ID</option>
+              <option value="Passport">Passport</option>
+              <option value="Voter ID (Election Commission)">Voter ID Card</option>
+              <option value="Driving License">Driving License</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="kycIdNumber">ID Document Number *</label>
+            <input type="text" id="kycIdNumber" placeholder="e.g. 4819 2039 8812" value="4819 2039 8812" required>
+          </div>
+          <div class="form-group">
+            <label>Front &amp; Back Document Photos</label>
+            <div style="border: 2px dashed var(--border-strong); padding: 1.5rem; border-radius: var(--radius-md); text-align: center; background-color: var(--surface-variant); cursor: pointer;" onclick="document.getElementById('kycFileInput').click()">
+              <span class="material-symbols-rounded text-primary" style="font-size: 2.2rem;">cloud_upload</span>
+              <p style="font-size: 0.85rem; font-weight: 600; margin-top: 0.4rem;" id="kycUploadStatus">Tap to select or take photo of ID</p>
+              <small class="text-muted">JPG, PNG or PDF (Max 5MB)</small>
+              <input type="file" id="kycFileInput" style="display: none;" onchange="handleKycFileSelected(this)">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            <span class="material-symbols-rounded">verified</span> Submit for Instant Verification
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. File a Complaint Modal (1:1 with Complaint.kt) -->
+  <div class="styno-modal-overlay" id="complaintModal" onclick="closeOnBackdrop(event, 'complaintModal')">
+    <div class="styno-modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h2>File a Quality &amp; Safety Ticket</h2>
+          <p class="modal-subtitle">Direct escalation to STYNO Safety &amp; Quality Audit Desk</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('complaintModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="modal-body scrollable">
+        <form onsubmit="handleComplaintSubmit(event)">
+          <div class="form-group">
+            <label for="complaintStayName">Accommodation Name / Stay *</label>
+            <input type="text" id="complaintStayName" placeholder="e.g. Styno Orchid Girls Elite Hostel" value="Styno Orchid Girls Elite Hostel" required>
+          </div>
+          <div class="form-group-row">
+            <div class="form-group">
+              <label for="complaintCategory">Issue Category *</label>
+              <select id="complaintCategory" required>
+                <option value="Maintenance / Room Repairs">Maintenance / Room Repairs</option>
+                <option value="Food &amp; Kitchen Hygiene">Food &amp; Kitchen Hygiene</option>
+                <option value="Wi-Fi &amp; Internet Down">Wi-Fi &amp; Internet Down</option>
+                <option value="Water / Electricity Backup">Water / Electricity Backup</option>
+                <option value="Gate Curfew &amp; Security">Gate Curfew &amp; Security</option>
+                <option value="Host / Warden Behavior">Host / Warden Behavior</option>
+                <option value="Other">Other Query</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="complaintUrgency">Urgency *</label>
+              <select id="complaintUrgency" required>
+                <option value="Normal">Normal (24h resolution)</option>
+                <option value="High" selected>High (4h response)</option>
+                <option value="Urgent">Urgent / Immediate Attention</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="complaintDescription">Describe the Issue in Detail *</label>
+            <textarea id="complaintDescription" rows="3" placeholder="Explain the problem clearly so our field audit team can assist..." required style="width:100%; border-radius: var(--radius-sm); border: 1.5px solid var(--border-strong); padding: 0.6rem; font-family: inherit; font-size: 0.875rem;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            <span class="material-symbols-rounded">send</span> Submit Ticket to STYNO Desk
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Edit Profile Modal -->
+  <div class="styno-modal-overlay" id="editProfileModal" onclick="closeOnBackdrop(event, 'editProfileModal')">
+    <div class="styno-modal-card modal-sm">
+      <div class="modal-header">
+        <div>
+          <h2>Edit User Profile</h2>
+          <p class="modal-subtitle">Update your personal account information</p>
+        </div>
+        <button class="icon-close-btn" onclick="closeModal('editProfileModal')"><span class="material-symbols-rounded">close</span></button>
+      </div>
+      <div class="modal-body scrollable">
+        <form onsubmit="handleSaveProfile(event)">
+          <div class="form-group">
+            <label for="editFullName">Full Name *</label>
+            <input type="text" id="editFullName" value="Aditya Yadav" required>
+          </div>
+          <div class="form-group">
+            <label for="editEmail">Email Address *</label>
+            <input type="email" id="editEmail" value="adityayadav36978@gmail.com" required>
+          </div>
+          <div class="form-group">
+            <label for="editPhone">Mobile Phone *</label>
+            <input type="tel" id="editPhone" value="+91 98765 43210" required>
+          </div>
+          <div class="form-group">
+            <label for="editBio">Bio / Occupation</label>
+            <input type="text" id="editBio" placeholder="e.g. Software Engineer in Noida" value="Student &bull; Noida Tech Corridor">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Save Profile Changes
+          </button>
+        </form>
       </div>
     </div>
   </div>
