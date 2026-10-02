@@ -121,6 +121,11 @@ fun BookingFlowScreen(
         }
     }
 
+    // Resolve owner payment configuration for this specific property
+    val ownerPaymentDetails = remember(property.id) {
+        viewModel.getPaymentDetailsForProperty(property.id)
+    }
+
     // Stripe SDK Modal Payment Sheet (Cards, UPI, QR & Net Banking)
     if (showStripeSheet) {
         StripePaymentSheetDialog(
@@ -130,6 +135,7 @@ fun BookingFlowScreen(
             guestName = draft.guestName,
             guestEmail = draft.guestEmail,
             guestPhone = draft.guestPhone,
+            ownerPaymentDetails = ownerPaymentDetails,
             initialPaymentType = initialPaymentType,
             onDismiss = { viewModel.dismissStripePaymentSheet() },
             onPaymentSuccess = { stripeResult ->
@@ -282,6 +288,45 @@ fun BookingFlowScreen(
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(text = property.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Text(text = "${property.area}, ${property.city}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = when {
+                                        property.genderSuitability.isWomenOnly -> Color(0xFFFCE7F3)
+                                        property.genderSuitability.isMenOnly -> Color(0xFFE0F2FE)
+                                        property.genderSuitability.isCouple -> Color(0xFFF3E8FF)
+                                        property.genderSuitability.isFamily -> Color(0xFFDCFCE7)
+                                        else -> Color(0xFFF1F5F9)
+                                    }
+                                ) {
+                                    Text(
+                                        text = "Category: ${property.stayCategoryType}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when {
+                                            property.genderSuitability.isWomenOnly -> Color(0xFFBE185D)
+                                            property.genderSuitability.isMenOnly -> Color(0xFF0369A1)
+                                            property.genderSuitability.isCouple -> Color(0xFF7E22CE)
+                                            property.genderSuitability.isFamily -> Color(0xFF15803D)
+                                            else -> Color(0xFF475569)
+                                        },
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (property.isShared) Color(0xFFDCFCE7) else Color(0xFFF1F5F9)
+                                ) {
+                                    Text(
+                                        text = if (property.isShared) "👥 Gender-Matched Sharing" else "🔒 Private Unit",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (property.isShared) Color(0xFF166534) else Color(0xFF334155),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -441,6 +486,169 @@ fun BookingFlowScreen(
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
+
+                    // Gender Selection for Gender-Matched Sharing and Safety
+                    Text(
+                        text = "Resident Gender (Required for Women Safety & Wing Matching)",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Female", "Male").forEach { genderOption ->
+                            val isSelected = draft.guestGender.equals(genderOption, ignoreCase = true)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) {
+                                    if (genderOption == "Female") Color(0xFFFCE7F3) else MaterialTheme.colorScheme.primaryContainer
+                                } else MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) {
+                                        if (genderOption == "Female") Color(0xFFBE185D) else MaterialTheme.colorScheme.primary
+                                    } else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        guestDetailsError = null
+                                        viewModel.updateBookingDraft { it.copy(guestGender = genderOption) }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            guestDetailsError = null
+                                            viewModel.updateBookingDraft { it.copy(guestGender = genderOption) }
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = genderOption,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Stay Occupancy Mode (Individual, Couple, Family)
+                    Text(
+                        text = "Booking Type",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Individual", "Couple", "Family").forEach { type ->
+                            val isSelected = draft.guestStayType == type
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        guestDetailsError = null
+                                        val isCouple = type == "Couple"
+                                        viewModel.updateBookingDraft {
+                                            it.copy(
+                                                guestStayType = type,
+                                                isCoupleBooking = isCouple
+                                            )
+                                        }
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = type,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Live Safety Rule Check Banner
+                    val liveSafetyCheck = remember(draft.guestGender, draft.isCoupleBooking, property.id, room?.name) {
+                        com.example.data.model.SafetyValidationEngine.validateBookingEligibility(
+                            property = property,
+                            roomOption = room,
+                            userGender = draft.guestGender,
+                            isCoupleBooking = draft.isCoupleBooking
+                        )
+                    }
+
+                    if (liveSafetyCheck is com.example.data.model.SafetyValidationResult.Denied) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF87171))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = liveSafetyCheck.reason,
+                                    color = Color(0xFF991B1B),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    // Privacy Shield Guarantee Card
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = StynoEmerald.copy(alpha = 0.08f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Styno Privacy Shield: Your phone, email, and ID documents are 256-bit encrypted and never exposed publicly.",
+                                fontSize = 11.sp,
+                                color = StynoEmerald,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     OutlinedTextField(
                         value = draft.guestEmail,
@@ -723,28 +931,46 @@ fun BookingFlowScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val paymentMethods = listOf(
-                        Triple(
-                            "Credit / Debit Card (Stripe SDK)",
-                            "Visa, Mastercard, RuPay, Amex • 256-bit encryption",
-                            Icons.Default.CreditCard
-                        ),
-                        Triple(
-                            "UPI (Google Pay / PhonePe / Paytm)",
-                            "Instant UPI transfer or custom VPA ID",
-                            Icons.Default.PhoneAndroid
-                        ),
-                        Triple(
-                            "Dynamic Bharat QR Code",
-                            "Scan & Pay using any UPI / banking app",
-                            Icons.Default.QrCode
-                        ),
-                        Triple(
-                            "Net Banking (All Major Banks)",
-                            "HDFC, ICICI, SBI, Axis, Kotak & more",
-                            Icons.Default.AccountBalance
+                    val paymentMethods = remember(ownerPaymentDetails) {
+                        val list = mutableListOf<Triple<String, String, androidx.compose.ui.graphics.vector.ImageVector>>()
+                        if (ownerPaymentDetails.isUpiConfigured) {
+                            list.add(
+                                Triple(
+                                    "UPI (Google Pay / PhonePe / Paytm)",
+                                    "Direct UPI settlement • ${ownerPaymentDetails.upiId}",
+                                    Icons.Default.PhoneAndroid
+                                )
+                            )
+                        }
+                        if (ownerPaymentDetails.isQrConfigured) {
+                            list.add(
+                                Triple(
+                                    "Dynamic Bharat QR Code",
+                                    "Scan verified host QR code directly with any UPI app",
+                                    Icons.Default.QrCode
+                                )
+                            )
+                        }
+                        if (ownerPaymentDetails.isBankConfigured) {
+                            val maskedAc = com.example.data.security.StynoSecurityEngine.maskAccountNumber(ownerPaymentDetails.accountNumber)
+                            list.add(
+                                Triple(
+                                    "Net Banking (All Major Banks)",
+                                    "${ownerPaymentDetails.bankName.ifBlank { "Host Bank" }} (A/C: $maskedAc)",
+                                    Icons.Default.AccountBalance
+                                )
+                            )
+                        }
+                        // Always include Card payment with Stripe SDK
+                        list.add(
+                            Triple(
+                                "Credit / Debit Card (Stripe SDK)",
+                                "Visa, Mastercard, RuPay, Amex • 256-bit encryption",
+                                Icons.Default.CreditCard
+                            )
                         )
-                    )
+                        list
+                    }
 
                     paymentMethods.forEach { (method, subtitle, icon) ->
                         val isSelected = draft.selectedPaymentMethod == method ||
@@ -853,6 +1079,16 @@ fun BookingFlowScreen(
                         if (currentStep == 2) {
                             if (draft.guestName.isBlank() || draft.guestPhone.trim().length < 10) {
                                 guestDetailsError = "Please enter your legal name and a valid 10-digit mobile number."
+                                return@Button
+                            }
+                            val safetyCheck = com.example.data.model.SafetyValidationEngine.validateBookingEligibility(
+                                property = property,
+                                roomOption = room,
+                                userGender = draft.guestGender,
+                                isCoupleBooking = draft.isCoupleBooking
+                            )
+                            if (safetyCheck is com.example.data.model.SafetyValidationResult.Denied) {
+                                guestDetailsError = safetyCheck.reason
                                 return@Button
                             }
                             guestDetailsError = null

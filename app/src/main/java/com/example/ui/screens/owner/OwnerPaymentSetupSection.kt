@@ -1,8 +1,14 @@
 package com.example.ui.screens.owner
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -16,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.model.Booking
 import com.example.data.model.OwnerPaymentDetails
 import com.example.data.model.Property
@@ -33,6 +41,7 @@ fun OwnerPaymentSetupSection(
     properties: List<Property>,
     allBookings: List<Booking>,
     onSavePaymentDetails: (propertyId: String, details: OwnerPaymentDetails) -> Unit,
+    onUploadQrCode: ((Uri, String) -> String)? = null,
     modifier: Modifier = Modifier
 ) {
     if (properties.isEmpty()) {
@@ -74,17 +83,76 @@ fun OwnerPaymentSetupSection(
 
     var selectedPropertyIndex by remember { mutableIntStateOf(0) }
     val currentProperty = properties.getOrNull(selectedPropertyIndex) ?: properties.first()
+    val currentDetails = currentProperty.ownerPaymentDetails
 
-    // Form editing state
-    var accountHolderName by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.accountHolderName) }
-    var upiId by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.upiId) }
-    var bankName by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.bankName) }
-    var accountNumber by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.accountNumber) }
-    var ifscCode by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.ifscCode) }
-    var accountType by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.accountType) }
-    var payoutFrequency by remember(currentProperty.id) { mutableStateOf(currentProperty.ownerPaymentDetails.payoutFrequency) }
+    // Form editing state supporting UPI ID, UPI QR Code, and Bank Account independently or together
+    var isUpiIdEnabled by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.isUpiIdEnabled || (currentDetails.upiId.isNotBlank() && !currentDetails.isQrCodeEnabled && !currentDetails.isBankAccountEnabled))
+    }
+    var upiId by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.upiId)
+    }
+
+    var isQrCodeEnabled by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.isQrCodeEnabled || (!currentDetails.qrCodeImageUrl.isNullOrBlank()))
+    }
+    var qrCodeImageUrl by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.qrCodeImageUrl)
+    }
+    var qrCodeVpa by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.qrCodeVpa.ifBlank { currentDetails.upiId })
+    }
+
+    var isBankAccountEnabled by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.isBankAccountEnabled || (currentDetails.accountNumber.isNotBlank() && !currentDetails.isUpiIdEnabled && !currentDetails.isQrCodeEnabled))
+    }
+    var accountHolderName by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.accountHolderName.ifBlank { currentProperty.ownerInfo.name })
+    }
+    var bankName by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.bankName)
+    }
+    var accountNumber by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.accountNumber)
+    }
+    var ifscCode by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.ifscCode)
+    }
+    var accountType by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.accountType)
+    }
+    var payoutFrequency by remember(currentProperty.id, currentDetails.lastUpdatedTimestamp) {
+        mutableStateOf(currentDetails.payoutFrequency)
+    }
     var maskAccountNumber by remember { mutableStateOf(true) }
+    var validationError by remember { mutableStateOf<String?>(null) }
     var showSavedNotification by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val qrImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val savedPath = if (onUploadQrCode != null) {
+                onUploadQrCode(uri, currentProperty.resolvedOwnerId)
+            } else {
+                try {
+                    val safeOwner = currentProperty.resolvedOwnerId.filter { it.isLetterOrDigit() }.ifBlank { "owner_${System.currentTimeMillis()}" }
+                    val destFile = java.io.File(context.filesDir, "owner_qr_${safeOwner}.png")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        java.io.FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    destFile.absolutePath
+                } catch (e: Exception) {
+                    uri.toString()
+                }
+            }
+            qrCodeImageUrl = savedPath
+            validationError = null
+        }
+    }
 
     // Calculate real payout statistics strictly for this host's properties
     val (payoutSummary, transactionRecords) = remember(properties, allBookings, currentProperty.id) {
@@ -351,7 +419,7 @@ fun OwnerPaymentSetupSection(
             }
         }
 
-        // Account Configuration Form Card
+        // Account Configuration Form Card with 3 Independent Configurable Payment Methods
         Card(
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -362,17 +430,46 @@ fun OwnerPaymentSetupSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Security, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Secure Host Settlement Account",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                // Header with dynamic Setup Completion Status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Security, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Owner Payment Methods",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Setup Completion Badge
+                    val isComplete = currentDetails.isConfigured
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isComplete) StynoEmerald.copy(alpha = 0.12f) else MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        border = BorderStroke(1.dp, if (isComplete) StynoEmerald.copy(alpha = 0.35f) else MaterialTheme.colorScheme.error.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = if (isComplete) "SETUP ACTIVE (${currentDetails.activeMethodsList.joinToString(", ")})" else "SETUP INCOMPLETE",
+                            color = if (isComplete) StynoEmerald else MaterialTheme.colorScheme.error,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
+
+                Text(
+                    text = "Configure any one, two, or all three payment methods for this property. Guests booking this property will ONLY be presented with your verified configured methods.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 // Privacy assurance banner
                 Surface(
@@ -388,7 +485,7 @@ fun OwnerPaymentSetupSection(
                         Icon(Icons.Default.Lock, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Privacy Protected: Account and UPI details are stored encrypted and strictly never shown to guests or public users.",
+                            text = "Privacy Protected: Stored securely per owner (${currentProperty.resolvedOwnerId}) and strictly isolated.",
                             fontSize = 11.sp,
                             color = StynoEmerald,
                             fontWeight = FontWeight.Medium
@@ -396,101 +493,434 @@ fun OwnerPaymentSetupSection(
                     }
                 }
 
-                // Beneficiary Name
-                OutlinedTextField(
-                    value = accountHolderName,
-                    onValueChange = { accountHolderName = it },
-                    label = { Text("Account Holder / Business Legal Name") },
-                    placeholder = { Text("e.g. Vikram Sharma") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // UPI ID
-                OutlinedTextField(
-                    value = upiId,
-                    onValueChange = { upiId = it.trim() },
-                    label = { Text("Direct UPI ID (Recommended for Instant Payouts)") },
-                    placeholder = { Text("e.g. owner@okaxis, 9876543210@paytm") },
-                    trailingIcon = {
-                        if (upiId.contains("@")) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = "Valid UPI Format", tint = StynoEmerald)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // Bank Name
-                OutlinedTextField(
-                    value = bankName,
-                    onValueChange = { bankName = it },
-                    label = { Text("Bank Name") },
-                    placeholder = { Text("e.g. HDFC Bank, ICICI Bank, SBI") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // Account Number with mask toggle
-                OutlinedTextField(
-                    value = accountNumber,
-                    onValueChange = { accountNumber = it.trim() },
-                    label = { Text("Bank Account Number") },
-                    placeholder = { Text("Enter bank account number") },
-                    trailingIcon = {
-                        IconButton(onClick = { maskAccountNumber = !maskAccountNumber }) {
-                            Icon(
-                                imageVector = if (maskAccountNumber) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Toggle account number visibility"
+                // ==========================================
+                // METHOD 1: DIRECT UPI ID
+                // ==========================================
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isUpiIdEnabled) StynoBluePrimary.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isUpiIdEnabled) StynoBluePrimary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = StynoBluePrimary, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("1. UPI ID", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text("Direct Google Pay, PhonePe, Paytm, BHIM", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Switch(
+                                checked = isUpiIdEnabled,
+                                onCheckedChange = {
+                                    isUpiIdEnabled = it
+                                    validationError = null
+                                }
                             )
                         }
-                    },
-                    visualTransformation = if (maskAccountNumber && accountNumber.length > 4) {
-                        androidx.compose.ui.text.input.PasswordVisualTransformation()
-                    } else {
-                        androidx.compose.ui.text.input.VisualTransformation.None
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
 
-                // IFSC Code
-                OutlinedTextField(
-                    value = ifscCode,
-                    onValueChange = { ifscCode = it.uppercase().trim() },
-                    label = { Text("IFSC Code") },
-                    placeholder = { Text("e.g. HDFC0001234") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                        if (isUpiIdEnabled) {
+                            OutlinedTextField(
+                                value = upiId,
+                                onValueChange = {
+                                    upiId = it.trim().lowercase()
+                                    validationError = null
+                                },
+                                label = { Text("Your Personal / Business UPI ID") },
+                                placeholder = { Text("e.g. yourname@okhdfcbank, 9876543210@paytm") },
+                                trailingIcon = {
+                                    if (upiId.contains("@") && upiId.length >= 4) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = "Valid UPI Format", tint = StynoEmerald)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
 
-                // Account Type selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Savings Account", "Current Account").forEach { type ->
-                        FilterChip(
-                            selected = accountType == type,
-                            onClick = { accountType = type },
-                            label = { Text(type) },
-                            modifier = Modifier.weight(1f)
-                        )
+                            // Quick handle selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf("@okhdfcbank", "@okaxis", "@okicici", "@paytm", "@ybl").forEach { handle ->
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable {
+                                            val prefix = upiId.substringBefore("@").ifBlank { "owner" }
+                                            upiId = "$prefix$handle"
+                                        }
+                                    ) {
+                                        Text(handle, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Payout Frequency
-                Text("Settlement Frequency:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // ==========================================
+                // METHOD 2: UPI QR CODE (WITH UPLOAD)
+                // ==========================================
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isQrCodeEnabled) StynoEmerald.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isQrCodeEnabled) StynoEmerald.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    listOf("Instant on Check-in", "Daily Batch", "Weekly").forEach { freq ->
-                        FilterChip(
-                            selected = payoutFrequency == freq,
-                            onClick = { payoutFrequency = freq },
-                            label = { Text(freq) }
-                        )
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.QrCode, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("2. UPI QR Code", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text("Upload personal or business UPI QR image", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Switch(
+                                checked = isQrCodeEnabled,
+                                onCheckedChange = {
+                                    isQrCodeEnabled = it
+                                    validationError = null
+                                }
+                            )
+                        }
+
+                        // Content visible under option
+                        if (qrCodeImageUrl.isNullOrBlank()) {
+                            // State: No QR Code Added
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.QrCode,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Text(
+                                        text = "No UPI QR Code added",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "Select your UPI QR code image (GPay, PhonePe, Paytm, BHIM) from your phone gallery or files.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Button(
+                                        onClick = {
+                                            isQrCodeEnabled = true
+                                            qrImagePickerLauncher.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = StynoEmerald),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth().height(42.dp)
+                                    ) {
+                                        Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Upload UPI QR Code", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                        } else {
+                            // State: QR image uploaded -> Show preview, Replace, Remove
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(StynoEmerald.copy(alpha = 0.08f))
+                                    .border(1.dp, StynoEmerald.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("QR Code Uploaded ✓", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = StynoEmerald)
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = StynoEmerald.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = "Owner Isolated",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StynoEmerald,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                // [QR Preview]
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.White,
+                                    shadowElevation = 3.dp,
+                                    border = BorderStroke(1.5.dp, StynoEmerald.copy(alpha = 0.4f)),
+                                    modifier = Modifier.size(160.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        AsyncImage(
+                                            model = qrCodeImageUrl,
+                                            contentDescription = "Uploaded Owner QR Code Preview",
+                                            modifier = Modifier.fillMaxSize().padding(8.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = "This QR code is stored securely with your owner payment profile and will be shown to guests booking this property.",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+
+                                // [Replace QR Code] and [Remove QR Code] buttons
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            qrImagePickerLauncher.launch(
+                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f).height(38.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Replace QR Code", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    OutlinedButton(
+                                        onClick = {
+                                            qrCodeImageUrl = null
+                                            isQrCodeEnabled = false
+                                            qrCodeVpa = ""
+                                            validationError = null
+                                        },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                        modifier = Modifier.weight(1f).height(38.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Remove QR Code", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isQrCodeEnabled) {
+                            // Optional QR VPA field
+                            OutlinedTextField(
+                                value = qrCodeVpa,
+                                onValueChange = {
+                                    qrCodeVpa = it.trim().lowercase()
+                                    validationError = null
+                                },
+                                label = { Text("QR UPI VPA / Handle (Optional Text Backup)") },
+                                placeholder = { Text("e.g. hostqr@upi") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // METHOD 3: BANK ACCOUNT
+                // ==========================================
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isBankAccountEnabled) StynoAccent.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isBankAccountEnabled) StynoAccent.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = StynoAccent, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("3. Bank Account", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text("Direct NEFT / RTGS / IMPS Bank Transfer", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Switch(
+                                checked = isBankAccountEnabled,
+                                onCheckedChange = {
+                                    isBankAccountEnabled = it
+                                    validationError = null
+                                }
+                            )
+                        }
+
+                        if (isBankAccountEnabled) {
+                            // Beneficiary Name
+                            OutlinedTextField(
+                                value = accountHolderName,
+                                onValueChange = {
+                                    accountHolderName = it
+                                    validationError = null
+                                },
+                                label = { Text("Account Holder / Legal Business Name") },
+                                placeholder = { Text("e.g. Vikram Sharma") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            // Bank Name
+                            OutlinedTextField(
+                                value = bankName,
+                                onValueChange = {
+                                    bankName = it
+                                    validationError = null
+                                },
+                                label = { Text("Bank Name") },
+                                placeholder = { Text("e.g. HDFC Bank, ICICI Bank, SBI") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            // Account Number with mask toggle
+                            OutlinedTextField(
+                                value = accountNumber,
+                                onValueChange = {
+                                    accountNumber = it.trim()
+                                    validationError = null
+                                },
+                                label = { Text("Bank Account Number") },
+                                placeholder = { Text("Enter account number (minimum 8 digits)") },
+                                trailingIcon = {
+                                    IconButton(onClick = { maskAccountNumber = !maskAccountNumber }) {
+                                        Icon(
+                                            imageVector = if (maskAccountNumber) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = "Toggle account number visibility"
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (maskAccountNumber && accountNumber.length > 4) {
+                                    androidx.compose.ui.text.input.PasswordVisualTransformation()
+                                } else {
+                                    androidx.compose.ui.text.input.VisualTransformation.None
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            // IFSC Code
+                            OutlinedTextField(
+                                value = ifscCode,
+                                onValueChange = {
+                                    ifscCode = it.uppercase().trim()
+                                    validationError = null
+                                },
+                                label = { Text("IFSC Code") },
+                                placeholder = { Text("e.g. HDFC0001234") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            // Account Type selector
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf("Savings Account", "Current Account").forEach { type ->
+                                    FilterChip(
+                                        selected = accountType == type,
+                                        onClick = { accountType = type },
+                                        label = { Text(type) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+
+                            // Payout Frequency
+                            Text("Settlement Frequency:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf("Instant on Check-in", "Daily Batch", "Weekly").forEach { freq ->
+                                    FilterChip(
+                                        selected = payoutFrequency == freq,
+                                        onClick = { payoutFrequency = freq },
+                                        label = { Text(freq) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Validation Error Banner
+                validationError?.let { err ->
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = err, fontSize = 12.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -511,7 +941,7 @@ fun OwnerPaymentSetupSection(
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Owner payment setup saved! Future booking payouts will route to this account.",
+                        text = "Owner payment setup saved! Configured methods: ${currentProperty.ownerPaymentDetails.activeMethodsList.joinToString(", ")}. Booking payouts will route directly to this profile.",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = StynoEmerald
@@ -523,20 +953,71 @@ fun OwnerPaymentSetupSection(
         // Save Details Button
         Button(
             onClick = {
+                validationError = null
+
+                if (!isUpiIdEnabled && !isQrCodeEnabled && !isBankAccountEnabled) {
+                    validationError = "Please enable at least one payment method: UPI ID, UPI QR Code, or Bank Account."
+                    return@Button
+                }
+
+                if (isUpiIdEnabled) {
+                    if (upiId.isBlank() || !upiId.contains("@") || upiId.length < 4) {
+                        validationError = "Please enter a valid UPI ID (e.g. host@okaxis, 9876543210@paytm)."
+                        return@Button
+                    }
+                }
+
+                if (isQrCodeEnabled) {
+                    if (qrCodeImageUrl.isNullOrBlank()) {
+                        validationError = "Please tap 'Upload UPI QR Code' to select and upload your UPI QR Code image."
+                        return@Button
+                    }
+                }
+
+                if (isBankAccountEnabled) {
+                    if (accountHolderName.isBlank()) {
+                        validationError = "Please enter the Beneficiary / Legal Account Holder Name."
+                        return@Button
+                    }
+                    if (accountNumber.length < 8) {
+                        validationError = "Please enter a valid Bank Account Number (minimum 8 digits)."
+                        return@Button
+                    }
+                    if (ifscCode.length < 8) {
+                        validationError = "Please enter a valid IFSC Code (minimum 8 characters, e.g. HDFC0001234)."
+                        return@Button
+                    }
+                }
+
                 val updatedDetails = OwnerPaymentDetails(
-                    accountHolderName = accountHolderName.ifBlank { "Verified Styno Host" },
-                    upiId = upiId,
-                    bankName = bankName.ifBlank { "HDFC Bank" },
-                    accountNumber = accountNumber,
-                    ifscCode = ifscCode,
+                    ownerId = currentProperty.resolvedOwnerId,
+                    isUpiIdEnabled = isUpiIdEnabled,
+                    upiId = if (isUpiIdEnabled) upiId.trim() else "",
+                    isQrCodeEnabled = isQrCodeEnabled,
+                    qrCodeImageUrl = if (isQrCodeEnabled) qrCodeImageUrl else null,
+                    qrCodeVpa = if (isQrCodeEnabled) qrCodeVpa.ifBlank { upiId }.trim() else "",
+                    isBankAccountEnabled = isBankAccountEnabled,
+                    accountHolderName = if (isBankAccountEnabled || isUpiIdEnabled) accountHolderName.trim() else "",
+                    bankName = if (isBankAccountEnabled) bankName.trim().ifBlank { "HDFC Bank" } else "",
+                    accountNumber = if (isBankAccountEnabled) accountNumber.trim() else "",
+                    ifscCode = if (isBankAccountEnabled) ifscCode.trim() else "",
                     accountType = accountType,
                     payoutFrequency = payoutFrequency,
                     isVerified = true,
-                    settlementMode = if (upiId.isNotBlank()) "Instant UPI Settlement" else "Direct Bank NEFT/RTGS",
-                    qrCodeVpa = if (upiId.isNotBlank()) "upi://pay?pa=$upiId&pn=${accountHolderName.replace(" ", "%20")}&cu=INR" else "",
                     isVerifiedForPayouts = true,
+                    settlementMode = when {
+                        isUpiIdEnabled && isQrCodeEnabled && isBankAccountEnabled -> "UPI, QR & Direct Bank Settlement"
+                        isUpiIdEnabled && isQrCodeEnabled -> "Direct UPI & QR Settlement"
+                        isUpiIdEnabled && isBankAccountEnabled -> "Direct UPI & Bank Transfer"
+                        isQrCodeEnabled && isBankAccountEnabled -> "QR Code & Bank Transfer"
+                        isUpiIdEnabled -> "Instant UPI Settlement"
+                        isQrCodeEnabled -> "UPI QR Code Settlement"
+                        isBankAccountEnabled -> "Direct Bank NEFT/RTGS"
+                        else -> "Not Configured"
+                    },
                     gatewayConnected = false,
-                    gatewayStatus = "Not Connected (Direct Host Settlement Mode)"
+                    gatewayStatus = "Direct Host Settlement Mode",
+                    lastUpdatedTimestamp = System.currentTimeMillis()
                 )
                 onSavePaymentDetails(currentProperty.id, updatedDetails)
                 showSavedNotification = true

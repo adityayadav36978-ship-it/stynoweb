@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import coil.compose.AsyncImage
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,6 +94,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.data.model.OwnerPaymentDetails
 import com.example.data.payment.CardBrand
 import com.example.data.payment.StripeCardInput
 import com.example.data.payment.StripePaymentManager
@@ -115,6 +118,7 @@ fun StripePaymentSheetDialog(
     guestName: String,
     guestEmail: String,
     guestPhone: String,
+    ownerPaymentDetails: OwnerPaymentDetails = OwnerPaymentDetails(),
     initialPaymentType: StripePaymentType = StripePaymentType.CARD,
     onDismiss: () -> Unit,
     onPaymentSuccess: (StripePaymentResult) -> Unit
@@ -123,7 +127,20 @@ fun StripePaymentSheetDialog(
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var selectedTab by remember { mutableStateOf(initialPaymentType) }
+    // Allowed tabs strictly determined by what the property owner configured
+    val allowedPaymentTypes = remember(ownerPaymentDetails) {
+        val types = mutableListOf<StripePaymentType>()
+        if (ownerPaymentDetails.isUpiConfigured) types.add(StripePaymentType.UPI)
+        if (ownerPaymentDetails.isQrConfigured) types.add(StripePaymentType.QR)
+        if (ownerPaymentDetails.isBankConfigured) types.add(StripePaymentType.NET_BANKING)
+        if (types.isEmpty()) types.add(StripePaymentType.CARD)
+        types
+    }
+
+    var selectedTab by remember(initialPaymentType, allowedPaymentTypes) {
+        val initial = if (initialPaymentType in allowedPaymentTypes) initialPaymentType else allowedPaymentTypes.first()
+        mutableStateOf(initial)
+    }
 
     // Card Input State
     var cardInput by remember {
@@ -139,12 +156,12 @@ fun StripePaymentSheetDialog(
     }
     var showCvc by remember { mutableStateOf(false) }
 
-    // UPI State
+    // UPI State - Pre-fill with owner's real verified UPI ID
     var selectedUpiApp by remember { mutableStateOf("Google Pay") }
-    var customUpiId by remember { mutableStateOf("aditya@okhdfcbank") }
+    var customUpiId by remember(ownerPaymentDetails) { mutableStateOf(ownerPaymentDetails.upiId.ifBlank { "" }) }
 
     // Net Banking State
-    var selectedBank by remember { mutableStateOf("HDFC Bank") }
+    var selectedBank by remember(ownerPaymentDetails) { mutableStateOf(ownerPaymentDetails.bankName.ifBlank { "HDFC Bank" }) }
 
     // Common Payment Flow State
     var paymentStage by remember { mutableStateOf(StripePaymentStage.IDLE) }
@@ -674,12 +691,13 @@ fun StripePaymentSheetDialog(
                 }
             }
 
-            // TAB 3: DYNAMIC BHARAT / STRIPE UPI QR CODE
+            // TAB 3: HOST UPI QR CODE
             if (selectedTab == StripePaymentType.QR) {
                 StripeDynamicQrContent(
                     amountToPay = amountToPay,
                     guestName = guestName,
                     isProcessing = isProcessing,
+                    ownerPaymentDetails = ownerPaymentDetails,
                     onSimulatePaid = {
                         coroutineScope.launch {
                             errorMessage = null
@@ -689,6 +707,7 @@ fun StripePaymentSheetDialog(
                                 bookingDescription = "Booking for $propertyName ($roomTypeName)",
                                 customerEmail = guestEmail,
                                 customerName = guestName,
+                                ownerUpiId = ownerPaymentDetails.qrCodeVpa.ifBlank { ownerPaymentDetails.upiId },
                                 onStageChanged = { stage -> paymentStage = stage }
                             )
 
@@ -1070,6 +1089,7 @@ private fun StripeDynamicQrContent(
     amountToPay: Double,
     guestName: String,
     isProcessing: Boolean,
+    ownerPaymentDetails: OwnerPaymentDetails,
     onSimulatePaid: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1086,7 +1106,7 @@ private fun StripeDynamicQrContent(
     val secs = secondsRemaining % 60
     val formattedTime = String.format("%02d:%02d", mins, secs)
 
-    val vpaString = "upi://pay?pa=styno.stays@icici&pn=Styno%20Stays&am=${amountToPay.toInt()}&cu=INR&tn=HostelStayBooking"
+    val hostVpa = ownerPaymentDetails.qrCodeVpa.ifBlank { ownerPaymentDetails.upiId }.trim()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1102,10 +1122,14 @@ private fun StripeDynamicQrContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Dynamic Bharat QR Code",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.QrCode, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "UPI QR Code",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = if (secondsRemaining > 60) StynoEmerald.copy(alpha = 0.15f) else Color(0xFFFEE2E2)
@@ -1122,81 +1146,58 @@ private fun StripeDynamicQrContent(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Realistic High Resolution Vector QR Pattern
+            // Real Owner QR Code Image
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = Color.White,
                 shadowElevation = 4.dp,
                 modifier = Modifier
-                    .size(190.dp)
-                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                    .size(200.dp)
+                    .border(2.dp, StynoEmerald.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Canvas(modifier = Modifier.size(160.dp)) {
-                        val cellSize = size.width / 21f
-                        val darkColor = Color(0xFF0F172A)
-
-                        // Draw Corner Position Detection Squares
-                        fun drawFinderPattern(startX: Float, startY: Float) {
-                            drawRect(
-                                color = darkColor,
-                                topLeft = Offset(startX, startY),
-                                size = Size(cellSize * 7, cellSize * 7)
+                    if (!ownerPaymentDetails.qrCodeImageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = ownerPaymentDetails.qrCodeImageUrl,
+                            contentDescription = "Host UPI QR Code",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                        )
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.QrCode,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(48.dp)
                             )
-                            drawRect(
-                                color = Color.White,
-                                topLeft = Offset(startX + cellSize, startY + cellSize),
-                                size = Size(cellSize * 5, cellSize * 5)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "No UPI QR Code added",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            drawRect(
-                                color = darkColor,
-                                topLeft = Offset(startX + cellSize * 2, startY + cellSize * 2),
-                                size = Size(cellSize * 3, cellSize * 3)
-                            )
-                        }
-
-                        drawFinderPattern(0f, 0f)
-                        drawFinderPattern(cellSize * 14, 0f)
-                        drawFinderPattern(0f, cellSize * 14)
-
-                        // Draw QR data cells based on deterministic pattern
-                        for (r in 0 until 21) {
-                            for (c in 0 until 21) {
-                                val inTopLeft = r < 7 && c < 7
-                                val inTopRight = r < 7 && c >= 14
-                                val inBottomLeft = r >= 14 && c < 7
-                                val inCenterLogo = r in 9..11 && c in 9..11
-
-                                if (!inTopLeft && !inTopRight && !inBottomLeft && !inCenterLogo) {
-                                    val shouldFill = ((r * 7 + c * 13 + (amountToPay.toInt() % 7)) % 3 == 0) ||
-                                            (r == 8 && c % 2 == 0) || (c == 8 && r % 2 == 0)
-                                    if (shouldFill) {
-                                        drawRect(
-                                            color = darkColor,
-                                            topLeft = Offset(c * cellSize, r * cellSize),
-                                            size = Size(cellSize, cellSize)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Center STYNO badge
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = StynoBluePrimary,
-                        shadowElevation = 2.dp,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("S", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
+
+            if (ownerPaymentDetails.accountHolderName.isNotBlank()) {
+                Text(
+                    text = "Payee / Host: ${ownerPaymentDetails.accountHolderName}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StynoEmerald
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+            }
 
             Text(
                 text = "Scan with Any UPI App (GPay, PhonePe, Paytm, CRED)",
@@ -1205,27 +1206,28 @@ private fun StripeDynamicQrContent(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("UPI ID", "styno.stays@icici"))
-                        Toast.makeText(context, "UPI ID copied: styno.stays@icici", Toast.LENGTH_SHORT).show()
-                    }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "UPI ID: styno.stays@icici",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(Icons.Default.ContentCopy, contentDescription = "Copy UPI ID", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+            if (hostVpa.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("UPI ID", hostVpa))
+                            Toast.makeText(context, "UPI ID copied: $hostVpa", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "UPI ID: $hostVpa",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy UPI ID", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

@@ -15,9 +15,10 @@ import androidx.room.RoomDatabase
         LocalComplaintEntity::class,
         CachedPropertyEntity::class,
         CachedSearchResultEntity::class,
-        PropertyDraftEntity::class
+        PropertyDraftEntity::class,
+        SafetyConcernReportEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 

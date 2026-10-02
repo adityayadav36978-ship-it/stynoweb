@@ -124,7 +124,27 @@ data class CustomPropertyEntity(
     val ownerUpiId: String = "",
     val ownerSettlementMode: String = "Instant UPI Settlement (0% fee)",
     val ownerIsVerifiedAccount: Boolean = true,
+    val girlsSafetyStatus: String = "NOT_SUBMITTED",
+    val girlsSafetyDataJson: String = "",
     val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "safety_concern_reports")
+data class SafetyConcernReportEntity(
+    @PrimaryKey val id: String,
+    val propertyId: String,
+    val propertyName: String,
+    val reportedByUserId: String,
+    val reportedByUserName: String,
+    val reportedByUserPhone: String,
+    val issueCategory: String,
+    val description: String,
+    val evidencePhotosCsv: String = "",
+    val reportedAtTimestamp: Long = System.currentTimeMillis(),
+    val reportedDateFormatted: String,
+    val status: String,
+    val adminNotes: String = "",
+    val actionTaken: String = ""
 )
 
 @Entity(tableName = "complaints")

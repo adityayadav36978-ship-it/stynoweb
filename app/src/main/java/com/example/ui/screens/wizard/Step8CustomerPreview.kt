@@ -343,6 +343,83 @@ fun Step8CustomerPreview(
             }
         }
 
+        // Occupancy & Sharing Status Preview Card
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            imageVector = if (state.propertyType == PropertyType.HOTEL || !state.isSharingAvailable) Icons.Default.Lock else Icons.Default.Groups,
+                            contentDescription = null,
+                            tint = if (state.isSharingAvailable && state.propertyType != PropertyType.HOTEL) Color(0xFF166534) else MaterialTheme.colorScheme.primary
+                        )
+                        Text("Occupancy & Sharing Configuration", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                    IconButton(onClick = { onEditStep(3) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Sharing", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                if (state.propertyType != PropertyType.HOTEL && state.isSharingAvailable) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFDCFCE7),
+                        border = BorderStroke(1.dp, Color(0xFF86EFAC)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Occupancy Mode:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF166534))
+                                Text("👥 Shared Occupancy", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = Color(0xFF14532D))
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Sharing Capacity:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF166534))
+                                Text("${state.sharingCapacity} Persons / Beds per Unit", fontSize = 12.sp, color = Color(0xFF14532D))
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Available Beds/Spaces:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF166534))
+                                Text("${state.availableSpaces} Space(s) Currently Vacant", fontSize = 12.sp, color = Color(0xFF14532D))
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Eligible Audience:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF166534))
+                                Text("${state.targetAudience.displayName} Only (Safe Gender Matching)", fontSize = 12.sp, color = Color(0xFF14532D))
+                            }
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFF1F5F9),
+                        border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Occupancy Mode:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF334155))
+                                Text("🔒 Private Room / Unit", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, color = Color(0xFF0F172A))
+                            }
+                            Text(
+                                text = if (state.propertyType == PropertyType.HOTEL) "Hotel policy: Exclusively private booking. No shared occupancy." else "Full unit/room booked exclusively for the primary guest and their group.",
+                                fontSize = 11.sp,
+                                color = Color(0xFF475569)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 4. Room Configurations & Pricing
         Card(
             shape = RoundedCornerShape(16.dp),

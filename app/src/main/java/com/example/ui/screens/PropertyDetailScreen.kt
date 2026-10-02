@@ -41,8 +41,10 @@ import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.RestaurantMenu
@@ -53,6 +55,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -97,6 +100,7 @@ import com.example.data.model.PropertyType
 import com.example.data.model.Review
 import com.example.data.model.RoomOption
 import com.example.data.model.VerificationStatus
+import com.example.data.model.GirlsSafetyVerificationStatus
 import com.example.ui.components.DynamicPriceBreakdownCard
 import com.example.ui.components.DynamicPriceCalculation
 import com.example.ui.components.PropertyImageCarousel
@@ -318,37 +322,305 @@ fun PropertyDetailScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Stay Category & Sharing Badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = when {
+                                property.genderSuitability.isWomenOnly -> Color(0xFFFCE7F3)
+                                property.genderSuitability.isMenOnly -> Color(0xFFE0F2FE)
+                                property.genderSuitability.isCouple -> Color(0xFFF3E8FF)
+                                property.genderSuitability.isFamily -> Color(0xFFDCFCE7)
+                                else -> Color(0xFFF1F5F9)
+                            }
+                        ) {
+                            Text(
+                                text = "Category: ${property.stayCategoryType}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    property.genderSuitability.isWomenOnly -> Color(0xFFBE185D)
+                                    property.genderSuitability.isMenOnly -> Color(0xFF0369A1)
+                                    property.genderSuitability.isCouple -> Color(0xFF7E22CE)
+                                    property.genderSuitability.isFamily -> Color(0xFF15803D)
+                                    else -> Color(0xFF475569)
+                                },
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (property.isShared) Color(0xFFDCFCE7) else Color(0xFFF1F5F9)
+                        ) {
+                            Text(
+                                text = if (property.isShared) "👥 Gender-Matched Sharing" else "🔒 Private Unit",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (property.isShared) Color(0xFF166534) else Color(0xFF334155),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Verified Badge Card
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = StynoEmerald.copy(alpha = 0.12f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.4f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    // Dynamic Verification Status Card (No Fake Badges)
+                    when (property.verificationStatus) {
+                        VerificationStatus.VERIFIED -> {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = StynoEmerald.copy(alpha = 0.12f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Verified,
+                                        contentDescription = "Verified",
+                                        tint = StynoEmerald,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "STYNO 100% Verified Property",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF065F46)
+                                        )
+                                        Text(
+                                            text = "Physical audit, warden KYC & security verification completed",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFF047857)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        VerificationStatus.PENDING -> {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFEF3C7),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCD34D)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Verification Pending",
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Verification Pending",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF92400E)
+                                        )
+                                        Text(
+                                            text = "Physical safety and document verification audit in progress by STYNO",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFFB45309)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        VerificationStatus.UNDER_REVIEW -> {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFFF7ED),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDBA74)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Safety Review Required",
+                                        tint = Color(0xFFEA580C),
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Safety Review Required",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF9A3412)
+                                        )
+                                        Text(
+                                            text = "Additional safety inspection requested under STYNO compliance rules",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFFC2410C)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        VerificationStatus.REJECTED -> {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFEF2F2),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF87171)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Temporarily Restricted",
+                                        tint = Color(0xFFDC2626),
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Temporarily Restricted",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF991B1B)
+                                        )
+                                        Text(
+                                            text = "This property does not meet current verification or safety criteria",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFFB91C1C)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Official Girls Safety Verified Trust Seal Card
+                    if (property.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        val safety = property.girlsSafetyVerification
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFF1F2),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFDA4AF)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = "Verified",
-                                tint = StynoEmerald,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "STYNO 100% Verified Property",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF065F46)
-                                )
-                                Text(
-                                    text = "Physical audit, warden KYC & security verification completed",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF047857)
-                                )
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = "Girls Safety Verified",
+                                        tint = Color(0xFFE11D48),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "STYNO Girls Safety Verified",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF9F1239)
+                                        )
+                                        Text(
+                                            text = "Certified by STYNO Trust & Safety Committee",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color(0xFFBE123C)
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(0xFFE11D48)
+                                    ) {
+                                        Text(
+                                            text = "AUDITED ✓",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            color = Color.White,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = Color(0xFFFECDD3))
+
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (safety.femaleWardenPresent) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Female Resident Warden on premises 24/7 (${safety.femaleWardenName.ifBlank { "Assigned Warden" }})",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF881337)
+                                            )
+                                        }
+                                    }
+                                    if (safety.cctvCoverageCommonAreas) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "24/7 CCTV Monitoring in all common corridors & entry gates",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF881337)
+                                            )
+                                        }
+                                    }
+                                    if (safety.biometricOrSmartLock) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Biometric / RFID smart entry lock system",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF881337)
+                                            )
+                                        }
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Night Curfew: ${safety.curfewOrGateLockTime} with strict visitor logging",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF881337)
+                                        )
+                                    }
+                                    if (safety.policeVerificationCompleted) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Police Background Verification cleared for all staff",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF881337)
+                                            )
+                                        }
+                                    }
+                                    safety.auditCertificateNumber?.let { cert ->
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Certificate: $cert • Audited: ${safety.verificationDateFormatted ?: "Verified"}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFBE123C)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -500,6 +772,75 @@ fun PropertyDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // Category-Based Sharing & Occupancy Breakdown Card
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (property.isShared) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (property.isShared) Color(0xFFBBF7D0) else Color(0xFFE2E8F0)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(
+                                        imageVector = if (property.isShared) Icons.Default.Groups else Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = if (property.isShared) Color(0xFF166534) else Color(0xFF475569),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = if (property.isShared) "Shared Occupancy Stay" else "Private Room / Unit",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (property.isShared) Color(0xFF166534) else Color(0xFF1E293B)
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (property.isShared) Color(0xFFDCFCE7) else Color(0xFFE2E8F0)
+                                ) {
+                                    Text(
+                                        text = if (property.isShared) "${property.sharingCapacity}-Sharing (${property.availableSpaces.coerceAtLeast(0)} left)" else "Private Unit",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = if (property.isShared) Color(0xFF14532D) else Color(0xFF334155),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+
+                            if (property.isShared) {
+                                Text(
+                                    text = "• Eligible Audience: ${property.genderSuitability.displayName} only (Safe Gender-Matched Roommates)",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF15803D),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "• Vacant Spaces: ${property.availableSpaces.coerceAtLeast(0)} of ${property.sharingCapacity} beds available in this shared unit.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF166534)
+                                )
+                            } else {
+                                Text(
+                                    text = if (property.propertyType == PropertyType.HOTEL)
+                                        "• Hotel Suite: Complete private unit booking. No sharing with outside guests."
+                                    else
+                                        "• Entire private room/unit for you and your group. Zero sharing with external tenants.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF475569)
+                                )
+                            }
+                        }
+                    }
 
                     property.roomOptions.forEach { option ->
                         val isSelected = selectedRoomOption?.id == option.id
@@ -666,6 +1007,52 @@ fun PropertyDetailScreen(
                                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                                     color = StynoAccent
                                 )
+                            }
+                        }
+                    }
+                }
+            } else if (!property.hasFoodService) {
+                item {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.RestaurantMenu,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Food Service Unavailable",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Self-cooking kitchen access or food delivery (Swiggy / Zomato) supported.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -1225,6 +1612,60 @@ fun PropertyDetailScreen(
                 }
             }
 
+            // 9.5 Report Safety Concern to STYNO Safety Committee Banner
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFFFF1F2),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = Color(0xFFBE123C),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Report Safety Concern",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF9F1239)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Report any breach in warden presence, gate locks, visitor entry, or harassment. STYNO Trust Team reviews and can suspend verification.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFBE123C),
+                                    lineHeight = 15.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { viewModel.openSafetyReportDialog(property) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBE123C)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.testTag("btn_report_safety_concern")
+                            ) {
+                                Text("Report", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
         // Sticky Bottom Booking Bar
@@ -1448,6 +1889,137 @@ fun PropertyDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showReviewDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    val showSafetyReportDialog by viewModel.showSafetyReportDialog.collectAsStateWithLifecycle()
+    val safetyTargetProperty by viewModel.safetyReportTargetProperty.collectAsStateWithLifecycle()
+
+    if (showSafetyReportDialog) {
+        val target = safetyTargetProperty ?: property
+        var selectedCategory by remember { mutableStateOf("Gate Security & Visitor Timing") }
+        var safetyDescription by remember { mutableStateOf("") }
+        var isSubmitting by remember { mutableStateOf(false) }
+
+        val categories = listOf(
+            "Gate Security & Visitor Timing",
+            "Warden Absent / Missing",
+            "CCTV Offline / Obstructed",
+            "Biometric / Smart Lock Malfunction",
+            "Unauthorized Entry / Trespassing",
+            "Harassment / Safety Breach",
+            "Misleading Safety Claims"
+        )
+
+        AlertDialog(
+            onDismissRequest = { viewModel.closeSafetyReportDialog() },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = Color(0xFFBE123C))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Report Safety Concern", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Property: ${target.name}",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Select Safety Issue Category *",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        categories.forEach { cat ->
+                            val isSel = selectedCategory == cat
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSel) Color(0xFFBE123C) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { selectedCategory = cat }
+                            ) {
+                                Text(
+                                    text = cat,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = safetyDescription,
+                        onValueChange = { safetyDescription = it },
+                        label = { Text("Incident Details *") },
+                        placeholder = { Text("Describe what happened, timing, warden response, or lock/camera issue...") },
+                        minLines = 3,
+                        maxLines = 5,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFFBEB),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCD34D))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(14.dp).padding(top = 1.dp))
+                            Text(
+                                text = "STYNO Trust & Safety Committee investigates every incident. Confirmed safety violations result in immediate suspension or revocation of the Girls Safety Verified badge.",
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                color = Color(0xFF78350F)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (safetyDescription.isNotBlank()) {
+                            isSubmitting = true
+                            viewModel.submitSafetyConcernReport(
+                                propertyId = target.id,
+                                propertyName = target.name,
+                                issueCategory = selectedCategory,
+                                description = safetyDescription.trim()
+                            ) {
+                                isSubmitting = false
+                            }
+                        }
+                    },
+                    enabled = safetyDescription.isNotBlank() && !isSubmitting,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBE123C))
+                ) {
+                    Text(if (isSubmitting) "Submitting..." else "Submit Report")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.closeSafetyReportDialog() }) {
                     Text("Cancel")
                 }
             }

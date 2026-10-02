@@ -497,6 +497,53 @@ class LocationViewModel(
         _recentLocations.value = loadRecentLocations()
     }
 
+    private val _pincodeLookupState = MutableStateFlow<PincodeLookupState>(PincodeLookupState.Idle)
+    val pincodeLookupState: StateFlow<PincodeLookupState> = _pincodeLookupState.asStateFlow()
+
+    fun lookupAndApplyPincode(
+        pincode: String,
+        autoApply: Boolean = true,
+        onSuccess: (com.example.data.repository.RealLocationResult) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val cleanPin = pincode.trim().filter { it.isDigit() }
+        if (cleanPin.length != 6) {
+            val err = "Please enter a valid 6-digit Indian PIN code"
+            _pincodeLookupState.value = PincodeLookupState.Error(err)
+            onError(err)
+            return
+        }
+
+        _pincodeLookupState.value = PincodeLookupState.Loading(cleanPin)
+        viewModelScope.launch {
+            val result = locationRepository.lookupIndianPincode(cleanPin)
+            if (result.isSuccess) {
+                val loc = result.getOrThrow()
+                _pincodeLookupState.value = PincodeLookupState.Success(loc)
+                if (autoApply) {
+                    setLocation(
+                        country = "India",
+                        countryCode = "IN",
+                        state = loc.state,
+                        district = loc.district ?: loc.city,
+                        city = loc.city,
+                        locality = loc.locality,
+                        landmark = loc.landmark ?: "",
+                        latitude = loc.latitude,
+                        longitude = loc.longitude,
+                        formattedAddress = loc.formattedAddress,
+                        isGpsLive = false
+                    )
+                }
+                onSuccess(loc)
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Failed to find location for PIN $cleanPin"
+                _pincodeLookupState.value = PincodeLookupState.Error(err)
+                onError(err)
+            }
+        }
+    }
+
     companion object {
         const val PREFS_NAME = "styno_user_prefs_v2"
         const val KEY_SELECTED_COUNTRY = "selected_country"
@@ -514,4 +561,11 @@ class LocationViewModel(
         const val KEY_RECENT_LOCATIONS = "recent_global_locations_v2"
         private const val MAX_RECENT_LOCATIONS = 8
     }
+}
+
+sealed class PincodeLookupState {
+    object Idle : PincodeLookupState()
+    data class Loading(val pincode: String) : PincodeLookupState()
+    data class Success(val result: com.example.data.repository.RealLocationResult) : PincodeLookupState()
+    data class Error(val message: String) : PincodeLookupState()
 }

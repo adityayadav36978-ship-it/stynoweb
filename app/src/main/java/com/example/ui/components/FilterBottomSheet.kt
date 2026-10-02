@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
@@ -109,6 +111,8 @@ fun FilterBottomSheet(
     availableAmenities: List<String> = emptyList(),
     propertyTypeCounts: Map<PropertyType, Int> = emptyMap(),
     matchingResultsCount: Int? = null,
+    girlsSafetyOnly: Boolean = false,
+    onGirlsSafetyToggle: ((Boolean) -> Unit)? = null,
     onApply: (
         category: PropertyType?,
         gender: GenderSuitability?,
@@ -148,6 +152,7 @@ fun FilterBottomSheet(
     var tempSort by remember(selectedSort) { mutableStateOf(selectedSort) }
     var tempAmenities by remember(selectedAmenities) { mutableStateOf(selectedAmenities) }
     var tempVerifiedOnly by remember(verifiedOnly) { mutableStateOf(verifiedOnly) }
+    var tempGirlsSafetyOnly by remember(girlsSafetyOnly) { mutableStateOf(girlsSafetyOnly) }
     var tempPriceRange by remember(minPrice, maxPrice) { mutableStateOf((minPrice ?: 0f)..(maxPrice ?: 40000f)) }
     var tempMinRating by remember(minRating) { mutableStateOf(minRating) }
     var tempMaxDistance by remember(maxDistance) { mutableStateOf(maxDistance) }
@@ -913,6 +918,71 @@ fun FilterBottomSheet(
                 }
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Girls Safety Verification Only Toggle
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFF1F2),
+                border = BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = Color(0xFFBE123C),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Girls Safety Verified Only",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = Color(0xFF9F1239)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFBE123C)
+                                ) {
+                                    Text(
+                                        text = "AUDITED",
+                                        color = Color.White,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Resident female wardens, biometric gates, CCTV & background verified staff",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFBE123C),
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = tempGirlsSafetyOnly,
+                        onCheckedChange = { tempGirlsSafetyOnly = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFFBE123C)
+                        )
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // 6. Sorting Selection
@@ -964,6 +1034,8 @@ fun FilterBottomSheet(
                         tempFood = null
                         tempCleanliness = null
                         tempMinReviews = null
+                        tempGirlsSafetyOnly = false
+                        onGirlsSafetyToggle?.invoke(false)
                         onReset()
                         onDismiss()
                     },
@@ -1008,6 +1080,7 @@ fun FilterBottomSheet(
                                 tempMaxDistance
                             )
                         }
+                        onGirlsSafetyToggle?.invoke(tempGirlsSafetyOnly)
                         onDismiss()
                     },
                     modifier = Modifier

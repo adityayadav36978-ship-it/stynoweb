@@ -56,6 +56,7 @@ fun AddPropertyScreen(
     val savedDrafts by viewModel.propertyDrafts.collectAsStateWithLifecycle()
     val currentUserName by viewModel.userName.collectAsStateWithLifecycle()
     val currentUserPhone by viewModel.userPhone.collectAsStateWithLifecycle()
+    val currentUserEmail by viewModel.userEmail.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -68,7 +69,10 @@ fun AddPropertyScreen(
                 activeEditingDraft != null -> PropertyWizardState.fromDraftEntity(activeEditingDraft!!)
                 else -> PropertyWizardState(
                     ownerPhone = currentUserPhone,
-                    ownerEmail = "host@stynostays.com"
+                    ownerEmail = currentUserEmail.ifBlank {
+                        val phDigits = currentUserPhone.filter { it.isDigit() }
+                        if (phDigits.isNotBlank()) "owner_$phDigits@styno.com" else "owner@styno.com"
+                    }
                 )
             }
         )
@@ -208,7 +212,27 @@ fun AddPropertyScreen(
                                         wizardState = wizardState.copy(currentStep = 3)
                                     }
                                 }
-                                3 -> wizardState = wizardState.copy(currentStep = 4)
+                                3 -> {
+                                    if (wizardState.propertyType == PropertyType.HOTEL && wizardState.isSharingAvailable) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Hotels are strictly private room bookings. Sharing cannot be enabled for hotels.")
+                                        }
+                                    } else if ((wizardState.targetAudience == com.example.data.model.GenderSuitability.FAMILY || wizardState.targetAudience == com.example.data.model.GenderSuitability.COUPLES) && wizardState.isSharingAvailable) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Couple and Family bookings are strictly private. Sharing cannot be enabled.")
+                                        }
+                                    } else if (wizardState.isSharingAvailable && wizardState.sharingCapacity < 2) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Please define a valid sharing capacity (at least 2 occupants) for a shared listing.")
+                                        }
+                                    } else if (wizardState.isSharingAvailable && wizardState.availableSpaces > wizardState.sharingCapacity) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Available spaces (${wizardState.availableSpaces}) cannot exceed total sharing capacity (${wizardState.sharingCapacity}).")
+                                        }
+                                    } else {
+                                        wizardState = wizardState.copy(currentStep = 4)
+                                    }
+                                }
                                 4 -> {
                                     if (wizardState.rooms.isEmpty()) {
                                         coroutineScope.launch {
@@ -220,10 +244,28 @@ fun AddPropertyScreen(
                                 }
                                 5 -> wizardState = wizardState.copy(currentStep = 6)
                                 6 -> wizardState = wizardState.copy(currentStep = 7)
-                                7 -> wizardState = wizardState.copy(currentStep = 8)
+                                7 -> {
+                                    if (wizardState.propertyType == PropertyType.HOTEL && wizardState.isSharingAvailable) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Hotels are strictly private room bookings. Sharing cannot be enabled.")
+                                        }
+                                    } else if (wizardState.isSharingAvailable && wizardState.availableSpaces > wizardState.sharingCapacity) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Available beds (${wizardState.availableSpaces}) cannot exceed sharing capacity (${wizardState.sharingCapacity}).")
+                                        }
+                                    } else {
+                                        wizardState = wizardState.copy(currentStep = 8)
+                                    }
+                                }
                                 8 -> wizardState = wizardState.copy(currentStep = 9)
                                 9 -> wizardState = wizardState.copy(currentStep = 10)
                                 10 -> {
+                                    if (wizardState.isSharingAvailable && wizardState.availableSpaces > wizardState.sharingCapacity) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Available beds (${wizardState.availableSpaces}) cannot exceed sharing capacity (${wizardState.sharingCapacity}).")
+                                        }
+                                        return@Button
+                                    }
                                     // Publish action
                                     val prop = wizardState.toProperty(currentUserName, currentUserPhone)
                                     publishedPropertyName = prop.name

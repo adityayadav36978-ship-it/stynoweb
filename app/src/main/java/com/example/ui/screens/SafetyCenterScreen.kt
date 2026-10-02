@@ -42,10 +42,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.SafetyConcernCategories
 import com.example.data.model.SafetyContact
 import com.example.ui.theme.StynoAccent
 import com.example.ui.theme.StynoBluePrimary
@@ -72,6 +79,19 @@ fun SafetyCenterScreen(
     val sosTriggered = viewModel.sosTriggered.collectAsStateWithLifecycle().value
     val safetyContacts = remember { viewModel.getSafetyContacts() }
     val securityFeatures = remember { viewModel.getSecurityFeatures() }
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+
+    var showContactDialog by remember { mutableStateOf(false) }
+    var contactName by remember(userProfile.emergencyContactName) { mutableStateOf(userProfile.emergencyContactName) }
+    var contactPhone by remember(userProfile.emergencyContactPhone) { mutableStateOf(userProfile.emergencyContactPhone) }
+    var contactRelation by remember(userProfile.emergencyContactRelation) { mutableStateOf(userProfile.emergencyContactRelation.ifBlank { "Parent / Guardian" }) }
+    var shareStayWithContact by remember(userProfile.shareStayWithTrustedContact) { mutableStateOf(userProfile.shareStayWithTrustedContact) }
+    var notifyCheckIn by remember(userProfile.notifyTrustedContactOnCheckIn) { mutableStateOf(userProfile.notifyTrustedContactOnCheckIn) }
+
+    var showReportDialog by remember { mutableStateOf(false) }
+    var reportCategory by remember { mutableStateOf(SafetyConcernCategories.ALL.first()) }
+    var reportDescription by remember { mutableStateOf("") }
+    var reportSubmittedSuccess by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -229,6 +249,181 @@ fun SafetyCenterScreen(
                             Icon(imageVector = Icons.Default.Share, contentDescription = "Share live stay location", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Share Live Stay Location with Family", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+
+            // Trusted Emergency Contact Card (Girls Safety Layer)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBCFE8))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFFCE7F3)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFFDB2777), modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Trusted Emergency Contact", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text("Controlled stay updates for safety", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Button(
+                                onClick = { showContactDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBE185D)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(if (userProfile.emergencyContactName.isBlank()) "Add Contact" else "Edit", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        if (userProfile.emergencyContactName.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFDF2F8),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        text = "${userProfile.emergencyContactName} (${userProfile.emergencyContactRelation.ifBlank { "Emergency Contact" }})",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF9D174D)
+                                    )
+                                    Text(
+                                        text = "Phone: ${userProfile.emergencyContactPhone}",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFBE185D)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Privacy Controls Row 1
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Share Stay Updates", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Allow trusted contact to track live stay and check-in confirmation", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(
+                                    checked = shareStayWithContact,
+                                    onCheckedChange = { checked ->
+                                        shareStayWithContact = checked
+                                        viewModel.updateTrustedEmergencyContact(
+                                            userProfile.emergencyContactName,
+                                            userProfile.emergencyContactPhone,
+                                            userProfile.emergencyContactRelation,
+                                            shareStay = checked,
+                                            notifyCheckIn = notifyCheckIn
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFBE185D), checkedTrackColor = Color(0xFFFCE7F3))
+                                )
+                            }
+
+                            // Privacy Controls Row 2
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Notify on Check-In Arrival", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Automated safety ping to your contact when you pass gate check-in", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(
+                                    checked = notifyCheckIn,
+                                    onCheckedChange = { checked ->
+                                        notifyCheckIn = checked
+                                        viewModel.updateTrustedEmergencyContact(
+                                            userProfile.emergencyContactName,
+                                            userProfile.emergencyContactPhone,
+                                            userProfile.emergencyContactRelation,
+                                            shareStay = shareStayWithContact,
+                                            notifyCheckIn = checked
+                                        )
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFBE185D), checkedTrackColor = Color(0xFFFCE7F3))
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No emergency contact added yet. Adding a trusted contact allows instant location sharing and check-in safety alerts.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "🔒 Privacy Shield: Your contact details are never exposed to property owners, other residents, or public APIs.",
+                            fontSize = 10.sp,
+                            color = StynoEmerald,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            // Dedicated Safety Concern Reporting Card
+            item {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFFFFBEB),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Report a Safety Concern",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF92400E)
+                                )
+                                Text(
+                                    text = "Harassment, unsafe property, unauthorized occupants, or security breaches.",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFB45309)
+                                )
+                            }
+                            Button(
+                                onClick = { showReportDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Report", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -396,6 +591,158 @@ fun SafetyCenterScreen(
                 }
             }
         }
+    }
+
+    // Dialog for Editing Trusted Emergency Contact
+    if (showContactDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showContactDialog = false },
+            title = {
+                Text("Trusted Emergency Contact", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Your emergency contact is kept private. It is used exclusively for emergency check-in notifications and SOS broadcasts.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = contactName,
+                        onValueChange = { contactName = it },
+                        label = { Text("Contact Full Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = contactPhone,
+                        onValueChange = { contactPhone = it },
+                        label = { Text("Mobile Phone Number") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = contactRelation,
+                        onValueChange = { contactRelation = it },
+                        label = { Text("Relationship (e.g. Parent, Sister, Friend)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (contactName.isNotBlank() && contactPhone.isNotBlank()) {
+                            viewModel.updateTrustedEmergencyContact(
+                                name = contactName.trim(),
+                                phone = contactPhone.trim(),
+                                relation = contactRelation.trim(),
+                                shareStay = shareStayWithContact,
+                                notifyCheckIn = notifyCheckIn
+                            )
+                            showContactDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBE185D))
+                ) {
+                    Text("Save Contact", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showContactDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Dialog for Filing a Safety Concern Report
+    if (showReportDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = {
+                Text("Report a Safety Concern", fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "All safety reports are investigated with priority by the STYNO Trust & Safety Committee.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("Select Category:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        SafetyConcernCategories.ALL.take(4).forEach { cat ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (reportCategory == cat) Color(0xFFFEE2E2) else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth().clickable { reportCategory = cat }
+                            ) {
+                                Text(
+                                    text = cat,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (reportCategory == cat) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (reportCategory == cat) Color(0xFF991B1B) else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = reportDescription,
+                        onValueChange = { reportDescription = it },
+                        label = { Text("Incident Details & Description") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (reportDescription.isNotBlank()) {
+                            viewModel.submitSafetyConcernReport(
+                                propertyId = "current_stay",
+                                propertyName = "Current Stay / General",
+                                issueCategory = reportCategory,
+                                description = reportDescription.trim()
+                            )
+                            showReportDialog = false
+                            reportDescription = ""
+                            reportSubmittedSuccess = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Text("Submit Safety Report", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showReportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (reportSubmittedSuccess) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { reportSubmittedSuccess = false },
+            title = { Text("Safety Report Submitted", fontWeight = FontWeight.Bold, color = StynoEmerald) },
+            text = {
+                Text(
+                    text = "Your safety concern has been logged securely and forwarded to the STYNO Trust & Safety Committee for immediate investigation.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(onClick = { reportSubmittedSuccess = false }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 }

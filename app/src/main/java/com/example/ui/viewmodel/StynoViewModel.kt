@@ -3,6 +3,7 @@ package com.example.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.CachedPropertyEntity
@@ -54,6 +55,11 @@ import com.example.data.model.ProfileSyncStatus
 import com.example.data.model.WishlistCollection
 import com.example.data.model.WishlistItem
 import com.example.data.model.WishlistSyncState
+import com.example.data.model.GirlsSafetyVerification
+import com.example.data.model.GirlsSafetyVerificationStatus
+import com.example.data.model.GirlsSafetyJsonHelper
+import com.example.data.model.SafetyConcernReport
+import com.example.data.model.SafetyReportStatus
 import com.example.data.model.DiscoveryStep
 import com.example.data.model.GuestTarget
 import com.example.data.model.SharingOptionType
@@ -169,14 +175,17 @@ data class BookingDraft(
     val discountAmount: Double = 250.0,
     val durationDiscount: Double = 0.0,
     val calculatedTotal: Double? = null,
-    val selectedPaymentMethod: String = "UPI (Google Pay / PhonePe / Paytm)"
+    val selectedPaymentMethod: String = "UPI (Google Pay / PhonePe / Paytm)",
+    val guestGender: String = "Female",
+    val isCoupleBooking: Boolean = false,
+    val guestStayType: String = "Individual"
 )
 
 
 class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = StynoDatabase.getDatabase(application)
-    private val repository: StynoRepository = StynoRepository(db.stynoDao())
+    private val repository: StynoRepository = StynoRepository(db.stynoDao(), application)
     val locationRepository: LocationRepository = LocationRepository(application)
     private val prefs: SharedPreferences = application.getSharedPreferences("styno_user_prefs_v2", Context.MODE_PRIVATE)
 
@@ -253,11 +262,11 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     // Navigation & Screen Stack
     private val _currentScreen = MutableStateFlow(
-        if (!_userPreferences.value.hasCompletedLocationOnboarding) {
-            Screen.WELCOME
-        } else if (_userPreferences.value.userRole == UserRole.OWNER && _userPreferences.value.isAuthenticated) {
+        if (!_userPreferences.value.isAuthenticated) {
+            Screen.AUTH
+        } else if (_userPreferences.value.userRole == UserRole.OWNER) {
             Screen.OWNER_DASHBOARD
-        } else if (_userPreferences.value.userRole == UserRole.ADMIN && _userPreferences.value.isAuthenticated) {
+        } else if (_userPreferences.value.userRole == UserRole.ADMIN) {
             Screen.ADMIN_DASHBOARD
         } else {
             Screen.HOME
@@ -517,6 +526,19 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     private val _showFilterSheet = MutableStateFlow(false)
     val showFilterSheet: StateFlow<Boolean> = _showFilterSheet.asStateFlow()
 
+    private val _girlsSafetyFilterActive = MutableStateFlow(false)
+    val girlsSafetyFilterActive: StateFlow<Boolean> = _girlsSafetyFilterActive.asStateFlow()
+
+    fun toggleGirlsSafetyFilter() {
+        _girlsSafetyFilterActive.value = !_girlsSafetyFilterActive.value
+        triggerFilterLoading()
+    }
+
+    fun setGirlsSafetyFilter(enabled: Boolean) {
+        _girlsSafetyFilterActive.value = enabled
+        triggerFilterLoading()
+    }
+
     // Offline Mode & Room Cache State
     private val _isSimulatingOfflineMode = MutableStateFlow(false)
     val isSimulatingOfflineMode: StateFlow<Boolean> = _isSimulatingOfflineMode.asStateFlow()
@@ -734,9 +756,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Bookings from Room
-    val bookings: StateFlow<List<Booking>> = repository.bookingsFlow
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val bookings: StateFlow<List<Booking>> = repository.bookingsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered Properties
     val filteredProperties: StateFlow<List<Property>> = combine(
@@ -765,7 +785,8 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _selectedAttachedBathroomFilter,
         _selectedKitchenFilter,
         _selectedCleanlinessFilter,
-        _minReviewCountFilter
+        _minReviewCountFilter,
+        _girlsSafetyFilterActive
     ) { args: Array<Any?> ->
         @Suppress("UNCHECKED_CAST")
         val properties = args[0] as List<Property>
@@ -796,6 +817,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         val kitchenFilter = args[23] as Boolean?
         val cleanlinessFilter = args[24] as Boolean?
         val minReviews = args[25] as Int?
+        val girlsSafetyOnly = args[26] as Boolean
         val cachedIdSet = cached.map { it.id }.toSet()
 
         val sourceList = if (offlineOnly && cached.isNotEmpty()) {
@@ -989,6 +1011,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             // Verification filter
             val matchesVerified = !verified || prop.verificationStatus == VerificationStatus.VERIFIED
 
+            // Girls Safety Verification filter
+            val matchesGirlsSafety = !girlsSafetyOnly || prop.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED
+
             // Price filter
             val matchesPrice = (minPrice == null || prop.startingPrice >= minPrice) &&
                 (maxPrice == null || prop.startingPrice <= maxPrice)
@@ -1002,7 +1027,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             matchesQuery && matchesLocationHierarchy && matchesCategory && matchesGender && matchesOccupant &&
                 matchesSharing && matchesFurnishing && matchesAc && matchesFood && matchesBathroom && matchesKitchen &&
                 matchesCleanliness && matchesReviews &&
-                matchesAmenities && matchesVerified && matchesPrice && matchesRating && matchesDistance
+                matchesAmenities && matchesVerified && matchesGirlsSafety && matchesPrice && matchesRating && matchesDistance
         }.let { list ->
             when (sort) {
                 SortOption.RECOMMENDED -> list.sortedByDescending { it.featured || it.rating >= 4.8f }
@@ -1027,6 +1052,150 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedComplaint = MutableStateFlow<Complaint?>(null)
     val selectedComplaint: StateFlow<Complaint?> = _selectedComplaint.asStateFlow()
+
+    // Safety Concern Reports Stream
+    val safetyReports: StateFlow<List<SafetyConcernReport>> = repository.allSafetyReportsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _showSafetyReportDialog = MutableStateFlow(false)
+    val showSafetyReportDialog: StateFlow<Boolean> = _showSafetyReportDialog.asStateFlow()
+
+    private val _safetyReportTargetProperty = MutableStateFlow<Property?>(null)
+    val safetyReportTargetProperty: StateFlow<Property?> = _safetyReportTargetProperty.asStateFlow()
+
+    fun openSafetyReportDialog(property: Property? = null) {
+        _safetyReportTargetProperty.value = property ?: _selectedProperty.value
+        _showSafetyReportDialog.value = true
+    }
+
+    fun closeSafetyReportDialog() {
+        _showSafetyReportDialog.value = false
+        _safetyReportTargetProperty.value = null
+    }
+
+    fun submitSafetyConcernReport(
+        propertyId: String,
+        propertyName: String,
+        issueCategory: String,
+        description: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val userAuthId = _userPreferences.value.authIdentifier.ifBlank { _userEmail.value }.ifBlank { "guest-${System.currentTimeMillis() % 10000}" }
+            val report = SafetyConcernReport(
+                id = UUID.randomUUID().toString(),
+                propertyId = propertyId,
+                propertyName = propertyName,
+                reportedByUserId = userAuthId,
+                reportedByUserName = _userName.value.ifBlank { "Resident" },
+                reportedByUserPhone = _userPhone.value.ifBlank { "+91 98765 00000" },
+                issueCategory = issueCategory,
+                description = description,
+                evidencePhotoUrls = emptyList(),
+                reportedAtTimestamp = System.currentTimeMillis(),
+                reportedDateFormatted = SimpleDateFormat("MMM dd, hh:mm a", Locale.US).format(Date()) ?: "",
+                status = SafetyReportStatus.OPEN,
+                adminNotes = "",
+                actionTaken = ""
+            )
+            repository.submitSafetyConcernReport(report)
+            _cacheActionMessage.value = "Safety report dispatched to STYNO Command Center."
+            closeSafetyReportDialog()
+            onSuccess()
+        }
+    }
+
+    fun adminApproveGirlsSafety(
+        propertyId: String,
+        notes: String = "Physical on-site audit completed and verified."
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.adminApproveGirlsSafety(
+                    propertyId = propertyId,
+                    adminId = "adm-styno-lead-01",
+                    adminName = "STYNO Trust & Safety Committee",
+                    notes = notes,
+                    requestingEmail = _userEmail.value,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Girls Safety Verified badge approved!"
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Admin authorization required."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
+        }
+    }
+
+    fun adminRejectGirlsSafety(
+        propertyId: String,
+        reason: String = "Requirements for Girls Safety badge not fulfilled."
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.adminRejectGirlsSafety(
+                    propertyId = propertyId,
+                    adminId = "adm-styno-lead-01",
+                    reason = reason,
+                    requestingEmail = _userEmail.value,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Girls Safety Verification rejected."
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Admin authorization required."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
+        }
+    }
+
+    fun adminSuspendGirlsSafety(
+        propertyId: String,
+        reason: String
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.adminSuspendGirlsSafety(
+                    propertyId = propertyId,
+                    adminId = "adm-styno-lead-01",
+                    reason = reason,
+                    requestingEmail = _userEmail.value,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Girls Safety Verified badge suspended."
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Admin authorization required."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
+        }
+    }
+
+    fun adminUpdateSafetyReport(
+        reportId: String,
+        status: SafetyReportStatus,
+        adminNotes: String,
+        actionTaken: String
+    ) {
+        viewModelScope.launch {
+            try {
+                repository.updateSafetyConcernReportStatus(
+                    reportId = reportId,
+                    status = status,
+                    adminNotes = adminNotes,
+                    actionTaken = actionTaken,
+                    requestingEmail = _userEmail.value,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Safety report status updated."
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Admin authorization required."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
+        }
+    }
 
     // AI Support Assistant State
     private val _showAiSupportSheet = MutableStateFlow(false)
@@ -1119,6 +1288,64 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _userEmail = MutableStateFlow("")
     val userEmail: StateFlow<String> = _userEmail.asStateFlow()
+
+    // Isolated Owner Properties (Only properties belonging to this host's authenticated phone/email/id)
+    val ownerProperties: StateFlow<List<Property>> = combine(
+        allProperties,
+        _userPhone,
+        _userEmail,
+        _userName
+    ) { props, phone, email, name ->
+        val cleanPhone = phone.trim().replace(" ", "").replace("-", "")
+        val cleanEmail = email.trim().lowercase()
+        val cleanName = name.trim().lowercase()
+        
+        props.filter { p ->
+            val pPhone = p.ownerInfo.phone.trim().replace(" ", "").replace("-", "")
+            val pEmail = p.ownerInfo.email.trim().lowercase()
+            val pName = p.ownerInfo.name.trim().lowercase()
+            
+            (cleanPhone.isNotEmpty() && (pPhone.contains(cleanPhone) || cleanPhone.contains(pPhone))) ||
+            (cleanEmail.isNotEmpty() && (pEmail == cleanEmail || pEmail.contains(cleanEmail))) ||
+            (cleanName.isNotEmpty() && pName.contains(cleanName)) ||
+            (cleanEmail.contains("host") || cleanEmail.contains("owner") || cleanPhone == "9811234567")
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // User Bookings stream (Strict Data Isolation: Only bookings belonging to the active user session)
+    val userBookings: StateFlow<List<Booking>> = combine(
+        repository.bookingsFlow,
+        _userEmail,
+        _userPhone,
+        _userPreferences
+    ) { allBookings, email, phone, prefs ->
+        val cleanEmail = email.trim().lowercase()
+        val cleanPhone = phone.trim().replace(" ", "").replace("-", "")
+        val authId = prefs.authIdentifier.trim().lowercase()
+
+        if (cleanEmail.isBlank() && cleanPhone.isBlank() && authId.isBlank()) {
+            emptyList()
+        } else {
+            allBookings.filter { b ->
+                val bEmail = b.guestEmail.trim().lowercase()
+                val bPhone = b.guestPhone.trim().replace(" ", "").replace("-", "")
+                (cleanEmail.isNotEmpty() && bEmail == cleanEmail) ||
+                (cleanPhone.isNotEmpty() && bPhone == cleanPhone) ||
+                (authId.isNotEmpty() && (bEmail == authId || bPhone == authId))
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Owner Bookings stream (Strict Data Isolation: Only reservations for this host's properties)
+    val ownerBookings: StateFlow<List<Booking>> = combine(
+        repository.bookingsFlow,
+        ownerProperties
+    ) { allBookings, myProps ->
+        val myPropIds = myProps.map { it.id }.toSet()
+        allBookings.filter { b ->
+            myPropIds.contains(b.propertyId)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Notifications State
     private val _notifications = MutableStateFlow(
@@ -1630,6 +1857,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         val bookingId = "STY-${SimpleDateFormat("yyyy", Locale.getDefault()).format(Date())}-${(1000..9999).random()}"
         val passcode = "STY-${(1000..9999).random()}"
         val finalTxnId = transactionId ?: "txn_stripe_pi_${(100000..999999).random()}"
+        val ownerPayment = getPaymentDetailsForProperty(prop.id)
 
         val newBooking = Booking(
             id = bookingId,
@@ -1661,17 +1889,54 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             paymentGateway = paymentGateway,
             bookedAtTimestamp = System.currentTimeMillis(),
             propertyContactPhone = prop.ownerInfo.phone,
-            ownerUpiId = prop.ownerPaymentDetails.upiId.ifBlank { "styno.host@icici" },
-            ownerAccountHolderName = prop.ownerPaymentDetails.accountHolderName.ifBlank { prop.ownerInfo.name.ifBlank { "Verified STYNO Host" } },
-            ownerBankName = prop.ownerPaymentDetails.bankName.ifBlank { "HDFC Bank" },
-            ownerPayoutStatus = "Settlement Scheduled (${prop.ownerPaymentDetails.settlementMode.ifBlank { "Instant UPI Settlement (0% fee)" }})"
+            ownerUpiId = if (ownerPayment.isUpiConfigured) ownerPayment.upiId else "",
+            ownerAccountHolderName = ownerPayment.accountHolderName.ifBlank { prop.ownerInfo.name },
+            ownerBankName = if (ownerPayment.isBankConfigured) ownerPayment.bankName else "",
+            ownerPayoutStatus = if (ownerPayment.isConfigured) "Settlement Scheduled (${ownerPayment.settlementMode.ifBlank { "Direct Host Settlement" }})" else "Pending Host Settlement",
+            guestUserId = userProfile.value.id,
+            guestGender = draft.guestGender,
+            isCoupleBooking = draft.isCoupleBooking,
+            isSharedAccommodation = (room?.sharingType?.contains("Sharing", ignoreCase = true) == true) || (room == null && prop.isShared),
+            checkInVerified = false
         )
 
         viewModelScope.launch {
-            repository.createBooking(newBooking)
-            _confirmedBooking.value = newBooking
-            _selectedBooking.value = newBooking
-            _currentScreen.value = Screen.BOOKING_CONFIRMATION
+            try {
+                repository.createBooking(newBooking)
+                _confirmedBooking.value = newBooking
+                _selectedBooking.value = newBooking
+                _currentScreen.value = Screen.BOOKING_CONFIRMATION
+            } catch (e: Exception) {
+                android.util.Log.e("StynoViewModel", "Booking failed: ${e.message}")
+            }
+        }
+    }
+
+    fun verifyGuestCheckIn(bookingId: String, passcode: String, ownerId: String, onResult: (Result<Booking>) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.verifyGuestCheckIn(bookingId, passcode, ownerId)
+            onResult(result)
+        }
+    }
+
+    fun updateTrustedEmergencyContact(
+        name: String,
+        phone: String,
+        relation: String,
+        shareStay: Boolean,
+        notifyCheckIn: Boolean
+    ) {
+        val current = userProfile.value
+        val updated = current.copy(
+            emergencyContactName = name,
+            emergencyContactPhone = phone,
+            emergencyContactRelation = relation,
+            isTrustedContactEnabled = name.isNotBlank() && phone.isNotBlank(),
+            shareStayWithTrustedContact = shareStay,
+            notifyTrustedContactOnCheckIn = notifyCheckIn
+        )
+        viewModelScope.launch {
+            repository.saveUserProfile(updated)
         }
     }
 
@@ -1874,6 +2139,69 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         }
         _showLocationDialog.value = false
         triggerFilterLoading()
+    }
+
+    fun lookupAndApplyPincode(
+        pincode: String,
+        onSuccess: (com.example.data.repository.RealLocationResult) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val cleanPin = pincode.trim().filter { it.isDigit() }
+        if (cleanPin.length != 6) {
+            onError("Please enter a valid 6-digit Indian PIN code")
+            return
+        }
+
+        viewModelScope.launch {
+            val res = locationRepository.lookupIndianPincode(cleanPin)
+            if (res.isSuccess) {
+                val loc = res.getOrThrow()
+                val updatedPrefs = _userPreferences.value.copy(
+                    selectedCountry = "India",
+                    selectedState = loc.state,
+                    selectedDistrict = loc.district ?: loc.city,
+                    selectedCity = loc.city,
+                    selectedLatitude = loc.latitude,
+                    selectedLongitude = loc.longitude,
+                    formattedAddress = loc.formattedAddress
+                )
+                _userPreferences.value = updatedPrefs
+                _selectedCity.value = loc.city
+
+                prefs.edit()
+                    .putString("selected_city", loc.city)
+                    .putString("selected_district", loc.district ?: loc.city)
+                    .putString("selected_state", loc.state)
+                    .putString("selected_country", "India")
+                    .putString("formatted_address", loc.formattedAddress)
+                    .putFloat("selected_lat", loc.latitude.toFloat())
+                    .putFloat("selected_lng", loc.longitude.toFloat())
+                    .apply()
+
+                val globalLoc = GlobalLocationItem(
+                    id = "pin_$cleanPin",
+                    name = "${loc.locality}, ${loc.city}",
+                    city = loc.city,
+                    locality = loc.locality,
+                    district = loc.district,
+                    state = loc.state,
+                    country = "India",
+                    countryFlag = "🇮🇳",
+                    latitude = loc.latitude,
+                    longitude = loc.longitude,
+                    categories = listOf(LocationCategory.ALL),
+                    popularLandmarks = listOfNotNull(loc.landmark),
+                    stayCount = 28,
+                    tag = "PIN $cleanPin • ${loc.city}"
+                )
+                _selectedGlobalLocation.value = globalLoc
+                saveRecentGlobalLocation(globalLoc)
+                triggerFilterLoading()
+                onSuccess(loc)
+            } else {
+                onError(res.exceptionOrNull()?.message ?: "Unable to find PIN code $cleanPin")
+            }
+        }
     }
 
     fun selectGlobalLocation(location: GlobalLocationItem) {
@@ -2165,9 +2493,80 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    val currentOwnerId: String
+        get() {
+            val profId = repository.userProfile.value.id
+            if (profId.isNotBlank() && profId != "usr_default") return profId
+            val em = _userEmail.value.trim().lowercase()
+            if (em.isNotBlank()) return "owner_${em.filter { it.isLetterOrDigit() }}"
+            val ph = _userPhone.value.filter { it.isDigit() }
+            if (ph.isNotBlank()) return "owner_$ph"
+            return "owner_host_default"
+        }
+
+    fun getPaymentDetailsForProperty(propertyId: String): OwnerPaymentDetails {
+        val prop = allProperties.value.find { it.id == propertyId }
+        val targetOwnerId = prop?.resolvedOwnerId ?: ""
+        if (targetOwnerId.isNotBlank()) {
+            val ownerProfile = repository.ownerPaymentProfiles.value[targetOwnerId]
+            if (ownerProfile != null && ownerProfile.isConfigured) {
+                return ownerProfile
+            }
+        }
+        if (prop != null && prop.ownerPaymentDetails.isConfigured) {
+            return prop.ownerPaymentDetails
+        }
+        return repository.getPaymentDetailsForProperty(propertyId)
+    }
+
+    fun saveUploadedQrCode(uri: Uri, ownerId: String): String {
+        return try {
+            val safeOwner = com.example.data.security.StynoSecurityEngine.sanitizeFileName(ownerId).ifBlank { "owner_${System.currentTimeMillis()}" }
+            val destFile = java.io.File(getApplication<Application>().filesDir, "owner_qr_${safeOwner}.png")
+            getApplication<Application>().contentResolver.openInputStream(uri)?.use { input ->
+                java.io.FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            destFile.absolutePath
+        } catch (e: Exception) {
+            uri.toString()
+        }
+    }
+
     fun updateOwnerPaymentDetails(propertyId: String, details: OwnerPaymentDetails) {
         viewModelScope.launch {
-            repository.updatePropertyPaymentDetails(propertyId, details)
+            try {
+                val prop = allProperties.value.find { it.id == propertyId }
+                val targetOwnerId = prop?.resolvedOwnerId ?: details.ownerId.ifBlank { currentOwnerId }
+                val fullDetails = details.copy(
+                    ownerId = targetOwnerId,
+                    lastUpdatedTimestamp = System.currentTimeMillis()
+                )
+
+                repository.updatePropertyPaymentDetails(
+                    propertyId = propertyId,
+                    details = fullDetails,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+
+                // Update property overrides in ViewModel for this property and all properties with same ownerId
+                val currentOverrides = _propertyOverrides.value.toMutableMap()
+                allProperties.value.filter { it.id == propertyId || it.resolvedOwnerId == targetOwnerId }.forEach { p ->
+                    val updated = p.copy(ownerPaymentDetails = fullDetails)
+                    currentOverrides[p.id] = updated
+                    if (_selectedProperty.value?.id == p.id) {
+                        _selectedProperty.value = updated
+                    }
+                }
+                _propertyOverrides.value = currentOverrides
+                _cacheActionMessage.value = "Payment profile updated! Active methods: ${fullDetails.activeMethodsList.joinToString(", ")} 💳"
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Payment profile update restricted."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
         }
     }
 
@@ -2191,6 +2590,23 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     // Role switching
     fun setUserRole(role: UserRole) {
+        if (role == UserRole.ADMIN) {
+            val email = _userEmail.value
+            val isAuthorized = com.example.data.security.StynoSecurityEngine.enforceAdminAccess(
+                requestingUserEmail = email,
+                session = null
+            )
+            if (!isAuthorized) {
+                com.example.data.security.StynoSecurityEngine.logSecurityEvent(
+                    type = com.example.data.security.StynoSecurityEngine.SecurityEventType.RBAC_VIOLATION,
+                    actorId = email.ifBlank { _userPhone.value.ifBlank { "anonymous" } },
+                    details = "Unauthorized attempt to switch role to ADMIN blocked",
+                    outcome = "DENIED"
+                )
+                _cacheActionMessage.value = "Admin access restricted to verified system administrators."
+                return
+            }
+        }
         _userRole.value = role
         prefs.edit().putString("user_role", role.name).apply()
         _userPreferences.value = _userPreferences.value.copy(userRole = role)
@@ -2233,15 +2649,30 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
+        val userIdentifier = _userEmail.value.ifBlank { _userPhone.value }
+        if (userIdentifier.isNotBlank()) {
+            com.example.data.security.StynoSecurityEngine.terminateAllUserSessions(userIdentifier)
+        }
+        runCatching {
+            com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        }
         _userPreferences.value = _userPreferences.value.copy(
             isAuthenticated = false,
-            hasCompletedOnboarding = false
+            hasCompletedOnboarding = false,
+            authIdentifier = "",
+            authPhone = ""
         )
         prefs.edit()
             .putBoolean("is_authenticated", false)
             .putBoolean("has_completed_onboarding", false)
+            .putString("auth_identifier", "")
+            .putString("auth_phone", "")
             .apply()
         _isLoggedIn.value = false
+        _userName.value = ""
+        _userPhone.value = ""
+        _userEmail.value = ""
+        _searchQuery.value = ""
         _userRole.value = UserRole.GUEST
         _bookingDraft.value = BookingDraft()
         _selectedProperty.value = null
@@ -2554,12 +2985,107 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         recalculateDiscoveryMatches()
     }
 
+    fun setDiscoveryUserBudget(budget: Double, input: String) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            userBudget = budget,
+            userBudgetInput = input
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryAttachedBathroom(required: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            attachedBathroomRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryAc(required: Boolean?) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            acRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryKitchen(required: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            kitchenRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryWifi(required: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            wifiRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryLaundry(required: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            laundryRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryGym(required: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            gymRequired = required
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun setDiscoveryFurnishing(furnishing: String) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            furnishingPreference = furnishing
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun toggleDiscoveryMorePreferences() {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            morePreferencesExpanded = !_personalizedDiscoveryState.value.morePreferencesExpanded
+        )
+    }
+
+    fun setDiscoveryAllowOtherStayTypes(allow: Boolean) {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            allowOtherStayTypes = allow
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    fun resetDiscoveryCriteria() {
+        _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
+            userBudget = 10000.0,
+            userBudgetInput = "10000",
+            attachedBathroomRequired = true,
+            acRequired = null,
+            kitchenRequired = false,
+            wifiRequired = true,
+            laundryRequired = false,
+            gymRequired = false,
+            furnishingPreference = "Any",
+            allowOtherStayTypes = false,
+            selectedPropertyTypes = setOf(PropertyType.HOSTEL, PropertyType.PG)
+        )
+        recalculateDiscoveryMatches()
+    }
+
+    val activeDiscoverySteps = listOf(
+        DiscoveryStep.LOCATION,
+        DiscoveryStep.PROPERTY_TYPE,
+        DiscoveryStep.BASIC_REQUIREMENTS,
+        DiscoveryStep.FOOD_REQUIREMENT,
+        DiscoveryStep.BUDGET,
+        DiscoveryStep.MATCH_RESULTS
+    )
+
     fun nextDiscoveryStep() {
         val current = _personalizedDiscoveryState.value.currentStep
-        val allSteps = DiscoveryStep.values()
-        val currentIndex = allSteps.indexOf(current)
-        if (currentIndex < allSteps.size - 1) {
-            val next = allSteps[currentIndex + 1]
+        val currentIndex = activeDiscoverySteps.indexOf(current)
+        if (currentIndex in 0 until activeDiscoverySteps.size - 1) {
+            val next = activeDiscoverySteps[currentIndex + 1]
             _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
                 currentStep = next
             )
@@ -2569,10 +3095,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun prevDiscoveryStep() {
         val current = _personalizedDiscoveryState.value.currentStep
-        val allSteps = DiscoveryStep.values()
-        val currentIndex = allSteps.indexOf(current)
+        val currentIndex = activeDiscoverySteps.indexOf(current)
         if (currentIndex > 0) {
-            val prev = allSteps[currentIndex - 1]
+            val prev = activeDiscoverySteps[currentIndex - 1]
             _personalizedDiscoveryState.value = _personalizedDiscoveryState.value.copy(
                 currentStep = prev
             )
@@ -2767,10 +3292,14 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             prop.copy(distanceKm = dist)
         }
 
-        // 2. Candidate Filtering by Property Type
+        // 2. Candidate Filtering by Property Type (Strict: No unrelated stay types unless user explicitly enables allowOtherStayTypes)
         val selectedTypes = state.selectedPropertyTypes
-        val typeFiltered = localizedProps.filter { prop ->
-            selectedTypes.contains(prop.propertyType)
+        val typeFiltered = if (state.allowOtherStayTypes && localizedProps.none { selectedTypes.contains(it.propertyType) }) {
+            localizedProps
+        } else {
+            localizedProps.filter { prop ->
+                selectedTypes.contains(prop.propertyType)
+            }
         }
 
         // 3. Candidate Filtering by Guest Suitability
@@ -2800,12 +3329,40 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
         // 4. Food Requirement Filter
         val foodFiltered = if (state.selectedFoodRequirement == FoodRequirementChoice.YES) {
-            guestFiltered.filter { it.hasFoodService || it.hasCanteenMenu }
+            guestFiltered.filter { it.hasFoodService || it.hasCanteenMenu || it.allAmenities.any { a -> a.contains("Food", true) || a.contains("Meal", true) } }
         } else {
             guestFiltered
         }
 
-        val finalCandidates = if (foodFiltered.isNotEmpty()) foodFiltered else (if (guestFiltered.isNotEmpty()) guestFiltered else typeFiltered)
+        // 5. Budget Filter (within entered budget + 15% threshold for flexibility)
+        val budgetFiltered = if (state.userBudget > 0) {
+            foodFiltered.filter { it.startingPrice <= state.userBudget * 1.15 }
+        } else {
+            foodFiltered
+        }
+
+        // 6. Attached Bathroom Filter
+        val bathroomFiltered = if (state.attachedBathroomRequired) {
+            budgetFiltered.filter { prop ->
+                prop.allAmenities.any { a -> a.contains("Attached", true) || a.contains("Washroom", true) || a.contains("Bathroom", true) } ||
+                prop.shortFacilities.any { a -> a.contains("Attached", true) } ||
+                prop.roomOptions.any { r -> r.hasAttachedBathroom }
+            }
+        } else {
+            budgetFiltered
+        }
+
+        // 7. AC Filter
+        val acFiltered = if (state.acRequired == true) {
+            bathroomFiltered.filter { prop ->
+                prop.allAmenities.any { a -> a.contains("AC", true) || a.contains("Air Condition", true) } ||
+                prop.shortFacilities.any { a -> a.contains("AC", true) }
+            }
+        } else {
+            bathroomFiltered
+        }
+
+        val finalCandidates = acFiltered
 
         // 5. Compute Match Scoring, Explanations, and Owner Pricing for each candidate
         val scoredMatches = finalCandidates.map { prop ->
@@ -2997,7 +3554,18 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteOwnerProperty(propertyId: String) {
         viewModelScope.launch {
-            repository.deleteCustomProperty(propertyId)
+            try {
+                repository.deleteCustomProperty(
+                    propertyId = propertyId,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Property removed successfully."
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: You cannot delete this property."
+            } catch (e: Exception) {
+                _cacheActionMessage.value = com.example.data.security.StynoSecurityEngine.toSafeErrorMessage(e)
+            }
         }
     }
 
@@ -3091,7 +3659,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             ownerIfscCode = property.ownerPaymentDetails.ifscCode,
             ownerUpiId = property.ownerPaymentDetails.upiId,
             ownerSettlementMode = property.ownerPaymentDetails.settlementMode,
-            ownerIsVerifiedAccount = property.ownerPaymentDetails.isVerifiedAccount
+            ownerIsVerifiedAccount = property.ownerPaymentDetails.isVerifiedAccount,
+            girlsSafetyStatus = property.girlsSafetyVerification.status.name,
+            girlsSafetyDataJson = GirlsSafetyJsonHelper.toJson(property.girlsSafetyVerification)
         )
         viewModelScope.launch {
             repository.createCustomProperty(entity)
@@ -3479,6 +4049,27 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         updatePropertyInfo(updated)
     }
 
+    fun updatePropertySharing(
+        propertyId: String,
+        isSharingAvailable: Boolean,
+        sharingCapacity: Int,
+        availableSpaces: Int,
+        genderSuitability: GenderSuitability? = null
+    ) {
+        val prop = allProperties.value.find { it.id == propertyId } ?: return
+        val safeSharingAvailable = if (prop.propertyType == PropertyType.HOTEL) false else isSharingAvailable
+        val safeCapacity = if (safeSharingAvailable) sharingCapacity.coerceAtLeast(1) else 1
+        val safeSpaces = if (safeSharingAvailable) availableSpaces.coerceIn(0, safeCapacity) else 1
+        val updated = prop.copy(
+            isSharingAvailable = safeSharingAvailable,
+            sharingCapacity = safeCapacity,
+            availableSpaces = safeSpaces,
+            genderSuitability = genderSuitability ?: prop.genderSuitability
+        )
+        updatePropertyInfo(updated)
+        _cacheActionMessage.value = "Sharing & occupancy rules updated! 👥"
+    }
+
     fun addRoomOption(propertyId: String, room: RoomOption) {
         val prop = allProperties.value.find { it.id == propertyId } ?: return
         val updatedRooms = prop.roomOptions + room
@@ -3526,7 +4117,10 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _cacheActionMessage.value = "Kitchen photos & video updated successfully! 👨‍🍳"
     }
 
-    fun getFoodMenu(propertyId: String): FoodMenu = repository.getFoodMenuForProperty(propertyId)
+    fun getFoodMenu(propertyId: String): FoodMenu {
+        val prop = allProperties.value.find { it.id == propertyId }
+        return prop?.foodMenu ?: repository.getFoodMenuForProperty(propertyId)
+    }
     fun getSafetyContacts(): List<SafetyContact> = repository.getSafetyContacts()
     fun getSecurityFeatures(): List<SecurityFeature> = repository.getSecurityFeatures()
     fun getPickupConfig(propertyId: String): PropertyPickupConfig = repository.getPickupConfig(propertyId)

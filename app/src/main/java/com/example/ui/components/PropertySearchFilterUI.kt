@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.OfflinePin
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
@@ -108,6 +109,8 @@ fun PropertyFilterBar(
     isOfflineCachedOnly: Boolean,
     cachedCount: Int,
     onToggleOfflineCachedOnly: () -> Unit,
+    girlsSafetyActive: Boolean = false,
+    onToggleGirlsSafety: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isPriceActive = (minPrice != null && minPrice > 100f) || (maxPrice != null && maxPrice < 39000f)
@@ -116,7 +119,8 @@ fun PropertyFilterBar(
 
     val totalActiveFilters = (if (isTypeActive) 1 else 0) +
             (if (isPriceActive) 1 else 0) +
-            (if (isDistanceActive) 1 else 0)
+            (if (isDistanceActive) 1 else 0) +
+            (if (girlsSafetyActive) 1 else 0)
 
     Row(
         modifier = modifier
@@ -254,6 +258,35 @@ fun PropertyFilterBar(
                         )
                     }
                 }
+            }
+        }
+
+        // 4.5 Girls Safety Verified Pill
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = if (girlsSafetyActive) Color(0xFFBE123C) else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .clickable { onToggleGirlsSafety() }
+                .testTag("filter_girls_safety_pill")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = if (girlsSafetyActive) Color(0xFFFDE047) else Color(0xFFE11D48),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Girls Safety",
+                    fontSize = 12.sp,
+                    fontWeight = if (girlsSafetyActive) FontWeight.Bold else FontWeight.Medium,
+                    color = if (girlsSafetyActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -811,13 +844,15 @@ fun ActiveFilterChipsRow(
     onClearDistance: () -> Unit,
     verifiedOnly: Boolean,
     onClearVerifiedOnly: () -> Unit,
+    girlsSafetyOnly: Boolean = false,
+    onClearGirlsSafety: () -> Unit = {},
     selectedAmenities: Set<String>,
     onRemoveAmenity: (String) -> Unit,
     onResetAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isPriceActive = (minPrice != null && minPrice > 100f) || (maxPrice != null && maxPrice < 39000f)
-    val hasAnyFilter = selectedCategory != null || isPriceActive || maxDistanceKm != null || verifiedOnly || selectedAmenities.isNotEmpty()
+    val hasAnyFilter = selectedCategory != null || isPriceActive || maxDistanceKm != null || verifiedOnly || girlsSafetyOnly || selectedAmenities.isNotEmpty()
 
     if (!hasAnyFilter) return
 
@@ -975,6 +1010,45 @@ fun ActiveFilterChipsRow(
                         contentDescription = "Remove verified filter",
                         modifier = Modifier.size(12.dp),
                         tint = StynoEmerald
+                    )
+                }
+            }
+        }
+
+        // Girls Safety Active Chip
+        if (girlsSafetyOnly) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFFFF1F2),
+                border = BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onClearGirlsSafety() }
+                    .testTag("active_filter_chip_girls_safety")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color(0xFFBE123C)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Girls Safety Verified",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFBE123C)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove Girls Safety filter",
+                        modifier = Modifier.size(12.dp),
+                        tint = Color(0xFFBE123C)
                     )
                 }
             }

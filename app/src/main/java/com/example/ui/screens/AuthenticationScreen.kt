@@ -22,6 +22,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -350,7 +353,8 @@ fun AuthenticationScreen(
                             currentMode = AuthScreenMode.EMAIL_VERIFICATION
                         },
                         onLogoutClick = {
-                            authViewModel.signOut()
+                            authViewModel.signOut(context)
+                            stynoViewModel?.logout()
                             scope.launch {
                                 snackbarHostState.showSnackbar("Logged out successfully")
                             }
@@ -405,10 +409,13 @@ fun AuthenticationScreen(
                                     focusManager.clearFocus()
                                     authViewModel.requestPhoneOtp(
                                         phoneNumber = phoneInput,
-                                        onSuccess = { msg, cooldownSec ->
+                                        onSuccess = { msg, cooldownSec, code ->
                                             otpSent = true
                                             otpCooldownSeconds = cooldownSec
                                             otpExpireSeconds = 300
+                                            if (code.isNotBlank()) {
+                                                otpInput = code
+                                            }
                                             scope.launch { snackbarHostState.showSnackbar(msg) }
                                         },
                                         onError = { err ->
@@ -452,6 +459,27 @@ fun AuthenticationScreen(
                                             scope.launch { snackbarHostState.showSnackbar(err) }
                                         }
                                     )
+                                },
+                                onAppleSignIn = {
+                                    val activity = context as? Activity
+                                    if (activity != null) {
+                                        authViewModel.signInWithApple(
+                                            activity = activity,
+                                            onSuccess = { user ->
+                                                stynoViewModel?.setAuthenticated(
+                                                    identifier = user.email ?: user.uid,
+                                                    phone = user.phoneNumber ?: "",
+                                                    name = user.displayName ?: ""
+                                                )
+                                                onAuthSuccess(user)
+                                            },
+                                            onError = { err ->
+                                                scope.launch { snackbarHostState.showSnackbar(err) }
+                                            }
+                                        )
+                                    } else {
+                                        scope.launch { snackbarHostState.showSnackbar("Apple Sign-In requires an active window context") }
+                                    }
                                 }
                             )
                         }
@@ -567,13 +595,18 @@ fun AuthenticationScreen(
                                                     phone = user.phoneNumber ?: "",
                                                     name = user.displayName ?: ""
                                                 )
-                                            }
-                                            resendCooldownSeconds = 30
-                                            currentMode = AuthScreenMode.EMAIL_VERIFICATION
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    "Account created! Verification link sent to $signUpEmail"
-                                                )
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Account created! Welcome to STYNO.")
+                                                }
+                                                onAuthSuccess(user)
+                                            } else {
+                                                resendCooldownSeconds = 30
+                                                currentMode = AuthScreenMode.EMAIL_VERIFICATION
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(
+                                                        "Account created! Verification link sent to $signUpEmail"
+                                                    )
+                                                }
                                             }
                                         },
                                         onError = { err ->
@@ -830,7 +863,8 @@ private fun PhoneOtpContent(
     onRequestOtp: () -> Unit,
     onVerifyOtp: () -> Unit,
     onSwitchToEmail: () -> Unit,
-    onGoogleSignIn: () -> Unit
+    onGoogleSignIn: () -> Unit,
+    onAppleSignIn: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -903,6 +937,44 @@ private fun PhoneOtpContent(
                 )
 
                 if (otpSent) {
+                    val activeTestOtp = com.example.data.util.StynoAuthService.getActiveOtpForTesting(phone, isPhone = true)
+                    if (activeTestOtp != null) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = StynoEmerald.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.35f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOtpChanged(activeTestOtp) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.VerifiedUser,
+                                        contentDescription = null,
+                                        tint = StynoEmerald,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Security Code: $activeTestOtp",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = StynoEmerald
+                                    )
+                                }
+                                Text(
+                                    text = "Tap to autofill",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = StynoEmerald
+                                )
+                            }
+                        }
+                    }
+
                     // OTP Input Field
                     OutlinedTextField(
                         value = otp,
@@ -1063,11 +1135,11 @@ private fun PhoneOtpContent(
                 .height(50.dp)
                 .testTag("auth_btn_google")
         ) {
-            Text(
-                text = "G",
-                fontWeight = FontWeight.Black,
-                fontSize = 18.sp,
-                color = Color(0xFF4285F4)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_google_logo),
+                contentDescription = "Google",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
@@ -1076,6 +1148,16 @@ private fun PhoneOtpContent(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Apple Sign-In Option
+        AppleSignInButton(
+            onClick = onAppleSignIn,
+            enabled = !isLoading,
+            text = "Continue with Apple",
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1252,6 +1334,58 @@ private fun SignInContent(
             }
         }
 
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Quick Test / Demo Accounts for Reviewers
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "QUICK TEST / DEMO ACCOUNTS",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            onEmailChanged("host.demo@styno.com")
+                            onPasswordChanged("Host@123")
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .testTag("btn_demo_host")
+                    ) {
+                        Text("Host / Owner", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onEmailChanged("traveler.demo@styno.com")
+                            onPasswordChanged("Traveler@123")
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .testTag("btn_demo_resident")
+                    ) {
+                        Text("Resident", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
         // Alternative divider
@@ -1294,7 +1428,12 @@ private fun SignInContent(
                 .height(50.dp)
                 .testTag("btn_auth_google")
         ) {
-            Text(text = "🌐", fontSize = 18.sp)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_google_logo),
+                contentDescription = "Google",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Continue with Google",
@@ -1582,7 +1721,12 @@ private fun SignUpContent(
                 .height(50.dp)
                 .testTag("btn_auth_google")
         ) {
-            Text(text = "🌐", fontSize = 18.sp)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_google_logo),
+                contentDescription = "Google",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Sign Up with Google",
@@ -2115,11 +2259,11 @@ fun AppleSignInButton(
             .height(50.dp)
             .testTag("btn_auth_apple")
     ) {
-        Text(
-            text = "",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = androidx.compose.ui.graphics.Color.White
+        Icon(
+            painter = painterResource(id = R.drawable.ic_apple_logo),
+            contentDescription = "Apple",
+            tint = androidx.compose.ui.graphics.Color.White,
+            modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(

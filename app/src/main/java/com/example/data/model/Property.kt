@@ -22,14 +22,25 @@ enum class GenderSuitability(val displayName: String) {
     TOURISTS("Tourists"),
     WORKING_PROFESSIONALS("Working Professionals"),
     STUDENTS("Students"),
-    EVERYONE("Everyone / Open to All")
+    EVERYONE("Everyone / Open to All"),
+    MEN_ONLY("Men Only"),
+    WOMEN_ONLY("Women Only");
+
+    val isBoysEligible: Boolean get() = this == BOYS_ONLY || this == MEN_ONLY || this == ALL || this == CO_ED || this == EVERYONE
+    val isGirlsEligible: Boolean get() = this == GIRLS_ONLY || this == WOMEN_ONLY || this == ALL || this == CO_ED || this == EVERYONE
+    val isCoupleOrFamily: Boolean get() = this == COUPLES || this == FAMILY
+    val isWomenOnly: Boolean get() = this == WOMEN_ONLY || this == GIRLS_ONLY
+    val isMenOnly: Boolean get() = this == MEN_ONLY || this == BOYS_ONLY
+    val isMixedAccommodation: Boolean get() = this == CO_ED || this == ALL || this == EVERYONE
+    val isFamily: Boolean get() = this == FAMILY
+    val isCouple: Boolean get() = this == COUPLES
 }
 
-enum class VerificationStatus(val displayName: String) {
-    PENDING("Pending Verification"),
-    UNDER_REVIEW("Under Review"),
-    VERIFIED("Verified by STYNO"),
-    REJECTED("Rejected")
+enum class VerificationStatus(val displayName: String, val badgeLabel: String = "") {
+    PENDING("Verification Pending", "Audit Pending"),
+    UNDER_REVIEW("Safety Review Required", "Review Required"),
+    VERIFIED("Verified by STYNO", "Verified"),
+    REJECTED("Temporarily Restricted", "Restricted")
 }
 
 enum class DurationType(val displayName: String, val unitLabel: String = "") {
@@ -184,29 +195,109 @@ data class Property(
     val securityDepositOption: String = "1 Month Refundable",
     val targetCustomerTypes: List<String> = listOf("Everyone"),
     val availableSharingTypes: List<String> = listOf("Private", "Double Sharing", "Triple Sharing"),
+    val isSharingAvailable: Boolean = false,
+    val sharingCapacity: Int = 1,
+    val availableSpaces: Int = 1,
+    val ownerId: String = "",
     val ownerPaymentDetails: OwnerPaymentDetails = OwnerPaymentDetails(),
-    val quickStayConfig: QuickStayConfig = QuickStayConfig()
-)
+    val quickStayConfig: QuickStayConfig = QuickStayConfig(),
+    val girlsSafetyVerification: GirlsSafetyVerification = GirlsSafetyVerification()
+) {
+    val resolvedOwnerId: String
+        get() = if (ownerId.isNotBlank()) {
+            ownerId
+        } else if (ownerInfo.email.isNotBlank() && !ownerInfo.email.contains("manager@stynostays.com")) {
+            "owner_${ownerInfo.email.lowercase().replace(Regex("[^a-z0-9]"), "_")}"
+        } else if (ownerInfo.phone.isNotBlank()) {
+            "owner_${ownerInfo.phone.filter { it.isDigit() }}"
+        } else {
+            "owner_prop_${id}"
+        }
+
+    val isShared: Boolean get() {
+        if (propertyType == PropertyType.HOTEL) return false
+        if (genderSuitability == GenderSuitability.FAMILY || genderSuitability == GenderSuitability.COUPLES) return false
+        return isSharingAvailable && sharingCapacity > 1
+    }
+
+    val isPrivateUnit: Boolean get() = !isShared
+
+    val stayCategoryType: String get() = when {
+        genderSuitability.isWomenOnly -> "Women-Only"
+        genderSuitability.isMenOnly -> "Men-Only"
+        genderSuitability.isFamily -> "Family"
+        genderSuitability.isCouple -> "Couple"
+        else -> "Mixed / Gender-Neutral"
+    }
+
+    val isPropertyVerified: Boolean get() = verificationStatus == VerificationStatus.VERIFIED
+
+    val sharingDisplayText: String get() {
+        return if (isShared) {
+            "${sharingCapacity}-Sharing (${availableSpaces.coerceAtLeast(0)} space${if (availableSpaces == 1) "" else "s"} left)"
+        } else {
+            "Private Room/Unit"
+        }
+    }
+}
 
 data class OwnerPaymentDetails(
-    val upiId: String = "sharma.stays@icici",
-    val accountHolderName: String = "Vikram Sharma (Property Host)",
-    val accountNumber: String = "50100438928172",
-    val ifscCode: String = "HDFC0001234",
-    val bankName: String = "HDFC Bank",
+    val ownerId: String = "",
+    val isUpiIdEnabled: Boolean = false,
+    val upiId: String = "",
+    val isQrCodeEnabled: Boolean = false,
+    val qrCodeImageUrl: String? = null,
+    val qrCodeVpa: String = "",
+    val isBankAccountEnabled: Boolean = false,
+    val accountHolderName: String = "",
+    val accountNumber: String = "",
+    val ifscCode: String = "",
+    val bankName: String = "",
     val accountType: String = "Savings Account",
     val payoutFrequency: String = "Instant on Check-in",
-    val isVerified: Boolean = true,
-    val settlementMode: String = "Instant UPI / Direct Bank Settlement",
-    val qrCodeVpa: String = "upi://pay?pa=sharma.stays@icici&pn=Vikram%20Sharma&cu=INR",
-    val isVerifiedForPayouts: Boolean = true,
+    val isVerified: Boolean = false,
+    val settlementMode: String = "",
+    val isVerifiedForPayouts: Boolean = false,
     val gatewayConnected: Boolean = false,
-    val gatewayStatus: String = "Not Connected (Direct Host Settlement Mode)"
+    val gatewayStatus: String = "Direct Host Settlement Mode",
+    val lastUpdatedTimestamp: Long = 0L
 ) {
-    val isVerifiedAccount: Boolean get() = isVerified || isVerifiedForPayouts
-    val isConfigured: Boolean get() = upiId.isNotBlank() || accountNumber.isNotBlank()
+    private val anyMethodExplicitlySet: Boolean
+        get() = isUpiIdEnabled || isQrCodeEnabled || isBankAccountEnabled
+
+    val isUpiConfigured: Boolean
+        get() = (if (anyMethodExplicitlySet) isUpiIdEnabled else upiId.isNotBlank()) &&
+                upiId.isNotBlank() && upiId.contains("@") && upiId.length >= 4
+
+    val isQrConfigured: Boolean
+        get() = (if (anyMethodExplicitlySet) isQrCodeEnabled else !qrCodeImageUrl.isNullOrBlank()) &&
+                !qrCodeImageUrl.isNullOrBlank()
+
+    val isBankConfigured: Boolean
+        get() = (if (anyMethodExplicitlySet) isBankAccountEnabled else accountNumber.isNotBlank()) &&
+                accountNumber.isNotBlank() && accountNumber.length >= 8 &&
+                ifscCode.isNotBlank() && ifscCode.length >= 8 &&
+                accountHolderName.isNotBlank()
+
+    val isConfigured: Boolean
+        get() = isUpiConfigured || isQrConfigured || isBankConfigured
+
+    val isVerifiedAccount: Boolean get() = isConfigured && (isVerified || isVerifiedForPayouts)
+
     val maskedAccountNumber: String
         get() = if (accountNumber.length >= 4) "•••• •••• " + accountNumber.takeLast(4) else if (accountNumber.isNotBlank()) "•••• $accountNumber" else "Not Provided"
+
+    val configuredMethodsCount: Int
+        get() = (if (isUpiConfigured) 1 else 0) + (if (isQrConfigured) 1 else 0) + (if (isBankConfigured) 1 else 0)
+
+    val activeMethodsList: List<String>
+        get() {
+            val list = mutableListOf<String>()
+            if (isUpiConfigured) list.add("UPI ID")
+            if (isQrConfigured) list.add("UPI QR Code")
+            if (isBankConfigured) list.add("Bank Transfer")
+            return list
+        }
 }
 
 data class QuickStayOption(

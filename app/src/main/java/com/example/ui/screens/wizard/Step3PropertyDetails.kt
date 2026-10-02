@@ -80,6 +80,12 @@ fun Step3PropertyDetails(
             }
         }
 
+        // Category-Based Sharing & Eligible Audience Configuration Card
+        com.example.ui.components.CategorySharingSetupCard(
+            state = state,
+            onUpdateState = onUpdateState
+        )
+
         // Section: Availability
         OutlinedCard(
             shape = RoundedCornerShape(14.dp),

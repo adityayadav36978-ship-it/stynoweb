@@ -521,6 +521,9 @@ fun Step2BasicInfo(
                 )
 
                 // 4. Locality / Sector and PIN Code
+                var isPincodeLoading by remember { mutableStateOf(false) }
+                var pincodeFeedback by remember { mutableStateOf<String?>(null) }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -535,11 +538,55 @@ fun Step2BasicInfo(
 
                     OutlinedTextField(
                         value = state.postalCode,
-                        onValueChange = { onUpdateState(state.copy(postalCode = it)) },
+                        onValueChange = { newPin ->
+                            val cleanPin = newPin.filter { it.isDigit() }.take(6)
+                            onUpdateState(state.copy(postalCode = cleanPin))
+                            if (cleanPin.length == 6) {
+                                coroutineScope.launch {
+                                    isPincodeLoading = true
+                                    val lookup = locationRepository.lookupIndianPincode(cleanPin)
+                                    lookup.onSuccess { loc ->
+                                        pincodeFeedback = "Auto-filled: ${loc.locality}, ${loc.city}, ${loc.state}"
+                                        onUpdateState(
+                                            state.copy(
+                                                postalCode = cleanPin,
+                                                country = "India",
+                                                state = loc.state,
+                                                district = loc.district ?: loc.city,
+                                                city = loc.city,
+                                                area = if (state.area.isBlank()) loc.locality else state.area,
+                                                address = if (state.address.isBlank()) loc.formattedAddress else state.address,
+                                                gpsLatitude = loc.latitude,
+                                                gpsLongitude = loc.longitude
+                                            )
+                                        )
+                                    }.onFailure {
+                                        pincodeFeedback = "Could not resolve PIN code details"
+                                    }
+                                    isPincodeLoading = false
+                                }
+                            }
+                        },
                         label = { Text("PIN Code") },
                         placeholder = { Text("e.g. 201306") },
+                        trailingIcon = {
+                            if (isPincodeLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else if (state.postalCode.length == 6) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Valid PIN", tint = Color(0xFF10B981))
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(0.8f).testTag("input_property_pincode")
+                    )
+                }
+
+                if (pincodeFeedback != null) {
+                    Text(
+                        text = pincodeFeedback!!,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF059669),
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 

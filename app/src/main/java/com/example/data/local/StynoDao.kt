@@ -62,6 +62,9 @@ interface StynoDao {
     @Query("UPDATE bookings SET status = :newStatus WHERE id = :bookingId")
     suspend fun updateBookingStatus(bookingId: String, newStatus: String)
 
+    @Query("SELECT * FROM bookings WHERE id = :bookingId LIMIT 1")
+    suspend fun getBookingById(bookingId: String): LocalBookingEntity?
+
     // Chat
     @Query("SELECT * FROM chat_messages WHERE propertyId = :propertyId ORDER BY timestamp ASC")
     fun getChatMessages(propertyId: String): Flow<List<LocalChatMessageEntity>>
@@ -78,6 +81,9 @@ interface StynoDao {
 
     @Query("UPDATE custom_properties SET verificationStatus = :status WHERE id = :propertyId")
     suspend fun updatePropertyVerification(propertyId: String, status: String)
+
+    @Query("UPDATE custom_properties SET girlsSafetyStatus = :status, girlsSafetyDataJson = :json WHERE id = :propertyId")
+    suspend fun updateCustomPropertyGirlsSafety(propertyId: String, status: String, json: String)
 
     @Query("DELETE FROM custom_properties WHERE id = :propertyId")
     suspend fun deleteCustomProperty(propertyId: String)
@@ -104,6 +110,19 @@ interface StynoDao {
 
     @Query("UPDATE complaints SET status = :status, resolutionNotes = :notes WHERE id = :complaintId")
     suspend fun updateComplaintStatus(complaintId: String, status: String, notes: String)
+
+    // Safety Concern Reports
+    @Query("SELECT * FROM safety_concern_reports ORDER BY reportedAtTimestamp DESC")
+    fun getAllSafetyConcernReports(): Flow<List<SafetyConcernReportEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSafetyConcernReport(report: SafetyConcernReportEntity)
+
+    @Query("UPDATE safety_concern_reports SET status = :status, adminNotes = :adminNotes, actionTaken = :actionTaken WHERE id = :reportId")
+    suspend fun updateSafetyConcernReportStatus(reportId: String, status: String, adminNotes: String, actionTaken: String)
+
+    @Query("DELETE FROM safety_concern_reports WHERE id = :reportId")
+    suspend fun deleteSafetyConcernReport(reportId: String)
 
     // Cached Properties (Offline & Frequently Accessed Cache)
     @Query("SELECT * FROM cached_properties ORDER BY lastAccessedTimestamp DESC")

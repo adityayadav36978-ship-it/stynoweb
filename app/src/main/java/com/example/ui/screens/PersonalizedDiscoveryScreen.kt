@@ -38,6 +38,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ui.screens.discovery.NoMatchingStaysView
+import com.example.ui.screens.discovery.Step3BasicRequirementsView
+import com.example.ui.screens.discovery.Step4FoodRequirementView
+import com.example.ui.screens.discovery.Step5BudgetView
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -173,8 +177,9 @@ fun PersonalizedDiscoveryScreen(
     }
 
     val currentStep = discoveryState.currentStep
-    val totalSteps = DiscoveryStep.values().size
-    val currentStepIndex = DiscoveryStep.values().indexOf(currentStep) + 1
+    val activeSteps = viewModel.activeDiscoverySteps
+    val totalSteps = activeSteps.size
+    val currentStepIndex = (activeSteps.indexOf(currentStep).takeIf { it >= 0 } ?: 0) + 1
     val progress = currentStepIndex.toFloat() / totalSteps.toFloat()
 
     val context = LocalContext.current
@@ -312,7 +317,11 @@ fun PersonalizedDiscoveryScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = if (currentStep == DiscoveryStep.MATCH_RESULTS) "Explore All on Map" else "Next Step",
+                                    text = when (currentStep) {
+                                        DiscoveryStep.MATCH_RESULTS -> "Explore All on Map"
+                                        DiscoveryStep.BUDGET -> "Find Matching Stays"
+                                        else -> "Next Step"
+                                    },
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
                                 )
@@ -380,6 +389,18 @@ fun PersonalizedDiscoveryScreen(
                         selectedTypes = discoveryState.selectedPropertyTypes,
                         onToggleType = { viewModel.toggleDiscoveryPropertyType(it) }
                     )
+                    DiscoveryStep.BASIC_REQUIREMENTS -> Step3BasicRequirementsView(
+                        viewModel = viewModel,
+                        state = discoveryState
+                    )
+                    DiscoveryStep.BUDGET -> Step5BudgetView(
+                        viewModel = viewModel,
+                        state = discoveryState
+                    )
+                    DiscoveryStep.FOOD_REQUIREMENT -> Step4FoodRequirementView(
+                        viewModel = viewModel,
+                        state = discoveryState
+                    )
                     DiscoveryStep.NEARBY_PREVIEW -> Step3NearbyPreviewView(
                         viewModel = viewModel,
                         state = discoveryState,
@@ -391,29 +412,12 @@ fun PersonalizedDiscoveryScreen(
                             viewModel.openPropertyDetails(prop)
                         }
                     )
-                    DiscoveryStep.GUEST_TARGET -> Step4GuestTargetView(
-                        selectedTarget = discoveryState.selectedGuestTarget,
-                        onSelectTarget = { viewModel.setDiscoveryGuestTarget(it) }
-                    )
-                    DiscoveryStep.SHARING_PREFERENCE -> Step5SharingPreferenceView(
+                    DiscoveryStep.GUEST_TARGET,
+                    DiscoveryStep.SHARING_PREFERENCE,
+                    DiscoveryStep.USER_OCCUPATION,
+                    DiscoveryStep.STAY_DURATION -> Step3BasicRequirementsView(
                         viewModel = viewModel,
-                        selectedSharing = discoveryState.selectedSharingOption,
-                        onSelectSharing = { viewModel.setDiscoverySharingPreference(it) }
-                    )
-                    DiscoveryStep.USER_OCCUPATION -> Step6OccupationView(
-                        selectedOccupation = discoveryState.selectedOccupation,
-                        customText = discoveryState.customOccupationText,
-                        onSelectOccupation = { occ, text -> viewModel.setDiscoveryOccupation(occ, text) }
-                    )
-                    DiscoveryStep.STAY_DURATION -> Step7StayDurationView(
-                        selectedDuration = discoveryState.selectedDurationChoice,
-                        selectedPropertyTypes = discoveryState.selectedPropertyTypes,
-                        onSelectDuration = { viewModel.setDiscoveryDuration(it) }
-                    )
-                    DiscoveryStep.FOOD_REQUIREMENT -> Step8FoodRequirementView(
-                        selectedFood = discoveryState.selectedFoodRequirement,
-                        candidateProperties = discoveryState.candidateProperties,
-                        onSelectFood = { viewModel.setDiscoveryFoodRequirement(it) }
+                        state = discoveryState
                     )
                     DiscoveryStep.MATCH_RESULTS -> Step9ResultsAndOwnerPricingView(
                         viewModel = viewModel,
@@ -1746,22 +1750,11 @@ private fun Step9ResultsAndOwnerPricingView(
 
         if (matches.isEmpty()) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("No direct matches found for strict filter criteria.", fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.jumpToDiscoveryStep(DiscoveryStep.PROPERTY_TYPE) }) {
-                            Text("Adjust Filters")
-                        }
-                    }
-                }
+                NoMatchingStaysView(
+                    viewModel = viewModel,
+                    state = discoveryState,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
             }
         } else {
             items(matches) { match ->

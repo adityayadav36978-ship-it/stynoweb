@@ -17,6 +17,9 @@ import com.example.data.model.RoomOption
 import com.example.data.model.RoomTypeConfig
 import com.example.data.model.VerificationStatus
 import com.example.data.model.WizardMediaItem
+import com.example.data.model.GirlsSafetySubmission
+import com.example.data.model.GirlsSafetyVerification
+import com.example.data.model.GirlsSafetyVerificationStatus
 import java.util.UUID
 
 data class PropertyWizardState(
@@ -57,6 +60,12 @@ data class PropertyWizardState(
     val checkOutTime: String = "11:00 AM",
     val gateClosingTime: String = "10:30 PM",
 
+    // Category-Based Sharing & Audience Setup
+    val targetAudience: GenderSuitability = GenderSuitability.BOYS_ONLY,
+    val isSharingAvailable: Boolean = false,
+    val sharingCapacity: Int = 2,
+    val availableSpaces: Int = 2,
+
     // Step 4: Room Types & Pricing
     val rooms: List<RoomTypeConfig> = defaultRoomsFor(PropertyType.HOSTEL),
 
@@ -68,6 +77,9 @@ data class PropertyWizardState(
 
     // Step 7: Category-Specific Fields
     val categoryConfig: CategorySpecificConfig = CategorySpecificConfig(),
+
+    // Girls Safety Verification Submission Dossier
+    val girlsSafetySubmission: GirlsSafetySubmission = GirlsSafetySubmission(),
 
     // Step 10: Owner Payment Setup
     val ownerPaymentDetails: com.example.data.model.OwnerPaymentDetails = com.example.data.model.OwnerPaymentDetails(),
@@ -125,15 +137,22 @@ data class PropertyWizardState(
 
         val genderSuitability = when (propertyType) {
             PropertyType.HOSTEL -> categoryConfig.hostelGender
-            PropertyType.PG -> if (categoryConfig.pgTargetGroup.contains("Women", true) || categoryConfig.pgTargetGroup.contains("Girls", true)) {
-                GenderSuitability.GIRLS_ONLY
-            } else if (categoryConfig.pgTargetGroup.contains("Men", true) || categoryConfig.pgTargetGroup.contains("Boys", true)) {
-                GenderSuitability.BOYS_ONLY
-            } else {
-                GenderSuitability.CO_ED
-            }
-            else -> GenderSuitability.FAMILY
+            PropertyType.PG -> targetAudience
+            PropertyType.HOTEL -> if (targetAudience == GenderSuitability.BOYS_ONLY || targetAudience == GenderSuitability.GIRLS_ONLY) GenderSuitability.ALL else targetAudience
+            else -> targetAudience
         }
+
+        // Category-Based Sharing Safety Rules:
+        // 1. Hotel listings are NEVER shared (always private room/suite).
+        // 2. Couple and Family bookings are ALWAYS private.
+        // 3. Sharing requires capacity >= 2 and availableSpaces >= 0.
+        val canShare = propertyType != PropertyType.HOTEL &&
+            genderSuitability != GenderSuitability.COUPLES &&
+            genderSuitability != GenderSuitability.FAMILY &&
+            isSharingAvailable
+
+        val effectiveCapacity = if (canShare) sharingCapacity.coerceAtLeast(2) else 1
+        val effectiveSpaces = if (canShare) availableSpaces.coerceIn(0, effectiveCapacity) else 1
 
         // Photos
         val photoPaths = photos.mapNotNull { it.localPath }
@@ -143,6 +162,9 @@ data class PropertyWizardState(
             name = propertyName.ifBlank { "Styno ${propertyType.displayName}" },
             propertyType = propertyType,
             genderSuitability = genderSuitability,
+            isSharingAvailable = canShare,
+            sharingCapacity = effectiveCapacity,
+            availableSpaces = effectiveSpaces,
             address = address.ifBlank { "Sector 62" },
             city = city.ifBlank { "Delhi NCR" },
             area = area.ifBlank { "Tech Zone" },
@@ -165,6 +187,26 @@ data class PropertyWizardState(
             furnishingType = if (propertyType == PropertyType.FLAT) categoryConfig.furnishingStatus else "Furnished",
             shortFacilities = amenitiesSummary.take(5),
             allAmenities = amenitiesSummary,
+            hasFoodService = foodConfig.hasFoodService,
+            hasCanteenMenu = foodConfig.hasFoodService,
+            foodMonthlyCharge = if (foodConfig.hasFoodService) foodConfig.monthlyCharge else 0.0,
+            foodDailyCharge = if (foodConfig.hasFoodService) (foodConfig.meals.sumOf { if (it.isEnabled) it.perMealPrice else 0.0 }).coerceAtLeast(120.0) else 0.0,
+            foodTimingsDescription = foodConfig.description.ifBlank { "Breakfast, Lunch, Dinner available with home-style hygienic cooking" },
+            foodMenu = if (foodConfig.hasFoodService) {
+                com.example.data.model.FoodMenu(
+                    propertyId = propertyId,
+                    todayDate = "Today's Fresh Mess Menu",
+                    meals = foodConfig.meals.filter { it.isEnabled }.map { mo ->
+                        com.example.data.model.DailyMeal(
+                            mealType = mo.name,
+                            timing = mo.timings,
+                            items = listOf(mo.name, "Fresh Preparation", "Unlimited Serving"),
+                            isVeg = foodConfig.dietaryType == com.example.data.model.FoodDietaryType.PURE_VEG || foodConfig.dietaryType == com.example.data.model.FoodDietaryType.JAIN_AVAILABLE,
+                            specialNote = "Prepared fresh on premises"
+                        )
+                    }
+                )
+            } else null,
             roomOptions = roomOptions,
             ownerInfo = OwnerInfo(
                 name = fallbackOwnerName.ifBlank { "Verified Styno Host" },
@@ -172,12 +214,8 @@ data class PropertyWizardState(
                 email = ownerEmail.ifBlank { "owner@styno.com" },
                 verifiedHost = true
             ),
-            ownerPaymentDetails = this.ownerPaymentDetails.copy(
-                accountHolderName = this.ownerPaymentDetails.accountHolderName.ifBlank { fallbackOwnerName.ifBlank { "Verified Styno Host" } },
-                upiId = this.ownerPaymentDetails.upiId.ifBlank { if (ownerPhone.isNotBlank()) "${ownerPhone.filter { it.isDigit() }}@styno" else "sharma.stays@icici" },
-                bankName = this.ownerPaymentDetails.bankName.ifBlank { "HDFC Bank" },
-                ifscCode = this.ownerPaymentDetails.ifscCode.ifBlank { "HDFC0001234" }
-            ),
+            ownerId = editingOriginalPropertyId ?: "owner_${(ownerEmail.ifBlank { ownerPhone.ifBlank { draftId } }).lowercase().filter { it.isLetterOrDigit() }}",
+            ownerPaymentDetails = this.ownerPaymentDetails,
             quickStayConfig = if (propertyType == PropertyType.QUICK_STAY) {
                 com.example.data.model.QuickStayConfig(
                     isEnabled = true,
@@ -208,6 +246,28 @@ data class PropertyWizardState(
                 )
             } else {
                 com.example.data.model.QuickStayConfig()
+            },
+            girlsSafetyVerification = if (girlsSafetySubmission.applyForVerification) {
+                GirlsSafetyVerification(
+                    status = GirlsSafetyVerificationStatus.PENDING_REVIEW,
+                    submittedAt = System.currentTimeMillis(),
+                    submissionDateFormatted = "Just now",
+                    femaleWardenPresent = girlsSafetySubmission.femaleWardenPresent,
+                    femaleWardenName = girlsSafetySubmission.femaleWardenName,
+                    femaleWardenPhone = girlsSafetySubmission.femaleWardenPhone,
+                    cctvCoverageCommonAreas = girlsSafetySubmission.cctvCoverageCommonAreas,
+                    biometricOrSmartLock = girlsSafetySubmission.biometricOrSmartLock,
+                    curfewOrGateLockTime = girlsSafetySubmission.curfewOrGateLockTime,
+                    visitorLogMaintained = girlsSafetySubmission.visitorLogMaintained,
+                    policeVerificationCompleted = girlsSafetySubmission.policeVerificationCompleted,
+                    backgroundCheckStaff = girlsSafetySubmission.backgroundCheckStaff,
+                    fireSafetyAndEmergencyExits = girlsSafetySubmission.fireSafetyAndEmergencyExits,
+                    safetyDocumentsUploaded = girlsSafetySubmission.safetyDocumentsUploaded,
+                    safetyAuditVideoUrl = girlsSafetySubmission.safetyAuditVideoUrl,
+                    safetyRemarksByOwner = girlsSafetySubmission.safetyRemarksByOwner
+                )
+            } else {
+                GirlsSafetyVerification(status = GirlsSafetyVerificationStatus.NOT_SUBMITTED)
             }
         )
     }
@@ -426,6 +486,10 @@ data class PropertyWizardState(
                 isGpsLocked = true,
                 photos = photos,
                 rooms = rooms,
+                targetAudience = property.genderSuitability,
+                isSharingAvailable = property.isSharingAvailable,
+                sharingCapacity = property.sharingCapacity,
+                availableSpaces = property.availableSpaces,
                 ownerPaymentDetails = property.ownerPaymentDetails,
                 isPaymentSetupCompleted = property.ownerPaymentDetails.isConfigured,
                 categoryConfig = CategorySpecificConfig(
@@ -442,6 +506,22 @@ data class PropertyWizardState(
                     quickStayAvailableSlots = property.quickStayConfig.availableSlots,
                     quickStayInstantCheckIn = property.quickStayConfig.isAvailableNow,
                     quickStayFacilities = property.quickStayConfig.facilities
+                ),
+                girlsSafetySubmission = GirlsSafetySubmission(
+                    applyForVerification = property.girlsSafetyVerification.status != GirlsSafetyVerificationStatus.NOT_SUBMITTED,
+                    femaleWardenPresent = property.girlsSafetyVerification.femaleWardenPresent,
+                    femaleWardenName = property.girlsSafetyVerification.femaleWardenName,
+                    femaleWardenPhone = property.girlsSafetyVerification.femaleWardenPhone,
+                    cctvCoverageCommonAreas = property.girlsSafetyVerification.cctvCoverageCommonAreas,
+                    biometricOrSmartLock = property.girlsSafetyVerification.biometricOrSmartLock,
+                    curfewOrGateLockTime = property.girlsSafetyVerification.curfewOrGateLockTime,
+                    visitorLogMaintained = property.girlsSafetyVerification.visitorLogMaintained,
+                    policeVerificationCompleted = property.girlsSafetyVerification.policeVerificationCompleted,
+                    backgroundCheckStaff = property.girlsSafetyVerification.backgroundCheckStaff,
+                    fireSafetyAndEmergencyExits = property.girlsSafetyVerification.fireSafetyAndEmergencyExits,
+                    safetyDocumentsUploaded = property.girlsSafetyVerification.safetyDocumentsUploaded,
+                    safetyAuditVideoUrl = property.girlsSafetyVerification.safetyAuditVideoUrl ?: "",
+                    safetyRemarksByOwner = property.girlsSafetyVerification.safetyRemarksByOwner
                 )
             )
         }

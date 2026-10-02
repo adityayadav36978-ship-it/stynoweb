@@ -301,4 +301,13 @@ class LocationRepository(
         )
         Result.success(item)
     }
+
+    suspend fun lookupIndianPincode(pincode: String): Result<RealLocationResult> = withContext(Dispatchers.IO) {
+        val res = geocodingService.lookupIndianPincode(pincode)
+        if (res != null) {
+            Result.success(res)
+        } else {
+            Result.failure(Exception("Unable to find location for PIN code $pincode"))
+        }
+    }
 }

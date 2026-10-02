@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.DurationType
+import com.example.data.model.GirlsSafetyVerificationStatus
 import com.example.data.model.Property
 import com.example.data.model.PropertyType
 import com.example.ui.components.CategoryChipsShimmerRow
@@ -166,6 +167,7 @@ fun HomeScreen(
     val bestRated = allProperties.sortedByDescending { it.rating }
     val budgetFriendly = allProperties.sortedBy { it.startingPrice }
     val quickStays = allProperties.filter { it.propertyType == PropertyType.QUICK_STAY || it.quickStayConfig.isEnabled }
+    val girlsSafetyStays = allProperties.filter { it.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED }
 
     if (isMapViewMode) {
         Column(
@@ -361,6 +363,98 @@ fun HomeScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+
+                // Girls Safety Verified Trust Banner
+                if (girlsSafetyStays.isNotEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    viewModel.setGirlsSafetyFilter(true)
+                                    viewModel.navigateTo(Screen.SEARCH)
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0xFF881337), Color(0xFFBE123C), Color(0xFFE11D48))
+                                        )
+                                    )
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = 0.22f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shield,
+                                                contentDescription = "Girls Safety Verified",
+                                                tint = Color(0xFFFDE047),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "Girls Safety Verified Stays",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    fontSize = 15.sp
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color.White.copy(alpha = 0.25f)
+                                                ) {
+                                                    Text(
+                                                        text = "100% AUDITED",
+                                                        color = Color.White,
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "Female wardens, biometric gates & background verified staff",
+                                                color = Color(0xFFFFE4E6),
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowForward,
+                                        contentDescription = "Explore Girls Safety Stays",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -733,6 +827,41 @@ fun HomeScreen(
                                 onSaveClick = { viewModel.toggleSave(property.id) },
                                 staggerDelayMs = (index * 45).coerceAtMost(200)
                             )
+                        }
+                    }
+                }
+
+                // 4.5 Section: Girls Safety Verified Stays Carousel
+                if (girlsSafetyStays.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SectionHeader(
+                            title = "🛡️ Girls Safety Verified Stays",
+                            subtitle = "Resident female wardens, biometric access & audited premises",
+                            onSeeAllClick = {
+                                viewModel.setGirlsSafetyFilter(true)
+                                viewModel.navigateTo(Screen.SEARCH)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp)
+                        ) {
+                            itemsIndexed(
+                                items = girlsSafetyStays,
+                                key = { _, prop -> "safety_carousel_${prop.id}" }
+                            ) { index, property ->
+                                val isSaved = savedPropertyIds.contains(property.id)
+                                PropertyCard(
+                                    property = property,
+                                    isSaved = isSaved,
+                                    onCardClick = { viewModel.openPropertyDetails(property) },
+                                    onSaveClick = { viewModel.toggleSave(property.id) },
+                                    modifier = Modifier.width(285.dp),
+                                    staggerDelayMs = (index * 40).coerceAtMost(200)
+                                )
+                            }
                         }
                     }
                 }

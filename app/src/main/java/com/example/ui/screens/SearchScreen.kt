@@ -301,6 +301,7 @@ fun SearchScreen(
     val selectedCity by viewModel.selectedCity.collectAsStateWithLifecycle()
     val selectedSort by viewModel.selectedSort.collectAsStateWithLifecycle()
     val verifiedOnly by viewModel.verifiedOnly.collectAsStateWithLifecycle()
+    val girlsSafetyFilterActive by viewModel.girlsSafetyFilterActive.collectAsStateWithLifecycle()
     val minPriceFilter by viewModel.minPriceFilter.collectAsStateWithLifecycle()
     val maxPriceFilter by viewModel.maxPriceFilter.collectAsStateWithLifecycle()
     val minRatingFilter by viewModel.minRatingFilter.collectAsStateWithLifecycle()
@@ -363,6 +364,7 @@ fun SearchScreen(
         (if (minPriceFilter != null || maxPriceFilter != null) 1 else 0) +
         (if (minRatingFilter != null) 1 else 0) +
         (if (verifiedOnly) 1 else 0) +
+        (if (girlsSafetyFilterActive) 1 else 0) +
         selectedAmenities.size +
         (if (maxDistanceKm != null) 1 else 0)
 
@@ -564,7 +566,9 @@ fun SearchScreen(
                         onToggleMapView = { isMapView = !isMapView },
                         isOfflineCachedOnly = isOfflineCachedOnly,
                         cachedCount = cachedProperties.size,
-                        onToggleOfflineCachedOnly = { viewModel.toggleOfflineCachedOnlyFilter() }
+                        onToggleOfflineCachedOnly = { viewModel.toggleOfflineCachedOnlyFilter() },
+                        girlsSafetyActive = girlsSafetyFilterActive,
+                        onToggleGirlsSafety = { viewModel.toggleGirlsSafetyFilter() }
                     )
 
                     ActiveFilterChipsRow(
@@ -577,6 +581,8 @@ fun SearchScreen(
                         onClearDistance = { viewModel.setMaxDistanceKm(null) },
                         verifiedOnly = verifiedOnly,
                         onClearVerifiedOnly = { viewModel.setVerifiedOnly(false) },
+                        girlsSafetyOnly = girlsSafetyFilterActive,
+                        onClearGirlsSafety = { viewModel.setGirlsSafetyFilter(false) },
                         selectedAmenities = selectedAmenities,
                         onRemoveAmenity = { viewModel.toggleAmenityFilter(it) },
                         onResetAll = { viewModel.resetFilters() },

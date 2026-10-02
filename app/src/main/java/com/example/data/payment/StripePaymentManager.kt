@@ -244,6 +244,7 @@ object StripePaymentManager {
         bookingDescription: String,
         customerEmail: String,
         customerName: String,
+        ownerUpiId: String = "",
         onStageChanged: (StripePaymentStage) -> Unit
     ): StripePaymentResult = withContext(Dispatchers.IO) {
         if (!isInitialized) {
@@ -278,7 +279,7 @@ object StripePaymentManager {
                 amountPaid = amountInr,
                 currency = "INR",
                 paymentMethodSummary = "Dynamic Bharat QR (Stripe UPI)",
-                upiId = "styno.stays@icici",
+                upiId = ownerUpiId.ifBlank { "direct_host_qr" },
                 authCode = authCode,
                 timestamp = System.currentTimeMillis(),
                 clientSecret = clientSecret,

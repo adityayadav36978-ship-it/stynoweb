@@ -1,6 +1,8 @@
 package com.example.data.repository
 
+import android.content.Context
 import android.util.Log
+import org.json.JSONObject
 import com.example.data.local.CachedPropertyEntity
 import com.example.data.local.CachedSearchResultEntity
 import com.example.data.local.CustomPropertyEntity
@@ -46,6 +48,15 @@ import com.example.data.model.ProfileSyncStatus
 import com.example.data.model.WishlistItem
 import com.example.data.model.WishlistCollection
 import com.example.data.model.WishlistSyncState
+import com.example.data.model.GirlsSafetyVerification
+import com.example.data.model.GirlsSafetyVerificationStatus
+import com.example.data.model.GirlsSafetyJsonHelper
+import com.example.data.model.SafetyConcernReport
+import com.example.data.model.SafetyReportStatus
+import com.example.data.model.SafetyValidationEngine
+import com.example.data.model.SafetyValidationResult
+import com.example.data.model.StynoPrivacyHelper
+import com.example.data.local.SafetyConcernReportEntity
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
@@ -66,7 +77,10 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
-class StynoRepository(private val stynoDao: StynoDao) {
+class StynoRepository(
+    private val stynoDao: StynoDao,
+    private val context: Context? = null
+) {
 
     private val _isFetchingProperties = MutableStateFlow(false)
     val isFetchingProperties: StateFlow<Boolean> = _isFetchingProperties.asStateFlow()
@@ -76,6 +90,86 @@ class StynoRepository(private val stynoDao: StynoDao) {
 
     private val _quickStayOverrides = MutableStateFlow<Map<String, QuickStayConfig>>(emptyMap())
     private val _paymentDetailsOverrides = MutableStateFlow<Map<String, OwnerPaymentDetails>>(emptyMap())
+    private val _ownerPaymentProfiles = MutableStateFlow<Map<String, OwnerPaymentDetails>>(emptyMap())
+    val ownerPaymentProfiles: StateFlow<Map<String, OwnerPaymentDetails>> = _ownerPaymentProfiles.asStateFlow()
+    private val _girlsSafetyOverrides = MutableStateFlow<Map<String, GirlsSafetyVerification>>(emptyMap())
+
+    init {
+        loadSavedPaymentProfiles()
+    }
+
+    private fun loadSavedPaymentProfiles() {
+        context?.let { ctx ->
+            try {
+                val prefs = ctx.getSharedPreferences("styno_owner_payment_profiles", Context.MODE_PRIVATE)
+                val allEntries = prefs.all
+                val profiles = mutableMapOf<String, OwnerPaymentDetails>()
+                for ((key, value) in allEntries) {
+                    if (key.startsWith("owner_") && value is String) {
+                        try {
+                            val json = JSONObject(value)
+                            val ownerId = json.optString("ownerId", key.removePrefix("owner_"))
+                            val details = OwnerPaymentDetails(
+                                ownerId = ownerId,
+                                isUpiIdEnabled = json.optBoolean("isUpiIdEnabled", false),
+                                upiId = json.optString("upiId", ""),
+                                isQrCodeEnabled = json.optBoolean("isQrCodeEnabled", false),
+                                qrCodeImageUrl = json.optString("qrCodeImageUrl", "").takeIf { it.isNotBlank() },
+                                qrCodeVpa = json.optString("qrCodeVpa", ""),
+                                isBankAccountEnabled = json.optBoolean("isBankAccountEnabled", false),
+                                accountHolderName = json.optString("accountHolderName", ""),
+                                accountNumber = json.optString("accountNumber", ""),
+                                ifscCode = json.optString("ifscCode", ""),
+                                bankName = json.optString("bankName", ""),
+                                accountType = json.optString("accountType", "Savings Account"),
+                                payoutFrequency = json.optString("payoutFrequency", "Instant on Check-in"),
+                                isVerified = json.optBoolean("isVerified", false),
+                                settlementMode = json.optString("settlementMode", ""),
+                                isVerifiedForPayouts = json.optBoolean("isVerifiedForPayouts", false),
+                                lastUpdatedTimestamp = json.optLong("lastUpdatedTimestamp", 0L)
+                            )
+                            profiles[ownerId] = details
+                        } catch (e: Exception) {
+                            Log.w("StynoRepository", "Error parsing payment profile: ${e.message}")
+                        }
+                    }
+                }
+                _ownerPaymentProfiles.value = profiles
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "Error loading saved payment profiles: ${e.message}")
+            }
+        }
+    }
+
+    private fun savePaymentProfileToDisk(ownerId: String, details: OwnerPaymentDetails) {
+        context?.let { ctx ->
+            try {
+                val prefs = ctx.getSharedPreferences("styno_owner_payment_profiles", Context.MODE_PRIVATE)
+                val json = JSONObject().apply {
+                    put("ownerId", details.ownerId.ifBlank { ownerId })
+                    put("isUpiIdEnabled", details.isUpiIdEnabled)
+                    put("upiId", details.upiId)
+                    put("isQrCodeEnabled", details.isQrCodeEnabled)
+                    put("qrCodeImageUrl", details.qrCodeImageUrl ?: "")
+                    put("qrCodeVpa", details.qrCodeVpa)
+                    put("isBankAccountEnabled", details.isBankAccountEnabled)
+                    put("accountHolderName", details.accountHolderName)
+                    put("accountNumber", details.accountNumber)
+                    put("ifscCode", details.ifscCode)
+                    put("bankName", details.bankName)
+                    put("accountType", details.accountType)
+                    put("payoutFrequency", details.payoutFrequency)
+                    put("isVerified", details.isVerified)
+                    put("settlementMode", details.settlementMode)
+                    put("isVerifiedForPayouts", details.isVerifiedForPayouts)
+                    put("lastUpdatedTimestamp", details.lastUpdatedTimestamp)
+                }
+                prefs.edit().putString("owner_$ownerId", json.toString()).apply()
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "Error saving payment profile to disk: ${e.message}")
+            }
+        }
+    }
 
     private val _syncMessage = MutableStateFlow<String?>("Properties synced with Firestore")
     val syncMessage: StateFlow<String?> = _syncMessage.asStateFlow()
@@ -141,7 +235,29 @@ class StynoRepository(private val stynoDao: StynoDao) {
                 responseTime = "Instant response",
                 joinedDate = "Verified Styno Partner since 2023"
             ),
-            hasCanteenMenu = true
+            hasCanteenMenu = true,
+            girlsSafetyVerification = GirlsSafetyVerification(
+                status = GirlsSafetyVerificationStatus.VERIFIED,
+                submittedAt = System.currentTimeMillis() - (20L * 24 * 3600 * 1000L),
+                submissionDateFormatted = "20 days ago",
+                femaleWardenPresent = true,
+                femaleWardenName = "Sunita Deshmukh",
+                femaleWardenPhone = "+91 98234 11223",
+                cctvCoverageCommonAreas = true,
+                biometricOrSmartLock = true,
+                curfewOrGateLockTime = "10:00 PM",
+                visitorLogMaintained = true,
+                policeVerificationCompleted = true,
+                backgroundCheckStaff = true,
+                fireSafetyAndEmergencyExits = true,
+                safetyDocumentsUploaded = listOf("Police_Verification_NOC_2026.pdf", "Warden_Aadhaar_ID_Verified.pdf", "Building_Fire_Safety_Certificate.pdf"),
+                verifiedAt = System.currentTimeMillis() - (18L * 24 * 3600 * 1000L),
+                verificationDateFormatted = "Sep 12, 2026",
+                verifiedByAdminId = "adm-styno-lead-01",
+                verifiedByAdminName = "STYNO Trust & Safety Committee",
+                auditCertificateNumber = "STYNO-GSV-2026-9842",
+                adminReviewNotes = "In-person physical audit completed by STYNO Trust & Safety team. Biometric entry operational, 24x7 female warden verified on premise."
+            )
         ),
 
         // 2. Hostel - Boys Hostel
@@ -327,7 +443,24 @@ class StynoRepository(private val stynoDao: StynoDao) {
                 phone = "+91 98332 99887",
                 email = "urbanliving.powai@styno.com"
             ),
-            hasCanteenMenu = true
+            hasCanteenMenu = true,
+            girlsSafetyVerification = GirlsSafetyVerification(
+                status = GirlsSafetyVerificationStatus.PENDING_REVIEW,
+                submittedAt = System.currentTimeMillis() - (2L * 24 * 3600 * 1000L),
+                submissionDateFormatted = "2 days ago",
+                femaleWardenPresent = true,
+                femaleWardenName = "Kavita Rao",
+                femaleWardenPhone = "+91 98332 11990",
+                cctvCoverageCommonAreas = true,
+                biometricOrSmartLock = true,
+                curfewOrGateLockTime = "10:30 PM",
+                visitorLogMaintained = true,
+                policeVerificationCompleted = true,
+                backgroundCheckStaff = true,
+                fireSafetyAndEmergencyExits = true,
+                safetyDocumentsUploaded = listOf("Police_Verification_Application.pdf", "Warden_Aadhaar_KYC.pdf"),
+                safetyRemarksByOwner = "Full CCTV coverage on entrance and lounge. Female resident warden stationed 24/7 on ground floor. Requesting STYNO safety badge audit."
+            )
         ),
 
         // 6. Flat - 1 BHK / 2 BHK / 3 BHK
@@ -513,6 +646,13 @@ class StynoRepository(private val stynoDao: StynoDao) {
         )
     )
 
+    fun getPropertiesSync(): List<Property> {
+        val list = mutableListOf<Property>()
+        list.addAll(seedProperties)
+        list.addAll(_firestoreProperties.value)
+        return list
+    }
+
     // Offline Room Database Caching Streams
     val cachedPropertiesFlow: Flow<List<Property>> = stynoDao.getAllCachedProperties().map { entities ->
         entities.map { PropertyCacheHelper.entityToProperty(it) }
@@ -618,15 +758,19 @@ class StynoRepository(private val stynoDao: StynoDao) {
                     email = "host@styno.com",
                     verifiedHost = (vStat == VerificationStatus.VERIFIED)
                 ),
+                ownerId = "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}",
                 ownerPaymentDetails = OwnerPaymentDetails(
-                    accountHolderName = custom.ownerAccountHolderName.ifBlank { custom.ownerName },
-                    bankName = custom.ownerBankName.ifBlank { "HDFC Bank" },
+                    ownerId = "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}",
+                    isUpiIdEnabled = custom.ownerUpiId.isNotBlank(),
+                    upiId = custom.ownerUpiId,
+                    isBankAccountEnabled = custom.ownerAccountNumber.isNotBlank(),
+                    accountHolderName = custom.ownerAccountHolderName,
+                    bankName = custom.ownerBankName,
                     accountNumber = custom.ownerAccountNumber,
-                    ifscCode = custom.ownerIfscCode.ifBlank { "HDFC0001234" },
-                    upiId = custom.ownerUpiId.ifBlank { "${custom.ownerPhone.filter { it.isDigit() }}@styno" },
+                    ifscCode = custom.ownerIfscCode,
                     settlementMode = custom.ownerSettlementMode,
-                    isVerified = custom.ownerIsVerifiedAccount,
-                    isVerifiedForPayouts = custom.ownerIsVerifiedAccount
+                    isVerified = custom.ownerIsVerifiedAccount && (custom.ownerUpiId.isNotBlank() || custom.ownerAccountNumber.isNotBlank()),
+                    isVerifiedForPayouts = custom.ownerIsVerifiedAccount && (custom.ownerUpiId.isNotBlank() || custom.ownerAccountNumber.isNotBlank())
                 ),
                 quickStayConfig = if (pType == PropertyType.QUICK_STAY || custom.quickStayEnabled) {
                     QuickStayConfig(
@@ -657,6 +801,13 @@ class StynoRepository(private val stynoDao: StynoDao) {
                     )
                 } else {
                     QuickStayConfig()
+                },
+                girlsSafetyVerification = if (custom.girlsSafetyDataJson.isNotBlank()) {
+                    GirlsSafetyJsonHelper.fromJson(custom.girlsSafetyDataJson)
+                } else {
+                    val status = runCatching { GirlsSafetyVerificationStatus.valueOf(custom.girlsSafetyStatus) }
+                        .getOrDefault(GirlsSafetyVerificationStatus.NOT_SUBMITTED)
+                    GirlsSafetyVerification(status = status)
                 }
             )
         }
@@ -666,12 +817,17 @@ class StynoRepository(private val stynoDao: StynoDao) {
         (convertedCustom + cloudProps + convertedCached + seedProperties).distinctBy { it.id }
     },
     _quickStayOverrides,
-    _paymentDetailsOverrides
-    ) { baseProps, qsOverrides, pdOverrides ->
+    _paymentDetailsOverrides,
+    _ownerPaymentProfiles,
+    _girlsSafetyOverrides
+    ) { baseProps, qsOverrides, pdOverrides, ownerProfiles, gsOverrides ->
         baseProps.map { prop ->
             var p = prop
             qsOverrides[prop.id]?.let { qs -> p = p.copy(quickStayConfig = qs) }
-            pdOverrides[prop.id]?.let { pd -> p = p.copy(ownerPaymentDetails = pd) }
+            val ownerId = p.resolvedOwnerId
+            val ownerDetails = pdOverrides[prop.id] ?: ownerProfiles[ownerId]
+            ownerDetails?.let { pd -> p = p.copy(ownerPaymentDetails = pd) }
+            gsOverrides[prop.id]?.let { gs -> p = p.copy(girlsSafetyVerification = gs) }
             p
         }
     }
@@ -1644,6 +1800,40 @@ class StynoRepository(private val stynoDao: StynoDao) {
     }
 
     suspend fun createBooking(booking: Booking) {
+        // Enforce rate limiting on booking submissions
+        val rateKey = booking.guestPhone.ifBlank { booking.guestEmail.ifBlank { booking.id } }
+        val rateCheck = com.example.data.security.StynoSecurityEngine.checkRateLimit(
+            action = com.example.data.security.StynoSecurityEngine.RateLimitAction.BOOKING_ATTEMPT,
+            key = rateKey
+        )
+        if (rateCheck is com.example.data.security.StynoSecurityEngine.RateLimitResult.Blocked) {
+            throw SecurityException(rateCheck.reason)
+        }
+
+        // Validate price bounds
+        if (booking.finalAmount < 0.0 || booking.finalAmount.isNaN()) {
+            throw SecurityException("Invalid booking amount detected.")
+        }
+
+        // Enforce backend/repository safety and gender-matched sharing validation
+        val property = getPropertiesSync().firstOrNull { it.id == booking.propertyId }
+        if (property != null) {
+            val roomOpt = property.roomOptions.firstOrNull { it.name == booking.roomTypeName }
+            val safetyResult = SafetyValidationEngine.validateBookingEligibility(
+                property = property,
+                roomOption = roomOpt,
+                userGender = booking.guestGender,
+                isCoupleBooking = booking.isCoupleBooking
+            )
+            if (safetyResult is SafetyValidationResult.Denied) {
+                throw SecurityException("Safety Enforcement Violation: ${safetyResult.reason}")
+            }
+        }
+
+        val sanitizedGuestName = com.example.data.security.StynoSecurityEngine.sanitizeString(booking.guestName)
+        val sanitizedGuestPhone = com.example.data.security.StynoSecurityEngine.sanitizeString(booking.guestPhone)
+        val sanitizedGuestEmail = com.example.data.security.StynoSecurityEngine.sanitizeString(booking.guestEmail)
+
         stynoDao.insertBooking(
             LocalBookingEntity(
                 id = booking.id,
@@ -1657,9 +1847,9 @@ class StynoRepository(private val stynoDao: StynoDao) {
                 checkInTime = booking.checkInTime,
                 checkOutDate = booking.checkOutDate,
                 durationText = booking.durationText,
-                guestName = booking.guestName,
-                guestPhone = booking.guestPhone,
-                guestEmail = booking.guestEmail,
+                guestName = sanitizedGuestName,
+                guestPhone = sanitizedGuestPhone,
+                guestEmail = sanitizedGuestEmail,
                 guestIdProofType = booking.guestIdProofType,
                 basePrice = booking.basePrice,
                 serviceFee = booking.serviceFee,
@@ -1731,7 +1921,22 @@ class StynoRepository(private val stynoDao: StynoDao) {
         }
     }
 
-    suspend fun cancelBooking(bookingId: String) {
+    suspend fun cancelBooking(
+        bookingId: String,
+        requestingUserId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        if (requestingUserId != null) {
+            val booking = stynoDao.getBookingById(bookingId)
+            if (booking != null) {
+                val prop = (seedProperties + _firestoreProperties.value).find { it.id == booking.propertyId }
+                val isGuest = booking.guestPhone == requestingUserId || booking.guestEmail.equals(requestingUserId, ignoreCase = true)
+                val isOwner = prop?.resolvedOwnerId == requestingUserId
+                if (!isGuest && !isOwner && !isAdmin) {
+                    throw SecurityException("Access Denied: You are not authorized to cancel booking $bookingId")
+                }
+            }
+        }
         stynoDao.updateBookingStatus(bookingId, BookingStatus.CANCELLED.name)
         try {
             val firestore = FirebaseFirestore.getInstance()
@@ -1808,56 +2013,84 @@ class StynoRepository(private val stynoDao: StynoDao) {
 
     // Owner property creation
     suspend fun createCustomProperty(custom: CustomPropertyEntity) {
-        stynoDao.insertCustomProperty(custom)
+        // Enforce Core Security Rule: Owners cannot self-assign VERIFIED status!
+        val sanitizedCustom = if (custom.girlsSafetyStatus == GirlsSafetyVerificationStatus.VERIFIED.name) {
+            val existing = _girlsSafetyOverrides.value[custom.id]
+            if (existing?.status == GirlsSafetyVerificationStatus.VERIFIED) {
+                custom
+            } else {
+                val updatedJson = if (custom.girlsSafetyDataJson.isNotBlank()) {
+                    val parsed = GirlsSafetyJsonHelper.fromJson(custom.girlsSafetyDataJson)
+                    GirlsSafetyJsonHelper.toJson(parsed.copy(status = GirlsSafetyVerificationStatus.PENDING_REVIEW))
+                } else ""
+                custom.copy(
+                    girlsSafetyStatus = GirlsSafetyVerificationStatus.PENDING_REVIEW.name,
+                    girlsSafetyDataJson = updatedJson
+                )
+            }
+        } else {
+            custom
+        }
+        stynoDao.insertCustomProperty(sanitizedCustom)
+
+        if (sanitizedCustom.girlsSafetyDataJson.isNotBlank()) {
+            val parsed = GirlsSafetyJsonHelper.fromJson(sanitizedCustom.girlsSafetyDataJson)
+            val current = _girlsSafetyOverrides.value.toMutableMap()
+            current[sanitizedCustom.id] = parsed
+            _girlsSafetyOverrides.value = current
+        }
+
         try {
             val firestore = FirebaseFirestore.getInstance()
             val propertyMap = hashMapOf<String, Any>(
-                "id" to custom.id,
-                "name" to custom.name,
-                "propertyType" to custom.propertyType,
-                "genderSuitability" to custom.genderSuitability,
-                "address" to custom.address,
-                "city" to custom.city,
-                "area" to custom.area,
-                "nearbyLandmark" to custom.nearbyLandmark,
-                "startingPrice" to custom.startingPrice,
-                "durationType" to custom.durationType,
-                "verificationStatus" to custom.verificationStatus,
-                "amenities" to custom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                "allAmenities" to custom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                "shortFacilities" to custom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(5),
-                "ownerName" to custom.ownerName,
-                "ownerPhone" to custom.ownerPhone,
-                "description" to custom.description,
-                "securityDeposit" to custom.securityDeposit,
-                "flatBhkConfig" to custom.flatBhkConfig,
-                "furnishingType" to custom.furnishingType,
-                "quickStayEnabled" to custom.quickStayEnabled,
-                "price3Hours" to custom.price3Hours,
-                "price6Hours" to custom.price6Hours,
-                "price12Hours" to custom.price12Hours,
-                "price24Hours" to custom.price24Hours,
-                "availableSlots" to custom.availableSlots,
-                "instantCheckIn" to custom.instantCheckIn,
-                "checkInInstructions" to custom.checkInInstructions,
-                "transitFacilities" to custom.transitFacilitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
-                "ownerAccountHolderName" to custom.ownerAccountHolderName,
-                "ownerBankName" to custom.ownerBankName,
-                "ownerAccountNumber" to custom.ownerAccountNumber,
-                "ownerIfscCode" to custom.ownerIfscCode,
-                "ownerUpiId" to custom.ownerUpiId,
-                "ownerSettlementMode" to custom.ownerSettlementMode,
-                "ownerIsVerifiedAccount" to custom.ownerIsVerifiedAccount,
+                "id" to sanitizedCustom.id,
+                "name" to sanitizedCustom.name,
+                "propertyType" to sanitizedCustom.propertyType,
+                "genderSuitability" to sanitizedCustom.genderSuitability,
+                "address" to sanitizedCustom.address,
+                "city" to sanitizedCustom.city,
+                "area" to sanitizedCustom.area,
+                "nearbyLandmark" to sanitizedCustom.nearbyLandmark,
+                "startingPrice" to sanitizedCustom.startingPrice,
+                "durationType" to sanitizedCustom.durationType,
+                "verificationStatus" to sanitizedCustom.verificationStatus,
+                "girlsSafetyStatus" to sanitizedCustom.girlsSafetyStatus,
+                "girlsSafetyDataJson" to sanitizedCustom.girlsSafetyDataJson,
+                "amenities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                "allAmenities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                "shortFacilities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(5),
+                "ownerName" to sanitizedCustom.ownerName,
+                "ownerPhone" to sanitizedCustom.ownerPhone,
+                "description" to sanitizedCustom.description,
+                "securityDeposit" to sanitizedCustom.securityDeposit,
+                "flatBhkConfig" to sanitizedCustom.flatBhkConfig,
+                "furnishingType" to sanitizedCustom.furnishingType,
+                "quickStayEnabled" to sanitizedCustom.quickStayEnabled,
+                "price3Hours" to sanitizedCustom.price3Hours,
+                "price6Hours" to sanitizedCustom.price6Hours,
+                "price12Hours" to sanitizedCustom.price12Hours,
+                "price24Hours" to sanitizedCustom.price24Hours,
+                "availableSlots" to sanitizedCustom.availableSlots,
+                "instantCheckIn" to sanitizedCustom.instantCheckIn,
+                "checkInInstructions" to sanitizedCustom.checkInInstructions,
+                "transitFacilities" to sanitizedCustom.transitFacilitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                "ownerAccountHolderName" to sanitizedCustom.ownerAccountHolderName,
+                "ownerBankName" to sanitizedCustom.ownerBankName,
+                "ownerAccountNumber" to sanitizedCustom.ownerAccountNumber,
+                "ownerIfscCode" to sanitizedCustom.ownerIfscCode,
+                "ownerUpiId" to sanitizedCustom.ownerUpiId,
+                "ownerSettlementMode" to sanitizedCustom.ownerSettlementMode,
+                "ownerIsVerifiedAccount" to sanitizedCustom.ownerIsVerifiedAccount,
                 "rating" to 4.9,
                 "reviewCount" to 1,
                 "latitude" to 28.5355,
                 "longitude" to 77.3910,
                 "publishedAtTimestamp" to System.currentTimeMillis()
             )
-            firestore.collection("properties").document(custom.id)
+            firestore.collection("properties").document(sanitizedCustom.id)
                 .set(propertyMap, SetOptions.merge())
                 .addOnSuccessListener {
-                    Log.d("StynoRepository", "Custom property synced to Firestore: ${custom.id}")
+                    Log.d("StynoRepository", "Custom property synced to Firestore: ${sanitizedCustom.id}")
                 }
         } catch (e: Exception) {
             Log.w("StynoRepository", "Firestore property sync note: ${e.localizedMessage}")
@@ -1888,10 +2121,49 @@ class StynoRepository(private val stynoDao: StynoDao) {
         }
     }
 
-    suspend fun updatePropertyPaymentDetails(propertyId: String, details: OwnerPaymentDetails) {
+    suspend fun updatePropertyPaymentDetails(
+        propertyId: String,
+        details: OwnerPaymentDetails,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val currentProps = (seedProperties + _firestoreProperties.value)
+        val prop = currentProps.find { it.id == propertyId }
+        val targetOwnerId = prop?.resolvedOwnerId ?: details.ownerId.ifBlank { "owner_$propertyId" }
+
+        // RBAC & IDOR check: if requestingOwnerId is provided, enforce that requesting owner owns this property or is Admin
+        if (requestingOwnerId != null) {
+            val isAuthorized = com.example.data.security.StynoSecurityEngine.enforcePaymentAccess(
+                requestingOwnerId = requestingOwnerId,
+                targetOwnerId = targetOwnerId,
+                isAdmin = isAdmin
+            )
+            if (!isAuthorized) {
+                throw SecurityException("Access Denied: Owner $requestingOwnerId is not authorized to update payment details for property $propertyId")
+            }
+        }
+
+        val updatedDetails = details.copy(
+            ownerId = targetOwnerId,
+            lastUpdatedTimestamp = System.currentTimeMillis()
+        )
+
+        // 1. Update owner payment profiles map
+        val profiles = _ownerPaymentProfiles.value.toMutableMap()
+        profiles[targetOwnerId] = updatedDetails
+        _ownerPaymentProfiles.value = profiles
+
+        // 2. Persist to disk
+        savePaymentProfileToDisk(targetOwnerId, updatedDetails)
+
+        // 3. Update property overrides for this property AND any sibling properties owned by this owner
         val current = _paymentDetailsOverrides.value.toMutableMap()
-        current[propertyId] = details
+        current[propertyId] = updatedDetails
+        currentProps.filter { it.resolvedOwnerId == targetOwnerId }.forEach { sibling ->
+            current[sibling.id] = updatedDetails
+        }
         _paymentDetailsOverrides.value = current
+
         try {
             val firestore = FirebaseFirestore.getInstance()
             val updateMap = hashMapOf<String, Any>(
@@ -1901,7 +2173,11 @@ class StynoRepository(private val stynoDao: StynoDao) {
                 "ownerIfscCode" to details.ifscCode,
                 "ownerUpiId" to details.upiId,
                 "ownerSettlementMode" to details.settlementMode,
-                "ownerIsVerifiedAccount" to details.isVerifiedAccount
+                "ownerIsVerifiedAccount" to details.isVerifiedAccount,
+                "ownerIsUpiIdEnabled" to details.isUpiIdEnabled,
+                "ownerIsQrCodeEnabled" to details.isQrCodeEnabled,
+                "ownerQrCodeImageUrl" to (details.qrCodeImageUrl ?: ""),
+                "ownerIsBankAccountEnabled" to details.isBankAccountEnabled
             )
             firestore.collection("properties").document(propertyId)
                 .set(updateMap, SetOptions.merge())
@@ -1910,7 +2186,45 @@ class StynoRepository(private val stynoDao: StynoDao) {
         }
     }
 
-    suspend fun deleteCustomProperty(propertyId: String) {
+    fun getPaymentDetailsForProperty(propertyId: String): OwnerPaymentDetails {
+        val allProps = (seedProperties + _firestoreProperties.value)
+        val prop = allProps.find { it.id == propertyId }
+        val ownerId = prop?.resolvedOwnerId ?: ""
+
+        if (ownerId.isNotBlank()) {
+            val profile = _ownerPaymentProfiles.value[ownerId]
+            if (profile != null && profile.isConfigured) return profile
+        }
+
+        val override = _paymentDetailsOverrides.value[propertyId]
+        if (override != null && override.isConfigured) return override
+
+        if (prop != null && prop.ownerPaymentDetails.isConfigured) return prop.ownerPaymentDetails
+
+        return (if (ownerId.isNotBlank()) _ownerPaymentProfiles.value[ownerId] else null)
+            ?: override
+            ?: prop?.ownerPaymentDetails
+            ?: OwnerPaymentDetails(ownerId = ownerId)
+    }
+
+    suspend fun deleteCustomProperty(
+        propertyId: String,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        if (requestingOwnerId != null) {
+            val allProps = (seedProperties + _firestoreProperties.value)
+            val prop = allProps.find { it.id == propertyId }
+            val actualOwnerId = prop?.resolvedOwnerId ?: ""
+            val isAuthorized = com.example.data.security.StynoSecurityEngine.enforcePropertyOwnership(
+                requestingOwnerId = requestingOwnerId,
+                actualPropertyOwnerId = actualOwnerId,
+                isAdmin = isAdmin
+            )
+            if (!isAuthorized) {
+                throw SecurityException("Access Denied: Owner $requestingOwnerId is not authorized to delete property $propertyId")
+            }
+        }
         stynoDao.deleteCustomProperty(propertyId)
         try {
             val firestore = FirebaseFirestore.getInstance()
@@ -1920,8 +2234,375 @@ class StynoRepository(private val stynoDao: StynoDao) {
         }
     }
 
-    suspend fun updatePropertyVerification(propertyId: String, status: VerificationStatus) {
+    suspend fun updatePropertyVerification(
+        propertyId: String,
+        status: VerificationStatus,
+        requestingEmail: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val isAuthorized = isAdmin || com.example.data.security.StynoSecurityEngine.enforceAdminAccess(requestingEmail)
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Admin authorization required to modify property verification status.")
+        }
         stynoDao.updatePropertyVerification(propertyId, status.name)
+    }
+
+    // ==========================================
+    // GIRLS SAFETY VERIFICATION ENGINE (ADMIN CONTROLLED)
+    // ==========================================
+
+    suspend fun adminApproveGirlsSafety(
+        propertyId: String,
+        adminId: String = "adm-styno-lead-01",
+        adminName: String = "STYNO Trust & Safety Committee",
+        notes: String = "Physical on-site audit completed and approved.",
+        requestingEmail: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val isAuthorized = isAdmin || com.example.data.security.StynoSecurityEngine.enforceAdminAccess(requestingEmail)
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Admin authorization required to approve Girls Safety verification audits.")
+        }
+        val currentOverrides = _girlsSafetyOverrides.value.toMutableMap()
+        val existing = currentOverrides[propertyId] ?: GirlsSafetyVerification()
+        val certNum = "STYNO-GSV-${SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())}-${(1000..9999).random()}"
+        val updated = existing.copy(
+            status = GirlsSafetyVerificationStatus.VERIFIED,
+            verifiedAt = System.currentTimeMillis(),
+            verificationDateFormatted = SimpleDateFormat("MMM dd, yyyy", Locale.US).format(Date()),
+            verifiedByAdminId = adminId,
+            verifiedByAdminName = adminName,
+            auditCertificateNumber = certNum,
+            adminReviewNotes = notes,
+            suspensionReason = null,
+            suspendedAt = null,
+            rejectionReason = null,
+            rejectedAt = null
+        )
+        currentOverrides[propertyId] = updated
+        _girlsSafetyOverrides.value = currentOverrides
+
+        // Persist to Room Custom Properties if present
+        stynoDao.updateCustomPropertyGirlsSafety(
+            propertyId = propertyId,
+            status = GirlsSafetyVerificationStatus.VERIFIED.name,
+            json = GirlsSafetyJsonHelper.toJson(updated)
+        )
+
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val updateMap = hashMapOf<String, Any>(
+                "girlsSafetyStatus" to GirlsSafetyVerificationStatus.VERIFIED.name,
+                "girlsSafetyDataJson" to GirlsSafetyJsonHelper.toJson(updated),
+                "verifiedAtTimestamp" to System.currentTimeMillis(),
+                "verifiedByAdmin" to adminName,
+                "auditCertificateNumber" to certNum
+            )
+            firestore.collection("properties").document(propertyId).set(updateMap, SetOptions.merge())
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Admin approve girls safety Firestore sync note: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun adminRejectGirlsSafety(
+        propertyId: String,
+        adminId: String = "adm-styno-lead-01",
+        reason: String,
+        requestingEmail: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val isAuthorized = isAdmin || com.example.data.security.StynoSecurityEngine.enforceAdminAccess(requestingEmail)
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Admin authorization required to reject Girls Safety verification audits.")
+        }
+        val currentOverrides = _girlsSafetyOverrides.value.toMutableMap()
+        val existing = currentOverrides[propertyId] ?: GirlsSafetyVerification()
+        val updated = existing.copy(
+            status = GirlsSafetyVerificationStatus.REJECTED,
+            rejectionReason = reason,
+            rejectedAt = System.currentTimeMillis(),
+            verifiedAt = null,
+            verifiedByAdminId = null,
+            verifiedByAdminName = null,
+            auditCertificateNumber = null
+        )
+        currentOverrides[propertyId] = updated
+        _girlsSafetyOverrides.value = currentOverrides
+
+        stynoDao.updateCustomPropertyGirlsSafety(
+            propertyId = propertyId,
+            status = GirlsSafetyVerificationStatus.REJECTED.name,
+            json = GirlsSafetyJsonHelper.toJson(updated)
+        )
+
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val updateMap = hashMapOf<String, Any>(
+                "girlsSafetyStatus" to GirlsSafetyVerificationStatus.REJECTED.name,
+                "girlsSafetyDataJson" to GirlsSafetyJsonHelper.toJson(updated)
+            )
+            firestore.collection("properties").document(propertyId).set(updateMap, SetOptions.merge())
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Admin reject girls safety Firestore sync note: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun adminSuspendGirlsSafety(
+        propertyId: String,
+        adminId: String = "adm-styno-lead-01",
+        reason: String,
+        requestingEmail: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val isAuthorized = isAdmin || com.example.data.security.StynoSecurityEngine.enforceAdminAccess(requestingEmail)
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Admin authorization required to suspend Girls Safety verification audits.")
+        }
+        val currentOverrides = _girlsSafetyOverrides.value.toMutableMap()
+        val existing = currentOverrides[propertyId] ?: GirlsSafetyVerification()
+        val updated = existing.copy(
+            status = GirlsSafetyVerificationStatus.SUSPENDED,
+            suspensionReason = reason,
+            suspendedAt = System.currentTimeMillis()
+        )
+        currentOverrides[propertyId] = updated
+        _girlsSafetyOverrides.value = currentOverrides
+
+        stynoDao.updateCustomPropertyGirlsSafety(
+            propertyId = propertyId,
+            status = GirlsSafetyVerificationStatus.SUSPENDED.name,
+            json = GirlsSafetyJsonHelper.toJson(updated)
+        )
+
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val updateMap = hashMapOf<String, Any>(
+                "girlsSafetyStatus" to GirlsSafetyVerificationStatus.SUSPENDED.name,
+                "girlsSafetyDataJson" to GirlsSafetyJsonHelper.toJson(updated)
+            )
+            firestore.collection("properties").document(propertyId).set(updateMap, SetOptions.merge())
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Admin suspend girls safety Firestore sync note: ${e.localizedMessage}")
+        }
+    }
+
+    // Safety Concern Reports Stream
+    val allSafetyReportsFlow: Flow<List<SafetyConcernReport>> = stynoDao.getAllSafetyConcernReports().map { list ->
+        if (list.isEmpty()) {
+            listOf(
+                SafetyConcernReport(
+                    id = "rep-seed-1",
+                    propertyId = "prop-hostel-01",
+                    propertyName = "Styno Orchid Girls Elite Hostel",
+                    reportedByUserId = "res-9812",
+                    reportedByUserName = "Ananya Sharma",
+                    reportedByUserPhone = "+91 98111 22334",
+                    issueCategory = "Gate Security & Visitor Timing",
+                    description = "Delivery person was allowed past 10:15 PM without entry register logging. Warden addressed it promptly.",
+                    reportedAtTimestamp = System.currentTimeMillis() - 86400000L,
+                    reportedDateFormatted = "Yesterday, 10:30 PM",
+                    status = SafetyReportStatus.OPEN,
+                    adminNotes = "Forwarded to Styno Safety Auditor for warden follow-up.",
+                    actionTaken = "Warden re-briefed on strict visitor logging."
+                )
+            )
+        } else {
+            list.map { entity ->
+                val status = runCatching { SafetyReportStatus.valueOf(entity.status) }.getOrDefault(SafetyReportStatus.OPEN)
+                SafetyConcernReport(
+                    id = entity.id,
+                    propertyId = entity.propertyId,
+                    propertyName = entity.propertyName,
+                    reportedByUserId = entity.reportedByUserId,
+                    reportedByUserName = entity.reportedByUserName,
+                    reportedByUserPhone = entity.reportedByUserPhone,
+                    issueCategory = entity.issueCategory,
+                    description = entity.description,
+                    evidencePhotoUrls = entity.evidencePhotosCsv.split(",").filter { it.isNotBlank() },
+                    reportedAtTimestamp = entity.reportedAtTimestamp,
+                    reportedDateFormatted = entity.reportedDateFormatted,
+                    status = status,
+                    adminNotes = entity.adminNotes,
+                    actionTaken = entity.actionTaken
+                )
+            }
+        }
+    }
+
+    suspend fun submitSafetyConcernReport(report: SafetyConcernReport) {
+        stynoDao.insertSafetyConcernReport(
+            SafetyConcernReportEntity(
+                id = report.id,
+                propertyId = report.propertyId,
+                propertyName = report.propertyName,
+                reportedByUserId = report.reportedByUserId,
+                reportedByUserName = report.reportedByUserName,
+                reportedByUserPhone = report.reportedByUserPhone,
+                issueCategory = report.issueCategory,
+                description = report.description,
+                evidencePhotosCsv = report.evidencePhotoUrls.joinToString(","),
+                reportedAtTimestamp = report.reportedAtTimestamp,
+                reportedDateFormatted = report.reportedDateFormatted,
+                status = report.status.name,
+                adminNotes = report.adminNotes,
+                actionTaken = report.actionTaken
+            )
+        )
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val reportMap = hashMapOf<String, Any>(
+                "id" to report.id,
+                "propertyId" to report.propertyId,
+                "propertyName" to report.propertyName,
+                "reportedByUserId" to report.reportedByUserId,
+                "reportedByUserName" to report.reportedByUserName,
+                "reportedByUserPhone" to report.reportedByUserPhone,
+                "issueCategory" to report.issueCategory,
+                "description" to report.description,
+                "reportedAtTimestamp" to report.reportedAtTimestamp,
+                "status" to report.status.name
+            )
+            firestore.collection("safety_concern_reports").document("report_${report.id}")
+                .set(reportMap, SetOptions.merge())
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Safety concern Firestore report error: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun updateSafetyConcernReportStatus(
+        reportId: String,
+        status: SafetyReportStatus,
+        adminNotes: String,
+        actionTaken: String,
+        requestingEmail: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        val isAuthorized = isAdmin || com.example.data.security.StynoSecurityEngine.enforceAdminAccess(requestingEmail)
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Admin authorization required to modify safety concern reports.")
+        }
+        stynoDao.updateSafetyConcernReportStatus(reportId, status.name, adminNotes, actionTaken)
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val updateMap = hashMapOf<String, Any>(
+                "status" to status.name,
+                "adminNotes" to adminNotes,
+                "actionTaken" to actionTaken,
+                "reviewedAt" to System.currentTimeMillis()
+            )
+            firestore.collection("safety_concern_reports").document("report_$reportId")
+                .set(updateMap, SetOptions.merge())
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Update safety report Firestore error: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Isolated safety concern reports for a specific owner.
+     * Owners can only view safety reports related to properties they own.
+     */
+    fun getSafetyReportsForOwner(ownerId: String): Flow<List<SafetyConcernReport>> {
+        val ownerProperties = getPropertiesSync().filter { it.resolvedOwnerId == ownerId }
+        val ownerPropertyIds = ownerProperties.map { it.id }.toSet()
+        return allSafetyReportsFlow.map { reports ->
+            reports.filter { it.propertyId in ownerPropertyIds }
+        }
+    }
+
+    /**
+     * Secure digital check-in verification.
+     * Verifies that the check-in is conducted by the authorized owner of the property
+     * and that the digital passcode provided by the arriving guest matches.
+     */
+    suspend fun verifyGuestCheckIn(bookingId: String, passcode: String, requestingOwnerId: String): Result<Booking> {
+        val entity = stynoDao.getBookingById(bookingId)
+            ?: return Result.failure(IllegalArgumentException("Booking record not found for ID: $bookingId"))
+
+        val property = getPropertiesSync().firstOrNull { it.id == entity.propertyId }
+        if (property != null && property.resolvedOwnerId != requestingOwnerId) {
+            return Result.failure(SecurityException("Access Denied: Owner $requestingOwnerId is not authorized to manage check-in for property ${property.id}"))
+        }
+
+        if (entity.digitalPasscode.trim().uppercase() != passcode.trim().uppercase()) {
+            return Result.failure(IllegalArgumentException("Invalid digital check-in passcode. Please verify with the guest."))
+        }
+
+        stynoDao.updateBookingStatus(bookingId, BookingStatus.ACTIVE.name)
+        val pType = runCatching { PropertyType.valueOf(entity.propertyType) }.getOrDefault(PropertyType.HOSTEL)
+        val updatedBooking = Booking(
+            id = entity.id,
+            propertyId = entity.propertyId,
+            propertyName = entity.propertyName,
+            propertyType = pType,
+            propertyImage = entity.propertyImage,
+            address = entity.address,
+            roomTypeName = entity.roomTypeName,
+            checkInDate = entity.checkInDate,
+            checkInTime = entity.checkInTime,
+            checkOutDate = entity.checkOutDate,
+            durationText = entity.durationText,
+            guestName = entity.guestName,
+            guestPhone = entity.guestPhone,
+            guestEmail = entity.guestEmail,
+            guestIdProofType = entity.guestIdProofType,
+            basePrice = entity.basePrice,
+            serviceFee = entity.serviceFee,
+            taxes = entity.taxes,
+            discount = entity.discount,
+            finalAmount = entity.finalAmount,
+            securityDeposit = entity.securityDeposit,
+            digitalPasscode = entity.digitalPasscode,
+            status = BookingStatus.ACTIVE,
+            paymentMethod = entity.paymentMethod,
+            paymentStatus = entity.paymentStatus,
+            transactionId = entity.transactionId,
+            paymentGateway = entity.paymentGateway,
+            bookedAtTimestamp = entity.bookedAtTimestamp,
+            propertyContactPhone = entity.propertyContactPhone,
+            ownerUpiId = entity.ownerUpiId,
+            ownerAccountHolderName = entity.ownerAccountHolderName,
+            ownerBankName = entity.ownerBankName,
+            ownerPayoutStatus = entity.ownerPayoutStatus,
+            checkInVerified = true,
+            checkInVerifiedAt = System.currentTimeMillis()
+        )
+        return Result.success(updatedBooking)
+    }
+
+    /**
+     * Privacy-safe profile retrieval.
+     * Mask personal identifiers (phone, email, govt ID, address, emergency contact)
+     * if the requester is not the user themselves or an administrator.
+     */
+    fun getUserProfileSecure(targetUserId: String, requestingUserId: String, isAdmin: Boolean = false): UserProfile {
+        val currentProfile = _userProfileState.value
+        if (targetUserId == requestingUserId || isAdmin) {
+            return currentProfile
+        }
+        return currentProfile.copy(
+            phoneNumber = StynoPrivacyHelper.maskPhoneNumber(currentProfile.phoneNumber),
+            alternatePhone = StynoPrivacyHelper.maskPhoneNumber(currentProfile.alternatePhone),
+            email = StynoPrivacyHelper.maskEmail(currentProfile.email),
+            permanentAddress = "Protected under Styno Women Safety & Privacy Shield",
+            emergencyContactName = "Protected (Accessible only to Emergency Services)",
+            emergencyContactPhone = "Protected",
+            emergencyContactRelation = "Protected",
+            kycMaskedId = StynoPrivacyHelper.maskGovtId(currentProfile.kycMaskedId),
+            kycDocImageBase64 = null,
+            kycDocUri = null
+        )
+    }
+
+    /**
+     * Security check to ensure an owner cannot access private safety or audit data of another owner's property.
+     */
+    fun getPropertySafetyStatusSecure(propertyId: String, requestingOwnerId: String?, isAdmin: Boolean = false): GirlsSafetyVerification {
+        val property = getPropertiesSync().firstOrNull { it.id == propertyId }
+            ?: return GirlsSafetyVerification()
+        if (!isAdmin && requestingOwnerId != null && property.resolvedOwnerId != requestingOwnerId) {
+            throw SecurityException("Access Denied: Owner cannot access another property's private safety verification details")
+        }
+        return property.girlsSafetyVerification
     }
 
     // Property Listing Drafts

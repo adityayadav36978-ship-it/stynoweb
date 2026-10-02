@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -522,6 +523,85 @@ fun LocationSelectionScreen(
                         .testTag("stable_location_search_input"),
                     singleLine = true
                 )
+
+                // Indian PIN Code Fast Auto-Fill Row
+                var pincodeInput by remember { mutableStateOf("") }
+                var isPincodeSearching by remember { mutableStateOf(false) }
+                var pincodeResultText by remember { mutableStateOf<String?>(null) }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        OutlinedTextField(
+                            value = pincodeInput,
+                            onValueChange = { input ->
+                                val clean = input.filter { it.isDigit() }.take(6)
+                                pincodeInput = clean
+                                if (clean.length == 6) {
+                                    isPincodeSearching = true
+                                    viewModel.lookupAndApplyPincode(
+                                        pincode = clean,
+                                        onSuccess = { loc ->
+                                            isPincodeSearching = false
+                                            pincodeResultText = "Auto-filled: ${loc.locality}, ${loc.city}, ${loc.state}"
+                                            selectedCountryObj = GlobalGeographicData.getCountry("India") ?: selectedCountryObj
+                                            selectedStateObj = selectedCountryObj.states.firstOrNull { it.name.equals(loc.state, ignoreCase = true) }
+                                            selectedDistrictName = loc.district ?: loc.city
+                                            selectedCityObj = selectedStateObj?.cities?.firstOrNull { it.name.equals(loc.city, ignoreCase = true) }
+                                            selectedLocalityObj = selectedCityObj?.localities?.firstOrNull { it.name.equals(loc.locality, ignoreCase = true) }
+                                                ?: GlobalLocality(name = loc.locality, latitude = loc.latitude, longitude = loc.longitude)
+                                            activeStep = HierarchyStep.STAY
+                                            loadNearbyFor(loc.latitude, loc.longitude, loc.city, loc.locality, "India")
+                                        },
+                                        onError = {
+                                            isPincodeSearching = false
+                                            pincodeResultText = "PIN code not found. Please select from list."
+                                        }
+                                    )
+                                }
+                            },
+                            placeholder = { Text("Enter 6-Digit PIN Code (e.g. 560001, 845438)...", fontSize = 12.sp) },
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                            trailingIcon = {
+                                if (isPincodeSearching) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                } else if (pincodeInput.length == 6 && pincodeResultText != null && !pincodeResultText!!.contains("not found")) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(18.dp))
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("pincode_autofill_input")
+                        )
+                    }
+                }
+                if (pincodeResultText != null) {
+                    Text(
+                        text = "📍 $pincodeResultText",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (pincodeResultText!!.contains("not found")) MaterialTheme.colorScheme.error else StynoEmerald,
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    )
+                }
             }
         },
         bottomBar = {

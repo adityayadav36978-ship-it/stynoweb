@@ -153,6 +153,7 @@ fun StynoApp(
     val selectedSort by viewModel.selectedSort.collectAsStateWithLifecycle()
     val selectedAmenities by viewModel.selectedAmenities.collectAsStateWithLifecycle()
     val verifiedOnly by viewModel.verifiedOnly.collectAsStateWithLifecycle()
+    val girlsSafetyFilterActive by viewModel.girlsSafetyFilterActive.collectAsStateWithLifecycle()
     val minPriceFilter by viewModel.minPriceFilter.collectAsStateWithLifecycle()
     val maxPriceFilter by viewModel.maxPriceFilter.collectAsStateWithLifecycle()
     val minRatingFilter by viewModel.minRatingFilter.collectAsStateWithLifecycle()
@@ -224,20 +225,7 @@ fun StynoApp(
             ) { targetScreen ->
                 when (targetScreen) {
                     Screen.WELCOME -> WelcomeEntryScreen(
-                        viewModel = viewModel,
-                        authViewModel = authViewModel,
-                        onSelectOwner = {
-                            viewModel.setUserRole(com.example.ui.viewmodel.UserRole.OWNER)
-                            viewModel.navigateTo(Screen.OWNER_DASHBOARD)
-                        },
-                        onSelectCustomer = {
-                            viewModel.setUserRole(com.example.ui.viewmodel.UserRole.GUEST)
-                            viewModel.setGuestAuthentication()
-                            viewModel.navigateTo(Screen.HOME)
-                        },
-                        onOpenCustomerWizard = {
-                            viewModel.navigateTo(Screen.CUSTOMER_INTENT)
-                        }
+                        viewModel = viewModel
                     )
                     Screen.AI_WORKSPACE -> AiWorkspaceScreen(viewModel = viewModel)
                     Screen.ONBOARDING -> OnboardingFlowScreen(
@@ -259,10 +247,8 @@ fun StynoApp(
                             viewModel.savePendingWishlistPropertyIfAny()
                             if (hasPendingWishlist) {
                                 viewModel.navigateTo(Screen.SAVED)
-                            } else if (viewModel.userRole.value == com.example.ui.viewmodel.UserRole.OWNER) {
-                                viewModel.navigateTo(Screen.OWNER_DASHBOARD)
                             } else {
-                                viewModel.navigateTo(Screen.HOME)
+                                viewModel.navigateTo(Screen.WELCOME)
                             }
                         },
                         onNavigateBack = {
@@ -323,6 +309,8 @@ fun StynoApp(
             selectedSort = selectedSort,
             selectedAmenities = selectedAmenities,
             verifiedOnly = verifiedOnly,
+            girlsSafetyOnly = girlsSafetyFilterActive,
+            onGirlsSafetyToggle = { viewModel.setGirlsSafetyFilter(it) },
             minPrice = minPriceFilter,
             maxPrice = maxPriceFilter,
             minRating = minRatingFilter,

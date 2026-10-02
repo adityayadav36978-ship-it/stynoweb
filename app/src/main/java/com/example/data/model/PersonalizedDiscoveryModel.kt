@@ -6,14 +6,17 @@ package com.example.data.model
 
 enum class DiscoveryStep(val stepIndex: Int, val title: String, val questionHeader: String) {
     LOCATION(1, "Location", "Where are you looking for your stay?"),
-    PROPERTY_TYPE(2, "Stay Type", "What are you looking for?"),
-    NEARBY_PREVIEW(3, "Nearby Stays", "Properties Around Your Location"),
-    GUEST_TARGET(4, "Guest Category", "Who are you looking for this stay for?"),
-    SHARING_PREFERENCE(5, "Sharing Preference", "Do you want a sharing room?"),
-    USER_OCCUPATION(6, "Occupation", "What do you do?"),
-    STAY_DURATION(7, "Duration", "How long do you want to stay?"),
-    FOOD_REQUIREMENT(8, "Food Requirement", "Do you want food included with your stay?"),
-    MATCH_RESULTS(9, "Personalized Results", "Recommended For You")
+    PROPERTY_TYPE(2, "Stay Type", "What type of stay do you need?"),
+    BASIC_REQUIREMENTS(3, "Requirements", "What do you require in your stay?"),
+    FOOD_REQUIREMENT(4, "Food Requirement", "Do you want food included with your stay?"),
+    BUDGET(5, "Your Budget", "What is your budget limit?"),
+    MATCH_RESULTS(6, "Personalized Matches", "Recommended Verified Stays"),
+    // Kept for backward compatibility
+    NEARBY_PREVIEW(7, "Nearby Preview", "Stays Around You"),
+    GUEST_TARGET(8, "Guest Target", "Who is this for?"),
+    SHARING_PREFERENCE(9, "Sharing", "Sharing Preference"),
+    USER_OCCUPATION(10, "Occupation", "Your Occupation"),
+    STAY_DURATION(11, "Duration", "Stay Duration")
 }
 
 enum class GuestTarget(val displayName: String, val icon: String, val subtitle: String) {
@@ -148,8 +151,23 @@ data class PersonalizedDiscoveryState(
     ),
     val customDurationDays: Int = 30,
     
-    // Step 8: Food Requirement
+    // Step 4: Food Requirement
     val selectedFoodRequirement: FoodRequirementChoice = FoodRequirementChoice.YES,
+    
+    // Step 5: Budget / Price Requirement (User enters their own required budget)
+    val userBudget: Double = 10000.0,
+    val userBudgetInput: String = "10000",
+    
+    // Additional Basic Requirements (Progression & More Preferences)
+    val attachedBathroomRequired: Boolean = true,
+    val acRequired: Boolean? = null, // null = Doesn't Matter, true = AC, false = Non-AC
+    val kitchenRequired: Boolean = false,
+    val wifiRequired: Boolean = true,
+    val laundryRequired: Boolean = false,
+    val gymRequired: Boolean = false,
+    val furnishingPreference: String = "Any", // Any, Fully Furnished, Semi Furnished
+    val morePreferencesExpanded: Boolean = false,
+    val allowOtherStayTypes: Boolean = false,
     
     // Dynamic Filtered Candidates & Final Recommendations
     val candidateProperties: List<Property> = emptyList(),

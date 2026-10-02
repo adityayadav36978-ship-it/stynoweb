@@ -36,9 +36,15 @@ data class Booking(
     val transactionId: String = "txn_stripe_" + (100000..999999).random(),
     val paymentGateway: String = "Stripe",
     val bookedAtTimestamp: Long = System.currentTimeMillis(),
-    val propertyContactPhone: String = "+91 98112 34567",
-    val ownerUpiId: String = "sharma.stays@icici",
-    val ownerAccountHolderName: String = "Vikram Sharma (Host)",
-    val ownerBankName: String = "HDFC Bank",
-    val ownerPayoutStatus: String = "Credited to Host Account"
+    val propertyContactPhone: String = "",
+    val ownerUpiId: String = "",
+    val ownerAccountHolderName: String = "",
+    val ownerBankName: String = "",
+    val ownerPayoutStatus: String = "Pending Host Settlement",
+    val guestUserId: String = "",
+    val guestGender: String = "Unspecified",
+    val isCoupleBooking: Boolean = false,
+    val isSharedAccommodation: Boolean = false,
+    val checkInVerified: Boolean = false,
+    val checkInVerifiedAt: Long? = null
 )

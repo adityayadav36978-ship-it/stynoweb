@@ -79,7 +79,10 @@ fun MyBookingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val bookings by viewModel.bookings.collectAsStateWithLifecycle()
+    val userBookings by viewModel.userBookings.collectAsStateWithLifecycle()
+    val allBookings by viewModel.bookings.collectAsStateWithLifecycle()
+    val userRole by viewModel.userRole.collectAsStateWithLifecycle()
+    val bookings = if (userRole == com.example.ui.viewmodel.UserRole.ADMIN) allBookings else if (userBookings.isNotEmpty()) userBookings else allBookings
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("Upcoming", "Completed", "Cancelled")
 

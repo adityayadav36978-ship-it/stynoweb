@@ -491,13 +491,18 @@ fun Step10PaymentSetup(
                                 }
                             }
 
+                            val isUpiSelected = selectedMethod == "UPI" || selectedMethod == "BOTH"
+                            val isBankSelected = selectedMethod == "BANK" || selectedMethod == "BOTH"
+
                             // Update owner payment details in state
                             val updatedPayment = OwnerPaymentDetails(
-                                upiId = upiId.ifBlank { if (state.ownerPhone.isNotBlank()) "${state.ownerPhone.filter { it.isDigit() }}@styno" else "host@icici" },
-                                accountHolderName = accountHolderName,
-                                accountNumber = accountNumber,
-                                ifscCode = ifscCode,
-                                bankName = bankName,
+                                isUpiIdEnabled = isUpiSelected,
+                                upiId = if (isUpiSelected) upiId.trim() else "",
+                                isBankAccountEnabled = isBankSelected,
+                                accountHolderName = accountHolderName.trim(),
+                                accountNumber = if (isBankSelected) accountNumber.trim() else "",
+                                ifscCode = if (isBankSelected) ifscCode.trim() else "",
+                                bankName = if (isBankSelected) bankName.trim() else "",
                                 accountType = accountType,
                                 payoutFrequency = payoutFrequency,
                                 isVerified = true,
@@ -507,7 +512,7 @@ fun Step10PaymentSetup(
                                     "BANK" -> "Direct IMPS / NEFT Bank Transfer"
                                     else -> "Direct UPI & Bank Settlement"
                                 },
-                                qrCodeVpa = "upi://pay?pa=$upiId&pn=${accountHolderName.replace(" ", "%20")}&cu=INR"
+                                qrCodeVpa = if (isUpiSelected && upiId.isNotBlank()) "upi://pay?pa=${upiId.trim()}&pn=${accountHolderName.trim().replace(" ", "%20")}&cu=INR" else ""
                             )
 
                             onUpdateState(

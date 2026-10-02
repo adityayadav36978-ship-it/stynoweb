@@ -63,6 +63,8 @@ import com.example.data.model.GenderSuitability
 import com.example.data.model.Property
 import com.example.data.model.PropertyType
 import com.example.data.model.VerificationStatus
+import com.example.data.model.GirlsSafetyVerificationStatus
+import androidx.compose.material.icons.filled.Shield
 import com.example.ui.theme.StynoAccent
 import com.example.ui.theme.StynoBlueLight
 import com.example.ui.theme.StynoBluePrimary
@@ -205,6 +207,35 @@ fun PropertyCard(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
+                            }
+                        }
+
+                        // Girls Safety Verified Chip (Strictly STYNO Admin Approved)
+                        if (property.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFBE185D).copy(alpha = 0.95f),
+                                shadowElevation = 2.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = "Girls Safety Verified",
+                                        tint = Color(0xFFFDE047),
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "GIRLS SAFETY",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -394,6 +425,46 @@ fun PropertyCard(
                     )
                 }
 
+                // Official STYNO Girls Safety Verification Trust Badge
+                if (property.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFF1F2),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Official Girls Safety Verified Seal",
+                                tint = Color(0xFFE11D48),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = "GIRLS SAFETY VERIFIED",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFBE123C),
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = "Audited by STYNO Trust Team • Female Warden & 24/7 Security",
+                                    fontSize = 9.sp,
+                                    color = Color(0xFF9F1239),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Facilities Chips Row
@@ -402,7 +473,33 @@ fun PropertyCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    property.shortFacilities.take(4).forEach { facility ->
+                    // Stay Category Badge
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = when {
+                            property.genderSuitability.isWomenOnly -> Color(0xFFFCE7F3)
+                            property.genderSuitability.isMenOnly -> Color(0xFFE0F2FE)
+                            property.genderSuitability.isCouple -> Color(0xFFF3E8FF)
+                            property.genderSuitability.isFamily -> Color(0xFFDCFCE7)
+                            else -> Color(0xFFF1F5F9)
+                        }
+                    ) {
+                        Text(
+                            text = property.stayCategoryType,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                property.genderSuitability.isWomenOnly -> Color(0xFFBE185D)
+                                property.genderSuitability.isMenOnly -> Color(0xFF0369A1)
+                                property.genderSuitability.isCouple -> Color(0xFF7E22CE)
+                                property.genderSuitability.isFamily -> Color(0xFF15803D)
+                                else -> Color(0xFF475569)
+                            },
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    property.shortFacilities.take(3).forEach { facility ->
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant

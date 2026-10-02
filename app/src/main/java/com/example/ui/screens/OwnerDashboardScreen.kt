@@ -1,6 +1,11 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,11 +25,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.AccountBalance
@@ -38,13 +47,19 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
+import com.example.ui.components.CategorySharingSetupCard
 import com.example.ui.components.PropertyPhotoItem
+import com.example.ui.components.StynoAppLogo
+import com.example.data.model.BookingStatus
+import com.example.ui.screens.wizard.PropertyWizardState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -122,8 +137,8 @@ fun OwnerDashboardScreen(
     viewModel: StynoViewModel,
     modifier: Modifier = Modifier
 ) {
-    val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
-    val bookings by viewModel.bookings.collectAsStateWithLifecycle()
+    val allProperties by viewModel.ownerProperties.collectAsStateWithLifecycle()
+    val bookings by viewModel.ownerBookings.collectAsStateWithLifecycle()
     val propertyReviews by viewModel.propertyReviews.collectAsStateWithLifecycle()
     val propertyDrafts by viewModel.propertyDrafts.collectAsStateWithLifecycle()
     val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
@@ -147,6 +162,7 @@ fun OwnerDashboardScreen(
     var uploadingFoodMediaProperty by remember { mutableStateOf<Property?>(null) }
     var managingPropertyQuickStay by remember { mutableStateOf<Property?>(null) }
     var managingPropertyPayout by remember { mutableStateOf<Property?>(null) }
+    var managingPropertySharing by remember { mutableStateOf<Property?>(null) }
     var respondingToReviewData by remember { mutableStateOf<Pair<Property, Review>?>(null) }
 
     if (!isLoggedIn) {
@@ -251,27 +267,34 @@ fun OwnerDashboardScreen(
                             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Apartment,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        StynoAppLogo(
+                            size = 38.dp,
+                            cornerRadius = 10.dp,
+                            elevation = 2.dp
+                        )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text(
-                                text = "Host Management Studio",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Host Studio",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(StynoEmerald.copy(alpha = 0.15f))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "OWNER",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StynoEmerald
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Production Control & Property Operations",
                                 style = MaterialTheme.typography.labelSmall,
@@ -476,6 +499,7 @@ fun OwnerDashboardScreen(
                             onUploadFoodMedia = { uploadingFoodMediaProperty = property },
                             onManageQuickStay = { managingPropertyQuickStay = property },
                             onManagePayout = { managingPropertyPayout = property },
+                            onManageSharing = { managingPropertySharing = property },
                             onToggleAvailability = { viewModel.togglePropertyAvailability(property.id) },
                             onDelete = { viewModel.deleteOwnerProperty(property.id) }
                         )
@@ -527,6 +551,9 @@ fun OwnerDashboardScreen(
                             allBookings = bookings,
                             onSavePaymentDetails = { propertyId, details ->
                                 viewModel.updateOwnerPaymentDetails(propertyId, details)
+                            },
+                            onUploadQrCode = { uri, ownerId ->
+                                viewModel.saveUploadedQrCode(uri, ownerId)
                             }
                         )
                     }
@@ -799,6 +826,24 @@ fun OwnerDashboardScreen(
             }
         )
     }
+
+    // 8. Sharing & Occupancy Configuration Dialog
+    managingPropertySharing?.let { property ->
+        EditSharingDialog(
+            property = property,
+            onDismiss = { managingPropertySharing = null },
+            onSave = { isSharing, capacity, spaces, audience ->
+                viewModel.updatePropertySharing(
+                    propertyId = property.id,
+                    isSharingAvailable = isSharing,
+                    sharingCapacity = capacity,
+                    availableSpaces = spaces,
+                    genderSuitability = audience
+                )
+                managingPropertySharing = null
+            }
+        )
+    }
 }
 
 // ========================================================
@@ -816,6 +861,7 @@ private fun EnhancedOwnerPropertyCard(
     onUploadFoodMedia: () -> Unit,
     onManageQuickStay: () -> Unit,
     onManagePayout: () -> Unit,
+    onManageSharing: () -> Unit,
     onToggleAvailability: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -937,6 +983,54 @@ private fun EnhancedOwnerPropertyCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            // Sharing & Audience Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (property.isShared) Color(0xFFDCFCE7) else Color(0xFFF1F5F9),
+                    border = BorderStroke(1.dp, if (property.isShared) Color(0xFF86EFAC) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.clickable { onManageSharing() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (property.isShared) Icons.Default.Groups else Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = if (property.isShared) Color(0xFF166534) else Color(0xFF475569),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = if (property.isShared) "${property.sharingCapacity}-Sharing (${property.availableSpaces} available) ✎" else "Private Unit ✎",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (property.isShared) Color(0xFF166534) else Color(0xFF334155)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.clickable { onManageSharing() }
+                ) {
+                    Text(
+                        text = "For: ${property.genderSuitability.displayName} ✎",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
             if (property.quickStayConfig.isEnabled || property.ownerPaymentDetails.upiId.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -958,13 +1052,13 @@ private fun EnhancedOwnerPropertyCard(
                             )
                         }
                     }
-                    if (property.ownerPaymentDetails.upiId.isNotBlank()) {
+                    if (property.ownerPaymentDetails.isConfigured) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = StynoEmerald.copy(alpha = 0.12f)
                         ) {
                             Text(
-                                text = "💳 Payout: ${property.ownerPaymentDetails.upiId}",
+                                text = "💳 Payout: ${property.ownerPaymentDetails.activeMethodsList.joinToString(", ")}",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = StynoEmerald,
@@ -1031,19 +1125,39 @@ private fun EnhancedOwnerPropertyCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Row 2 of Action Buttons: Quick Stay & Payout Accounts
+            // Row 2 of Action Buttons: Sharing, Quick Stay & Payout Accounts
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
+                    onClick = onManageSharing,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (property.isShared) Icons.Default.Groups else Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (property.isShared) Color(0xFF166534) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        if (property.isShared) "${property.sharingCapacity}-Share" else "Private",
+                        fontSize = 11.sp,
+                        color = if (property.isShared) Color(0xFF166534) else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                OutlinedButton(
                     onClick = onManageQuickStay,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 6.dp)
+                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 4.dp)
                 ) {
                     Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(14.dp), tint = if (property.quickStayConfig.isEnabled) StynoBluePrimary else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(if (property.quickStayConfig.isEnabled) "Quick Stay ✓" else "Quick Stay", fontSize = 11.sp, color = if (property.quickStayConfig.isEnabled) StynoBluePrimary else MaterialTheme.colorScheme.onSurface)
                 }
 
@@ -1051,11 +1165,11 @@ private fun EnhancedOwnerPropertyCard(
                     onClick = onManagePayout,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 6.dp)
+                    contentPadding = PaddingValues(vertical = 4.dp, horizontal = 4.dp)
                 ) {
-                    Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(14.dp), tint = if (property.ownerPaymentDetails.upiId.isNotBlank()) StynoEmerald else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (property.ownerPaymentDetails.upiId.isNotBlank()) "Payout UPI ✓" else "Payout / UPI", fontSize = 11.sp, color = if (property.ownerPaymentDetails.upiId.isNotBlank()) StynoEmerald else MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(14.dp), tint = if (property.ownerPaymentDetails.isConfigured) StynoEmerald else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(if (property.ownerPaymentDetails.isConfigured) "Payout ✓" else "Payout", fontSize = 11.sp, color = if (property.ownerPaymentDetails.isConfigured) StynoEmerald else MaterialTheme.colorScheme.onSurface)
                 }
             }
 
@@ -1687,7 +1801,10 @@ private fun OwnerSectionHeader(
 }
 
 @Composable
-private fun OwnerBookingItemCard(booking: Booking) {
+private fun OwnerBookingItemCard(
+    booking: Booking,
+    onVerifyCheckIn: ((Booking) -> Unit)? = null
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1731,10 +1848,42 @@ private fun OwnerBookingItemCard(booking: Booking) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Contact: ${booking.guestPhone} • ${booking.guestEmail}",
+                text = "Guest Contact (Privacy Protected): ${com.example.data.model.StynoPrivacyHelper.maskPhoneNumber(booking.guestPhone)} • ${com.example.data.model.StynoPrivacyHelper.maskEmail(booking.guestEmail)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (booking.status == BookingStatus.ACTIVE) Color(0xFFDCFCE7) else Color(0xFFFEF3C7)
+                ) {
+                    Text(
+                        text = if (booking.status == BookingStatus.ACTIVE) "✓ Checked-In (Verified)" else "⏳ Pending Arrival Check",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (booking.status == BookingStatus.ACTIVE) Color(0xFF166534) else Color(0xFF92400E),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+
+                if (booking.status != BookingStatus.ACTIVE && onVerifyCheckIn != null) {
+                    Button(
+                        onClick = { onVerifyCheckIn(booking) },
+                        colors = ButtonDefaults.buttonColors(containerColor = StynoEmerald),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text("Verify Check-In Passcode", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
@@ -2010,12 +2159,37 @@ private fun OwnerPaymentDetailsDialog(
     onDismiss: () -> Unit,
     onSave: (OwnerPaymentDetails) -> Unit
 ) {
-    var upiId by remember { mutableStateOf(property.ownerPaymentDetails.upiId) }
-    var accountHolder by remember { mutableStateOf(property.ownerPaymentDetails.accountHolderName) }
-    var accountNumber by remember { mutableStateOf(property.ownerPaymentDetails.accountNumber) }
-    var ifscCode by remember { mutableStateOf(property.ownerPaymentDetails.ifscCode) }
-    var bankName by remember { mutableStateOf(property.ownerPaymentDetails.bankName) }
-    var settlementMode by remember { mutableStateOf(property.ownerPaymentDetails.settlementMode) }
+    val current = property.ownerPaymentDetails
+    var isUpiIdEnabled by remember { mutableStateOf(current.isUpiIdEnabled || (current.upiId.isNotBlank() && !current.isQrCodeEnabled && !current.isBankAccountEnabled)) }
+    var upiId by remember { mutableStateOf(current.upiId) }
+    var isQrCodeEnabled by remember { mutableStateOf(current.isQrCodeEnabled || (!current.qrCodeImageUrl.isNullOrBlank())) }
+    var qrCodeImageUrl by remember { mutableStateOf(current.qrCodeImageUrl) }
+    var qrCodeVpa by remember { mutableStateOf(current.qrCodeVpa.ifBlank { current.upiId }) }
+    var isBankAccountEnabled by remember { mutableStateOf(current.isBankAccountEnabled || (current.accountNumber.isNotBlank() && !current.isUpiIdEnabled && !current.isQrCodeEnabled)) }
+    var accountHolder by remember { mutableStateOf(current.accountHolderName.ifBlank { property.ownerInfo.name }) }
+    var accountNumber by remember { mutableStateOf(current.accountNumber) }
+    var ifscCode by remember { mutableStateOf(current.ifscCode) }
+    var bankName by remember { mutableStateOf(current.bankName) }
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val qrLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val safeOwner = property.resolvedOwnerId.filter { it.isLetterOrDigit() }.ifBlank { "owner_${System.currentTimeMillis()}" }
+            val destFile = java.io.File(context.filesDir, "owner_qr_${safeOwner}.png")
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    java.io.FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                qrCodeImageUrl = destFile.absolutePath
+                validationError = null
+            } catch (e: Exception) {
+                qrCodeImageUrl = uri.toString()
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2023,7 +2197,7 @@ private fun OwnerPaymentDetailsDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AccountBalance, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(22.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Payout & Bank Accounts", fontWeight = FontWeight.Bold)
+                Text("Payout & Settlement Setup", fontWeight = FontWeight.Bold)
             }
         },
         text = {
@@ -2033,79 +2207,239 @@ private fun OwnerPaymentDetailsDialog(
             ) {
                 item {
                     Text(
-                        text = "Set your direct UPI ID or Bank Account for automatic booking payouts with 0% gateway deductions.",
+                        text = "Enable any one, two, or all three payment methods for this property. Guests can only book via your verified configured methods.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
+                // 1. UPI ID
                 item {
-                    OutlinedTextField(
-                        value = accountHolder,
-                        onValueChange = { accountHolder = it },
-                        label = { Text("Account Holder / Business Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                item {
-                    OutlinedTextField(
-                        value = upiId,
-                        onValueChange = { upiId = it },
-                        label = { Text("Direct UPI ID (e.g. host@okaxis, 9876543210@paytm)") },
-                        placeholder = { Text("name@bankupi") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                item {
-                    OutlinedTextField(
-                        value = bankName,
-                        onValueChange = { bankName = it },
-                        label = { Text("Bank Name (e.g. HDFC Bank, SBI)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                item {
-                    OutlinedTextField(
-                        value = accountNumber,
-                        onValueChange = { accountNumber = it },
-                        label = { Text("Bank Account Number (Optional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                item {
-                    OutlinedTextField(
-                        value = ifscCode,
-                        onValueChange = { ifscCode = it.uppercase() },
-                        label = { Text("IFSC Code (Optional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                }
-
-                item {
-                    Surface(
+                    Card(
                         shape = RoundedCornerShape(10.dp),
-                        color = StynoEmerald.copy(alpha = 0.1f),
-                        modifier = Modifier.fillMaxWidth()
+                        colors = CardDefaults.cardColors(containerColor = if (isUpiIdEnabled) StynoBluePrimary.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, if (isUpiIdEnabled) StynoBluePrimary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = StynoBluePrimary, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("1. UPI ID", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                Switch(checked = isUpiIdEnabled, onCheckedChange = { isUpiIdEnabled = it; validationError = null })
+                            }
+                            if (isUpiIdEnabled) {
+                                OutlinedTextField(
+                                    value = upiId,
+                                    onValueChange = { upiId = it.trim().lowercase(); validationError = null },
+                                    label = { Text("Direct UPI ID") },
+                                    placeholder = { Text("e.g. host@okaxis") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2. UPI QR Code
+                item {
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (isQrCodeEnabled) StynoEmerald.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, if (isQrCodeEnabled) StynoEmerald.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.QrCode, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("2. UPI QR Code", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                Switch(checked = isQrCodeEnabled, onCheckedChange = { isQrCodeEnabled = it; validationError = null })
+                            }
+                            if (qrCodeImageUrl.isNullOrBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(10.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text("No UPI QR Code added", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("Upload your UPI QR code image from gallery or files.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Button(
+                                            onClick = {
+                                                isQrCodeEnabled = true
+                                                qrLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = StynoEmerald),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth().height(38.dp)
+                                        ) {
+                                            Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Upload UPI QR Code", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(StynoEmerald.copy(alpha = 0.08f))
+                                        .border(1.dp, StynoEmerald.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                        .padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("QR Code Uploaded ✓", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StynoEmerald)
+                                        Text("Owner Isolated", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StynoEmerald)
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color.White,
+                                        border = BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.4f)),
+                                        modifier = Modifier.size(130.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            AsyncImage(
+                                                model = qrCodeImageUrl,
+                                                contentDescription = "Uploaded Owner QR Preview",
+                                                modifier = Modifier.fillMaxSize().padding(6.dp)
+                                            )
+                                        }
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { qrLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                                            modifier = Modifier.weight(1f).height(34.dp),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text("Replace QR Code", fontSize = 11.sp)
+                                        }
+                                        OutlinedButton(
+                                            onClick = {
+                                                qrCodeImageUrl = null
+                                                isQrCodeEnabled = false
+                                                qrCodeVpa = ""
+                                                validationError = null
+                                            },
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                            modifier = Modifier.weight(1f).height(34.dp),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text("Remove QR Code", fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                            if (isQrCodeEnabled) {
+                                OutlinedTextField(
+                                    value = qrCodeVpa,
+                                    onValueChange = { qrCodeVpa = it.trim().lowercase(); validationError = null },
+                                    label = { Text("QR VPA Handle (Optional)") },
+                                    placeholder = { Text("e.g. hostqr@upi") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. Bank Account
+                item {
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (isBankAccountEnabled) StynoAccent.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        border = BorderStroke(1.dp, if (isBankAccountEnabled) StynoAccent.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AccountBalance, contentDescription = null, tint = StynoAccent, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("3. Bank Account", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                                Switch(checked = isBankAccountEnabled, onCheckedChange = { isBankAccountEnabled = it; validationError = null })
+                            }
+                            if (isBankAccountEnabled) {
+                                OutlinedTextField(
+                                    value = accountHolder,
+                                    onValueChange = { accountHolder = it; validationError = null },
+                                    label = { Text("Account Holder Legal Name") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = bankName,
+                                    onValueChange = { bankName = it; validationError = null },
+                                    label = { Text("Bank Name") },
+                                    placeholder = { Text("e.g. HDFC Bank, SBI") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = accountNumber,
+                                    onValueChange = { accountNumber = it.trim(); validationError = null },
+                                    label = { Text("Account Number (min 8 digits)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(
+                                    value = ifscCode,
+                                    onValueChange = { ifscCode = it.uppercase().trim(); validationError = null },
+                                    label = { Text("IFSC Code") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true
+                                )
+                            }
+                        }
+                    }
+                }
+
+                validationError?.let { err ->
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StynoEmerald, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Settlements are processed directly to your account immediately after guest check-in verification.",
+                                text = err,
+                                color = MaterialTheme.colorScheme.error,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(8.dp)
                             )
                         }
                     }
@@ -2115,15 +2449,50 @@ private fun OwnerPaymentDetailsDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    validationError = null
+                    if (!isUpiIdEnabled && !isQrCodeEnabled && !isBankAccountEnabled) {
+                        validationError = "Please enable at least one payment method."
+                        return@Button
+                    }
+                    if (isUpiIdEnabled && (upiId.isBlank() || !upiId.contains("@") || upiId.length < 4)) {
+                        validationError = "Please enter a valid UPI ID (e.g. host@okaxis)."
+                        return@Button
+                    }
+                    if (isQrCodeEnabled && qrCodeImageUrl.isNullOrBlank()) {
+                        validationError = "Please tap 'Upload UPI QR Code' to select and upload your UPI QR Code image."
+                        return@Button
+                    }
+                    if (isBankAccountEnabled && (accountHolder.isBlank() || accountNumber.length < 8 || ifscCode.length < 8)) {
+                        validationError = "Please fill account holder name, account number (min 8 digits) and IFSC."
+                        return@Button
+                    }
+
                     onSave(
                         OwnerPaymentDetails(
-                            upiId = upiId.trim(),
-                            accountHolderName = accountHolder.trim(),
-                            accountNumber = accountNumber.trim(),
-                            ifscCode = ifscCode.trim(),
-                            bankName = bankName.trim(),
+                            ownerId = property.resolvedOwnerId,
+                            isUpiIdEnabled = isUpiIdEnabled,
+                            upiId = if (isUpiIdEnabled) upiId.trim() else "",
+                            isQrCodeEnabled = isQrCodeEnabled,
+                            qrCodeImageUrl = if (isQrCodeEnabled) qrCodeImageUrl else null,
+                            qrCodeVpa = if (isQrCodeEnabled) qrCodeVpa.ifBlank { upiId }.trim() else "",
+                            isBankAccountEnabled = isBankAccountEnabled,
+                            accountHolderName = if (isBankAccountEnabled || isUpiIdEnabled) accountHolder.trim() else "",
+                            accountNumber = if (isBankAccountEnabled) accountNumber.trim() else "",
+                            ifscCode = if (isBankAccountEnabled) ifscCode.trim() else "",
+                            bankName = if (isBankAccountEnabled) bankName.trim().ifBlank { "HDFC Bank" } else "",
+                            isVerified = true,
                             isVerifiedForPayouts = true,
-                            settlementMode = settlementMode
+                            settlementMode = when {
+                                isUpiIdEnabled && isQrCodeEnabled && isBankAccountEnabled -> "UPI, QR & Direct Bank Settlement"
+                                isUpiIdEnabled && isQrCodeEnabled -> "Direct UPI & QR Settlement"
+                                isUpiIdEnabled && isBankAccountEnabled -> "Direct UPI & Bank Transfer"
+                                isQrCodeEnabled && isBankAccountEnabled -> "QR Code & Bank Transfer"
+                                isUpiIdEnabled -> "Instant UPI Settlement"
+                                isQrCodeEnabled -> "UPI QR Code Settlement"
+                                isBankAccountEnabled -> "Direct Bank NEFT/RTGS"
+                                else -> "Not Configured"
+                            },
+                            lastUpdatedTimestamp = System.currentTimeMillis()
                         )
                     )
                 }
@@ -2138,3 +2507,83 @@ private fun OwnerPaymentDetailsDialog(
         }
     )
 }
+
+// 8. Sharing & Occupancy Configuration Dialog
+@Composable
+private fun EditSharingDialog(
+    property: Property,
+    onDismiss: () -> Unit,
+    onSave: (isSharing: Boolean, capacity: Int, spaces: Int, audience: GenderSuitability) -> Unit
+) {
+    var wizardState by remember(property) {
+        mutableStateOf(
+            PropertyWizardState(
+                propertyType = property.propertyType,
+                targetAudience = property.genderSuitability,
+                isSharingAvailable = property.isSharingAvailable,
+                sharingCapacity = property.sharingCapacity,
+                availableSpaces = property.availableSpaces
+            )
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = StynoEmerald,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        "Sharing & Occupancy Settings",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        property.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CategorySharingSetupCard(
+                    state = wizardState,
+                    onUpdateState = { wizardState = it }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(
+                        wizardState.isSharingAvailable,
+                        wizardState.sharingCapacity,
+                        wizardState.availableSpaces,
+                        wizardState.targetAudience
+                    )
+                }
+            ) {
+                Text("Save Sharing Rules")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+

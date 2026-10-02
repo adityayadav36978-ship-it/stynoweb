@@ -80,6 +80,12 @@ fun Step7CategoryFields(
             }
         }
 
+        // Category-Specific Sharing & Audience Configuration
+        com.example.ui.components.CategorySharingSetupCard(
+            state = state,
+            onUpdateState = onUpdateState
+        )
+
         when (state.propertyType) {
             PropertyType.HOSTEL -> HostelSpecificForm(state, onUpdateState)
             PropertyType.PG -> PgSpecificForm(state, onUpdateState)
@@ -88,6 +94,10 @@ fun Step7CategoryFields(
             PropertyType.ROOM -> RoomSpecificForm(state, onUpdateState)
             PropertyType.QUICK_STAY -> QuickStaySpecificForm(state, onUpdateState)
         }
+
+        // Universal STYNO Girls Safety Verification Application Section
+        Spacer(modifier = Modifier.height(10.dp))
+        GirlsSafetyVerificationApplicationSection(state = state, onUpdateState = onUpdateState)
     }
 }
 
@@ -763,6 +773,396 @@ fun QuickStaySpecificForm(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun GirlsSafetyVerificationApplicationSection(
+    state: PropertyWizardState,
+    onUpdateState: (PropertyWizardState) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val submission = state.girlsSafetySubmission
+
+    OutlinedCard(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (submission.applyForVerification) Color(0xFFFFF1F2) else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.5.dp,
+            if (submission.applyForVerification) Color(0xFFFB7185) else MaterialTheme.colorScheme.outlineVariant
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header with Shield Icon & Official Verification Explainer
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE11D48)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Girls Safety Verified",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Apply for Girls Safety Verification",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (submission.applyForVerification) Color(0xFF9F1239) else MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Official STYNO Trust & Safety Audit Program",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (submission.applyForVerification) Color(0xFFBE123C) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = submission.applyForVerification,
+                    onCheckedChange = { checked ->
+                        onUpdateState(
+                            state.copy(
+                                girlsSafetySubmission = submission.copy(applyForVerification = checked)
+                            )
+                        )
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFFE11D48)
+                    ),
+                    modifier = Modifier.testTag("switch_girls_safety_apply")
+                )
+            }
+
+            // Trust Policy Explainer Banner
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (submission.applyForVerification) Color(0xFFFFE4E6) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, if (submission.applyForVerification) Color(0xFFFDA4AF) else Color.Transparent)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = if (submission.applyForVerification) Color(0xFFBE123C) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp).padding(top = 2.dp)
+                    )
+                    Text(
+                        text = if (submission.applyForVerification) {
+                            "⚠️ MANDATORY STYNO RULE: Owners CANNOT manually grant, toggle or display the 'Girls Safety Verified' badge. Upon publication, your listing will remain in 'Pending STYNO Audit' status until physically verified & approved by the STYNO Trust & Safety Team."
+                        } else {
+                            "Enable this application if your property offers dedicated safety provisions for female residents (female warden, biometric locks, 24/7 CCTV, emergency protocols)."
+                        },
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        color = if (submission.applyForVerification) Color(0xFF881337) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (submission.applyForVerification) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                }
+            }
+
+            // Expanded Dossier Fields when owner chooses to apply
+            if (submission.applyForVerification) {
+                HorizontalDivider(color = Color(0xFFFECDD3))
+
+                Text(
+                    text = "Required Safety Verification Dossier *",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF9F1239)
+                )
+
+                // 1. Female Resident Warden
+                SafetyAuditToggleRow(
+                    title = "Female Resident Warden on premises 24/7",
+                    subtitle = "A dedicated female warden resides on property to assist female guests at all hours.",
+                    checked = submission.femaleWardenPresent,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(femaleWardenPresent = it)))
+                    }
+                )
+
+                if (submission.femaleWardenPresent) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = submission.femaleWardenName,
+                            onValueChange = {
+                                onUpdateState(state.copy(girlsSafetySubmission = submission.copy(femaleWardenName = it)))
+                            },
+                            label = { Text("Warden Full Name *") },
+                            placeholder = { Text("e.g., Sunita Deshmukh") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f).testTag("input_warden_name")
+                        )
+                        OutlinedTextField(
+                            value = submission.femaleWardenPhone,
+                            onValueChange = {
+                                onUpdateState(state.copy(girlsSafetySubmission = submission.copy(femaleWardenPhone = it)))
+                            },
+                            label = { Text("Warden Emergency Phone *") },
+                            placeholder = { Text("+91 98XXX XXXXX") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f).testTag("input_warden_phone")
+                        )
+                    }
+                }
+
+                // 2. CCTV Coverage
+                SafetyAuditToggleRow(
+                    title = "24/7 CCTV Surveillance in Common Areas & Gates",
+                    subtitle = "Continuous recording covering main gate, lobby, hallways, and perimeter (zero cameras in private rooms).",
+                    checked = submission.cctvCoverageCommonAreas,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(cctvCoverageCommonAreas = it)))
+                    }
+                )
+
+                // 3. Biometric / Smart Lock Access
+                SafetyAuditToggleRow(
+                    title = "Biometric / RFID Keycard Entry Gates",
+                    subtitle = "Keypad, fingerprint or RFID card entry preventing unauthorized trespassers.",
+                    checked = submission.biometricOrSmartLock,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(biometricOrSmartLock = it)))
+                    }
+                )
+
+                // 4. Night Curfew / Gate Locking Timing
+                OutlinedTextField(
+                    value = submission.curfewOrGateLockTime,
+                    onValueChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(curfewOrGateLockTime = it)))
+                    },
+                    label = { Text("Gate Closing / Night Curfew Time *") },
+                    placeholder = { Text("e.g. 10:00 PM") },
+                    leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("input_curfew_time")
+                )
+
+                // 5. Visitor Log Maintained
+                SafetyAuditToggleRow(
+                    title = "Strict Visitor Entry & Exit Log Register",
+                    subtitle = "All guests, couriers, and maintenance personnel must show ID and register in visitor book.",
+                    checked = submission.visitorLogMaintained,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(visitorLogMaintained = it)))
+                    }
+                )
+
+                // 6. Police Verification of Staff
+                SafetyAuditToggleRow(
+                    title = "Police Verification Completed for all Staff",
+                    subtitle = "Local police background checks completed for wardens, security, and housekeeping staff.",
+                    checked = submission.policeVerificationCompleted,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(policeVerificationCompleted = it)))
+                    }
+                )
+
+                // 7. Background Checks for Employees
+                SafetyAuditToggleRow(
+                    title = "Identity & Criminal Background Checks on Record",
+                    subtitle = "Government ID and background verification records kept on file.",
+                    checked = submission.backgroundCheckStaff,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(backgroundCheckStaff = it)))
+                    }
+                )
+
+                // 8. Fire Safety & Emergency Exits
+                SafetyAuditToggleRow(
+                    title = "Fire Extinguishers & Clear Emergency Exits",
+                    subtitle = "Functional fire safety equipment, first aid station, and unblocked emergency exit routes.",
+                    checked = submission.fireSafetyAndEmergencyExits,
+                    onCheckedChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(fireSafetyAndEmergencyExits = it)))
+                    }
+                )
+
+                // 9. Documents Upload Simulation
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Safety & Compliance Documents Attached:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF9F1239)
+                    )
+
+                    val defaultDocs = listOf(
+                        "Police Verification Certificate (Wardens & Staff)",
+                        "Fire Department Safety NOC",
+                        "CCTV Layout Plan & Monitoring Protocol",
+                        "Building Society Permission Letter"
+                    )
+
+                    defaultDocs.forEach { docName ->
+                        val isAttached = submission.safetyDocumentsUploaded.contains(docName)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isAttached) Color(0xFFFCE7F3) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, if (isAttached) Color(0xFFF472B6) else MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    val updatedDocs = if (isAttached) {
+                                        submission.safetyDocumentsUploaded - docName
+                                    } else {
+                                        submission.safetyDocumentsUploaded + docName
+                                    }
+                                    onUpdateState(state.copy(girlsSafetySubmission = submission.copy(safetyDocumentsUploaded = updatedDocs)))
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isAttached) Icons.Default.CheckCircle else Icons.Default.Description,
+                                        contentDescription = null,
+                                        tint = if (isAttached) Color(0xFFBE185D) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = docName,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isAttached) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isAttached) Color(0xFF831843) else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Text(
+                                    text = if (isAttached) "Attached ✓" else "+ Attach",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isAttached) Color(0xFFBE185D) else MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 10. Owner Remarks / Protocol Details
+                OutlinedTextField(
+                    value = submission.safetyRemarksByOwner,
+                    onValueChange = {
+                        onUpdateState(state.copy(girlsSafetySubmission = submission.copy(safetyRemarksByOwner = it)))
+                    },
+                    label = { Text("Special Safety Remarks for Audit Team") },
+                    placeholder = { Text("Detail any additional security provisions: e.g. female guards on night shifts, SOS emergency buzzer in rooms, warden room location, etc.") },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth().testTag("input_safety_remarks")
+                )
+
+                // Status Badge Reminder Box
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFFEF3C7),
+                    border = BorderStroke(1.dp, Color(0xFFFCD34D))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HourglassTop,
+                            contentDescription = null,
+                            tint = Color(0xFFB45309),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column {
+                            Text(
+                                text = "Application Status: VERIFICATION PENDING",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF78350F)
+                            )
+                            Text(
+                                text = "STYNO audit team will schedule an on-site physical inspection. Only STYNO Admin can approve or suspend this badge.",
+                                fontSize = 10.sp,
+                                color = Color(0xFF92400E)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SafetyAuditToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = if (checked) Color(0xFFFFEDD5).copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        border = BorderStroke(1.dp, if (checked) Color(0xFFFDBA74) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFFE11D48)
+                )
+            )
         }
     }
 }

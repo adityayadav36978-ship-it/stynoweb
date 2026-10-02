@@ -558,4 +558,242 @@ class RealGeocodingService(private val context: Context) {
         val distance = r * c
         return (Math.round(distance * 10.0) / 10.0)
     }
+
+    /**
+     * Looks up Indian 6-digit postal PIN code hierarchy:
+     * Auto-resolves Area, District/City, and State in India.
+     */
+    suspend fun lookupIndianPincode(pincode: String): RealLocationResult? = withContext(Dispatchers.IO) {
+        val cleanPin = pincode.trim().filter { it.isDigit() }
+        if (cleanPin.length != 6) return@withContext null
+
+        // 1. Try Indian Postal Pincode API
+        try {
+            val url = "https://api.postalpincode.in/pincode/$cleanPin"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "StynoApp/1.0")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val jsonArr = JSONArray(body)
+                        if (jsonArr.length() > 0) {
+                            val firstObj = jsonArr.getJSONObject(0)
+                            val status = firstObj.optString("Status", "")
+                            if (status.equals("Success", ignoreCase = true)) {
+                                val postOffices = firstObj.optJSONArray("PostOffice")
+                                if (postOffices != null && postOffices.length() > 0) {
+                                    val po = postOffices.getJSONObject(0)
+                                    val areaName = po.optString("Name", "Area $cleanPin")
+                                    val district = po.optString("District", "")
+                                    val state = po.optString("State", "India")
+                                    val city = if (district.isNotBlank()) district else areaName
+
+                                    // Attempt geocoding for coordinates
+                                    var lat = 20.5937
+                                    var lng = 78.9629
+                                    try {
+                                        val geocoder = Geocoder(context, Locale("en", "IN"))
+                                        @Suppress("DEPRECATION")
+                                        val geoResults = geocoder.getFromLocationName("$cleanPin, $state, India", 1)
+                                        if (!geoResults.isNullOrEmpty()) {
+                                            lat = geoResults[0].latitude
+                                            lng = geoResults[0].longitude
+                                        }
+                                    } catch (ge: Exception) {
+                                        Log.w(TAG, "Geocoder coordinate lookup note: ${ge.message}")
+                                    }
+
+                                    return@withContext RealLocationResult(
+                                        country = "India",
+                                        countryCode = "IN",
+                                        state = state,
+                                        district = district.ifBlank { city },
+                                        city = city,
+                                        locality = areaName,
+                                        landmark = "PIN: $cleanPin ($areaName)",
+                                        formattedAddress = "$areaName, $city, $state $cleanPin, India",
+                                        latitude = lat,
+                                        longitude = lng,
+                                        isLiveGps = false,
+                                        rawDisplayName = "$areaName, $city ($cleanPin)"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Postal PIN code network check note: ${e.message}")
+        }
+
+        // 2. Try Android Geocoder
+        try {
+            val geocoder = Geocoder(context, Locale("en", "IN"))
+            @Suppress("DEPRECATION")
+            val addresses = geocoder.getFromLocationName("$cleanPin, India", 1)
+            if (!addresses.isNullOrEmpty()) {
+                val addr = addresses[0]
+                val state = addr.adminArea ?: "India"
+                val district = addr.subAdminArea ?: addr.locality ?: "City"
+                val city = addr.locality ?: addr.subAdminArea ?: "City"
+                val locality = addr.subLocality ?: addr.featureName ?: "Area $cleanPin"
+
+                return@withContext RealLocationResult(
+                    country = "India",
+                    countryCode = "IN",
+                    state = state,
+                    district = district,
+                    city = city,
+                    locality = locality,
+                    landmark = "PIN: $cleanPin",
+                    formattedAddress = "$locality, $city, $state $cleanPin, India",
+                    latitude = addr.latitude,
+                    longitude = addr.longitude,
+                    isLiveGps = false,
+                    rawDisplayName = "$locality, $city ($cleanPin)"
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Native Geocoder for PIN failed: ${e.message}")
+        }
+
+        // 3. Resilient Offline Indian PIN code database
+        val offlineLookup = getOfflineIndianPincode(cleanPin)
+        if (offlineLookup != null) {
+            return@withContext offlineLookup
+        }
+
+        // 4. Region-based fallback from standard Indian PIN code prefix hierarchy
+        val prefix = cleanPin.take(2)
+        val (stateEst, cityEst) = when (prefix) {
+            "11" -> "Delhi" to "New Delhi"
+            "12", "13" -> "Haryana" to "Gurugram"
+            "14", "15", "16" -> "Punjab" to "Chandigarh"
+            "17" -> "Himachal Pradesh" to "Shimla"
+            "18", "19" -> "Jammu & Kashmir" to "Srinagar"
+            "20", "24" -> "Uttar Pradesh" to "Noida"
+            "21", "22", "23" -> "Uttar Pradesh" to "Lucknow"
+            "25", "26", "27", "28" -> "Uttar Pradesh" to "Varanasi"
+            "30", "31", "32", "33", "34" -> "Rajasthan" to "Jaipur"
+            "36", "37", "38", "39" -> "Gujarat" to "Ahmedabad"
+            "40" -> "Maharashtra" to "Mumbai"
+            "41", "42" -> "Maharashtra" to "Pune"
+            "43", "44" -> "Maharashtra" to "Nagpur"
+            "45", "46", "47", "48" -> "Madhya Pradesh" to "Bhopal"
+            "49" -> "Chhattisgarh" to "Raipur"
+            "50" -> "Telangana" to "Hyderabad"
+            "51", "52", "53" -> "Andhra Pradesh" to "Visakhapatnam"
+            "56", "57", "58", "59" -> "Karnataka" to "Bengaluru"
+            "60", "61", "62", "63", "64" -> "Tamil Nadu" to "Chennai"
+            "67", "68", "69" -> "Kerala" to "Kochi"
+            "70", "71", "72", "73", "74" -> "West Bengal" to "Kolkata"
+            "75", "76", "77" -> "Odisha" to "Bhubaneswar"
+            "78" -> "Assam" to "Guwahati"
+            "79" -> "North East" to "Shillong"
+            "80", "81", "82", "84", "85" -> "Bihar" to "Patna"
+            "83" -> "Jharkhand" to "Ranchi"
+            else -> "India" to "City"
+        }
+
+        RealLocationResult(
+            country = "India",
+            countryCode = "IN",
+            state = stateEst,
+            district = cityEst,
+            city = cityEst,
+            locality = "PIN $cleanPin Area",
+            landmark = "Postal Area $cleanPin",
+            formattedAddress = "PIN $cleanPin, $cityEst, $stateEst, India",
+            latitude = 28.6139,
+            longitude = 77.2090,
+            isLiveGps = false,
+            rawDisplayName = "PIN $cleanPin, $cityEst, $stateEst"
+        )
+    }
+
+    private fun getOfflineIndianPincode(pin: String): RealLocationResult? {
+        val map = mapOf(
+            "110001" to Triple("Connaught Place", "New Delhi", "Delhi"),
+            "110016" to Triple("Hauz Khas", "South Delhi", "Delhi"),
+            "110025" to Triple("Jamia Nagar", "South East Delhi", "Delhi"),
+            "110092" to Triple("Laxmi Nagar", "East Delhi", "Delhi"),
+            "201301" to Triple("Sector 18", "Gautam Buddha Nagar (Noida)", "Uttar Pradesh"),
+            "201309" to Triple("Sector 62", "Noida", "Uttar Pradesh"),
+            "122001" to Triple("DLF Phase 1", "Gurugram", "Haryana"),
+            "122018" to Triple("Cyber City", "Gurugram", "Haryana"),
+            "560001" to Triple("MG Road", "Bengaluru Urban", "Karnataka"),
+            "560034" to Triple("Koramangala", "Bengaluru Urban", "Karnataka"),
+            "560066" to Triple("Whitefield", "Bengaluru Urban", "Karnataka"),
+            "560100" to Triple("Electronic City", "Bengaluru Urban", "Karnataka"),
+            "560038" to Triple("Indiranagar", "Bengaluru Urban", "Karnataka"),
+            "560076" to Triple("BTM Layout", "Bengaluru Urban", "Karnataka"),
+            "560068" to Triple("Madivala", "Bengaluru Urban", "Karnataka"),
+            "400001" to Triple("Fort", "Mumbai", "Maharashtra"),
+            "400050" to Triple("Bandra West", "Mumbai", "Maharashtra"),
+            "400069" to Triple("Andheri East", "Mumbai", "Maharashtra"),
+            "400076" to Triple("Powai", "Mumbai", "Maharashtra"),
+            "411001" to Triple("Camp", "Pune", "Maharashtra"),
+            "411057" to Triple("Hinjawadi Tech Park", "Pune", "Maharashtra"),
+            "411014" to Triple("Viman Nagar", "Pune", "Maharashtra"),
+            "600001" to Triple("George Town", "Chennai", "Tamil Nadu"),
+            "600036" to Triple("IIT Madras", "Chennai", "Tamil Nadu"),
+            "600096" to Triple("OMR IT Corridor", "Chennai", "Tamil Nadu"),
+            "500001" to Triple("Abids", "Hyderabad", "Telangana"),
+            "500081" to Triple("HITEC City", "Hyderabad", "Telangana"),
+            "500032" to Triple("Gachibowli", "Hyderabad", "Telangana"),
+            "700001" to Triple("Dalhousie", "Kolkata", "West Bengal"),
+            "700091" to Triple("Salt Lake Sector V", "Kolkata", "West Bengal"),
+            "700156" to Triple("New Town", "Kolkata", "West Bengal"),
+            "302001" to Triple("MI Road", "Jaipur", "Rajasthan"),
+            "302017" to Triple("Malviya Nagar", "Jaipur", "Rajasthan"),
+            "380001" to Triple("Navrangpura", "Ahmedabad", "Gujarat"),
+            "380015" to Triple("Satellite", "Ahmedabad", "Gujarat"),
+            "226001" to Triple("Hazratganj", "Lucknow", "Uttar Pradesh"),
+            "226010" to Triple("Gomti Nagar", "Lucknow", "Uttar Pradesh"),
+            "800001" to Triple("Fraser Road", "Patna", "Bihar"),
+            "800020" to Triple("Kankarbagh", "Patna", "Bihar"),
+            "845438" to Triple("Bagaha Bazar", "West Champaran", "Bihar"),
+            "845101" to Triple("Bettiah", "West Champaran", "Bihar"),
+            "842001" to Triple("Muzaffarpur Town", "Muzaffarpur", "Bihar"),
+            "846004" to Triple("Lalbagh", "Darbhanga", "Bihar"),
+            "851101" to Triple("Begusarai Town", "Begusarai", "Bihar"),
+            "854301" to Triple("Purnea City", "Purnea", "Bihar"),
+            "812001" to Triple("Bhagalpur Town", "Bhagalpur", "Bihar"),
+            "823001" to Triple("Gaya Town", "Gaya", "Bihar"),
+            "452001" to Triple("Rajwada", "Indore", "Madhya Pradesh"),
+            "462001" to Triple("MP Nagar", "Bhopal", "Madhya Pradesh"),
+            "751001" to Triple("Saheed Nagar", "Bhubaneswar", "Odisha"),
+            "781001" to Triple("Pan Bazar", "Guwahati", "Assam"),
+            "682001" to Triple("Fort Kochi", "Ernakulam", "Kerala"),
+            "695001" to Triple("Statue", "Thiruvananthapuram", "Kerala"),
+            "160017" to Triple("Sector 17", "Chandigarh", "Punjab"),
+            "141001" to Triple("Clock Tower", "Ludhiana", "Punjab"),
+            "834001" to Triple("Main Road", "Ranchi", "Jharkhand"),
+            "831001" to Triple("Bistupur", "Jamshedpur", "Jharkhand"),
+            "492001" to Triple("Telibandha", "Raipur", "Chhattisgarh"),
+            "403001" to Triple("Panaji", "North Goa", "Goa"),
+            "248001" to Triple("Rajpur Road", "Dehradun", "Uttarakhand")
+        )
+
+        val entry = map[pin] ?: return null
+        return RealLocationResult(
+            country = "India",
+            countryCode = "IN",
+            state = entry.third,
+            district = entry.second,
+            city = entry.second,
+            locality = entry.first,
+            landmark = "PIN: $pin (${entry.first})",
+            formattedAddress = "${entry.first}, ${entry.second}, ${entry.third} $pin, India",
+            latitude = 28.5355,
+            longitude = 77.3910,
+            isLiveGps = false,
+            rawDisplayName = "${entry.first}, ${entry.second} ($pin)"
+        )
+    }
 }
