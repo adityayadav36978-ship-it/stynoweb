@@ -675,6 +675,10 @@ class StynoDataStore {
     return JSON.parse(localStorage.getItem(this.storageKeyBookings) || "[]");
   }
 
+  getAllBookings() {
+    return this.getBookings();
+  }
+
   // User Bookings with Strict Data Isolation (Only bookings belonging to this guest)
   getUserBookings(user = null) {
     const activeUser = user || (typeof AppState !== "undefined" ? AppState.currentUser : null);
@@ -761,6 +765,7 @@ class StynoDataStore {
 }
 
 const StynoDB = new StynoDataStore();
+window.StynoDB = StynoDB;
 
 // --------------------------------------------------------------------------
 // 5. APPLICATION STATE
@@ -802,6 +807,7 @@ const AppState = {
   minRatingFilter: 0,
   physicalAuditOnly: false
 };
+window.AppState = AppState;
 
 // --------------------------------------------------------------------------
 // 6. INITIALIZATION & VIEW MANAGEMENT
@@ -2528,9 +2534,105 @@ function populateCitiesForOwner(stateName) {
   onOwnerStateChanged(stateName);
 }
 
-function saveQuickStayPricing() {
-  showToast("Quick Stay hourly rates updated successfully");
+function handleOwnerCategoryChange(category) {
+  const sharingCb = document.getElementById("ownerAllowSharing");
+  const sharingCap = document.getElementById("ownerSharingCapacity");
+  const durationSelect = document.getElementById("ownerDurationType");
+  const sharingNotice = document.getElementById("ownerSharingNotice");
+
+  if (category === "HOTEL") {
+    if (sharingCb) {
+      sharingCb.checked = false;
+      sharingCb.disabled = true;
+    }
+    if (sharingCap) sharingCap.disabled = true;
+    if (durationSelect) durationSelect.value = "DAILY";
+    if (sharingNotice) {
+      sharingNotice.style.display = "block";
+      sharingNotice.textContent = "🏨 Hotel Policy: Under STYNO regulations, Hotel bookings are strictly private rooms. Room sharing with external guests is prohibited.";
+    }
+    showToast("Hotel category selected: Private rooms only (sharing disabled)");
+  } else if (category === "FLAT") {
+    if (sharingCb) sharingCb.disabled = false;
+    if (sharingCap) sharingCap.disabled = false;
+    if (durationSelect) durationSelect.value = "MONTHLY";
+    if (sharingNotice) {
+      sharingNotice.style.display = "block";
+      sharingNotice.textContent = "🏠 Flat Policy: Uncheck sharing for complete family/entire flat rental. Check sharing for co-living flatmates.";
+    }
+  } else if (category === "HOSTEL" || category === "PG") {
+    if (sharingCb) {
+      sharingCb.checked = true;
+      sharingCb.disabled = false;
+    }
+    if (sharingCap) sharingCap.disabled = false;
+    if (durationSelect) durationSelect.value = "MONTHLY";
+    if (sharingNotice) sharingNotice.style.display = "none";
+  } else if (category === "QUICK") {
+    if (durationSelect) durationSelect.value = "HOURLY";
+    if (sharingNotice) sharingNotice.style.display = "none";
+  } else {
+    if (sharingCb) sharingCb.disabled = false;
+    if (sharingCap) sharingCap.disabled = false;
+    if (durationSelect) durationSelect.value = "MONTHLY";
+    if (sharingNotice) sharingNotice.style.display = "none";
+  }
 }
+window.handleOwnerCategoryChange = handleOwnerCategoryChange;
+
+function handleQuickStayToggle(isChecked) {
+  const grid = document.querySelector(".quick-pricing-slots-grid");
+  if (grid) {
+    grid.style.opacity = isChecked ? "1" : "0.5";
+    grid.style.pointerEvents = isChecked ? "auto" : "none";
+  }
+  showToast(isChecked ? "Quick Stay slots enabled for hourly transit guests" : "Quick Stay transit slots disabled");
+}
+window.handleQuickStayToggle = handleQuickStayToggle;
+
+function saveQuickStayPricing() {
+  const p3 = Number(document.getElementById("qs3hPrice")?.value || 299);
+  const p6 = Number(document.getElementById("qs6hPrice")?.value || 499);
+  const p12 = Number(document.getElementById("qs12hPrice")?.value || 799);
+  const p24 = Number(document.getElementById("qs24hPrice")?.value || 1299);
+  const isEnabled = document.getElementById("quickStayGlobalToggle")?.checked ?? true;
+
+  const qsConfig = { isEnabled, p3, p6, p12, p24, updatedAt: Date.now() };
+  localStorage.setItem("styno_owner_quick_stay_rates", JSON.stringify(qsConfig));
+  showToast("Quick Stay hourly rates saved & synced with live search!");
+}
+window.saveQuickStayPricing = saveQuickStayPricing;
+
+function selectCityFilter(cityName) {
+  if (!cityName) return;
+  AppState.selectedCountry = "India";
+  AppState.selectedState = "";
+  AppState.selectedDistrict = "";
+  AppState.selectedCity = cityName;
+  AppState.selectedArea = "";
+  AppState.selectedPincode = null;
+  AppState.searchQuery = "";
+
+  const pill = document.getElementById("searchLocPill");
+  if (pill) {
+    pill.textContent = `${cityName}, India`;
+  }
+  const subtitle = document.getElementById("staysSectionSubtitle");
+  if (subtitle) {
+    subtitle.textContent = `Showing verified stays in ${cityName}`;
+  }
+
+  renderListings();
+
+  // Scroll smoothly to stays
+  const staysEl = document.getElementById("staysSection") || document.querySelector(".stays-section");
+  if (staysEl) {
+    staysEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  showToast(`Showing accommodations in ${cityName}`);
+}
+window.selectCityFilter = selectCityFilter;
 
 function saveOwnerPaymentDetails(e) {
   e.preventDefault();
@@ -4403,6 +4505,30 @@ function getStoredUsersAccounts() {
       brokerageSaved: 48000,
       createdAt: "2026-01-05T09:00:00.000Z",
       lastLoginAt: "2026-09-19T20:30:00.000Z"
+    },
+    {
+      id: "usr_admin_styno",
+      name: "STYNO Trust & Safety Council",
+      email: "admin@styno.com",
+      phone: "9999900000",
+      role: "ADMIN",
+      provider: "EMAIL",
+      passwordSalt: "salt_admin_2026",
+      passwordHash: "46f888795c739e830e38a20de29c488390bc7d7f7e9e3e7f4851eb3d5c5896cb",
+      fallbackPlain: "AdminPass@2026",
+      avatarInitials: "SA",
+      kycVerified: true,
+      kycDocType: "Official STYNO Administrator ID",
+      kycDocNumber: "STY-ADMIN-001",
+      dietType: "PURE_VEG",
+      messPreference: "ALL_MEALS",
+      foodNotes: "Official Trust & Safety Officer",
+      roomPref: "SINGLE",
+      curfewPref: "FLEXIBLE",
+      bio: "Official STYNO Trust & Safety Verification Council",
+      brokerageSaved: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      lastLoginAt: "2026-10-01T12:00:00.000Z"
     }
   ];
 
@@ -5170,7 +5296,16 @@ function togglePasswordVisibility(inputId, btnEl) {
 function updateAuthUI() {
   const user = AppState.currentUser || getStoredUser();
   const authContainer = document.getElementById("headerAuthContainer");
+  const adminBtn = document.getElementById("btnHeaderAdminPortal");
   
+  if (adminBtn) {
+    if (user && user.isLoggedIn && user.role === "ADMIN") {
+      adminBtn.style.display = "inline-flex";
+    } else {
+      adminBtn.style.display = "none";
+    }
+  }
+
   if (authContainer) {
     if (user && user.isLoggedIn) {
       authContainer.innerHTML = `
@@ -5206,7 +5341,8 @@ function updateAuthUI() {
     if (pKycBadge) pKycBadge.textContent = user.kycVerified ? "Verified" : "Pending";
     if (pVerifiedBadge) {
       pVerifiedBadge.style.display = "inline-flex";
-      pVerifiedBadge.innerHTML = `<span class="material-symbols-rounded">verified</span> ${user.role === 'OWNER' ? 'Verified Host' : 'Verified Guest'}`;
+      const roleLabel = user.role === 'ADMIN' ? 'Trust & Safety Admin' : (user.role === 'OWNER' ? 'Verified Host' : 'Verified Guest');
+      pVerifiedBadge.innerHTML = `<span class="material-symbols-rounded">verified</span> ${roleLabel}`;
     }
     if (pActionsCol) {
       pActionsCol.innerHTML = `
@@ -5247,6 +5383,162 @@ function updateAuthUI() {
   if (roomPref && user.roomPref) roomPref.value = user.roomPref;
   if (curfewPref && user.curfewPref) curfewPref.value = user.curfewPref;
 }
+
+// --------------------------------------------------------------------------
+// 17B. ADMIN TRUST & SAFETY PORTAL (1:1 with AdminDashboardScreen.kt)
+// --------------------------------------------------------------------------
+
+function openAdminModal() {
+  const user = AppState.currentUser || getStoredUser();
+  if (!user || !user.isLoggedIn || user.role !== "ADMIN") {
+    const adminPass = prompt("Enter STYNO Trust & Safety Council Admin Key (or sign in as admin@styno.com):", "AdminPass@2026");
+    if (adminPass === "AdminPass@2026") {
+      let adminAcc = findAccountByEmail("admin@styno.com");
+      if (!adminAcc) {
+        adminAcc = {
+          id: "usr_admin_styno",
+          name: "STYNO Trust & Safety Council",
+          email: "admin@styno.com",
+          phone: "9999900000",
+          role: "ADMIN",
+          isLoggedIn: true,
+          avatarInitials: "SA",
+          kycVerified: true,
+          bio: "Official STYNO Trust & Safety Verification Council"
+        };
+      }
+      adminAcc.isLoggedIn = true;
+      adminAcc.role = "ADMIN";
+      AppState.currentUser = adminAcc;
+      localStorage.setItem(STYNO_USER_STORAGE_KEY, JSON.stringify(adminAcc));
+      updateAuthUI();
+      showToast("Trust & Safety Council Admin session verified.");
+    } else {
+      showToast("Access Denied: Restricted to authorized STYNO Trust & Safety members.");
+      return;
+    }
+  }
+
+  renderAdminPropertyList();
+  openModal("adminModal");
+}
+window.openAdminModal = openAdminModal;
+
+function renderAdminPropertyList() {
+  const container = document.getElementById("adminPropertyListContainer");
+  if (!container) return;
+
+  const properties = StynoDB.getAllProperties();
+
+  // Metrics
+  const verifiedCount = properties.filter(p => p.girlsSafetyVerificationStatus === "VERIFIED" || (p.isVerified && p.genderSuitability === "GIRLS_ONLY")).length;
+  const pendingCount = properties.filter(p => p.girlsSafetyVerificationStatus === "PENDING" || (p.girlsSafetySubmitted && p.girlsSafetyVerificationStatus !== "VERIFIED")).length;
+  const suspendedCount = properties.filter(p => p.isAvailable === false).length;
+  const totalCount = properties.length;
+
+  const elVerified = document.getElementById("adminMetricVerified");
+  const elPending = document.getElementById("adminMetricPending");
+  const elSuspended = document.getElementById("adminMetricSuspended");
+  const elTotal = document.getElementById("adminMetricTotal");
+
+  if (elVerified) elVerified.textContent = verifiedCount;
+  if (elPending) elPending.textContent = pendingCount;
+  if (elSuspended) elSuspended.textContent = suspendedCount;
+  if (elTotal) elTotal.textContent = totalCount;
+
+  if (properties.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <span class="material-symbols-rounded" style="font-size: 2rem;">verified_user</span>
+        <p>No property dossiers found in audit registry.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = properties.map(p => {
+    const isGirlsSafe = p.girlsSafetyVerificationStatus === "VERIFIED";
+    const isPending = p.girlsSafetyVerificationStatus === "PENDING" || (p.girlsSafetySubmitted && !isGirlsSafe);
+    const badgeBg = isGirlsSafe ? "#059669" : (isPending ? "#D97706" : "#64748B");
+    const badgeText = isGirlsSafe ? "Girls Safety: VERIFIED" : (isPending ? "Safety Audit: PENDING" : "Standard Review");
+    const isSuspended = p.isAvailable === false;
+
+    return `
+      <div style="background: white; border: 1.5px solid ${isGirlsSafe ? '#A7F3D0' : (isPending ? '#FDE68A' : '#E2E8F0')}; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <strong style="color: #0F2B5C; font-size: 1rem;">${p.name}</strong>
+              <span class="badge" style="background: ${badgeBg}1A; color: ${badgeBg}; font-weight: 700; font-size: 0.725rem;">${badgeText}</span>
+              ${isSuspended ? '<span class="badge badge-rose" style="background: #FEE2E2; color: #DC2626; font-weight: 700; font-size: 0.725rem; padding: 0.2rem 0.5rem; border-radius: 4px;">SUSPENDED</span>' : ''}
+            </div>
+            <p style="margin: 0.25rem 0 0; font-size: 0.825rem; color: #475569;">
+              <span class="material-symbols-rounded" style="font-size: 0.9rem; vertical-align: middle;">location_on</span> ${p.area}, ${p.city}, ${p.state} • Type: <strong>${p.propertyType}</strong> (${p.genderSuitability || 'ALL'})
+            </p>
+            <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #64748B;">
+              Owner: <strong>${p.owner?.name || 'Host'}</strong> • Direct Tel: ${p.owner?.phone || 'N/A'} • Starting Rent: ₹${p.startingPrice?.toLocaleString('en-IN')}/mo
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+            ${!isGirlsSafe ? `
+              <button class="btn btn-sm btn-primary" onclick="adminApproveSafety('${p.id}')" style="background: #059669; border-color: #059669; font-size: 0.775rem;">
+                <span class="material-symbols-rounded" style="font-size: 0.9rem;">verified</span> Approve Girls Safe
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-outline" onclick="adminRevokeSafety('${p.id}')" style="color: #D97706; border-color: #D97706; font-size: 0.775rem;">
+                <span class="material-symbols-rounded" style="font-size: 0.9rem;">shield_with_heart</span> Revoke Safety Badge
+              </button>
+            `}
+            <button class="btn btn-sm btn-outline" onclick="adminTogglePropertyStatus('${p.id}')" style="font-size: 0.775rem; color: ${isSuspended ? '#059669' : '#DC2626'}; border-color: ${isSuspended ? '#059669' : '#DC2626'};">
+              <span class="material-symbols-rounded" style="font-size: 0.9rem;">${isSuspended ? 'check_circle' : 'block'}</span> ${isSuspended ? 'Activate' : 'Suspend'}
+            </button>
+          </div>
+        </div>
+        <div style="margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed #E2E8F0; display: flex; gap: 1rem; font-size: 0.775rem; color: #64748B; flex-wrap: wrap;">
+          <span>Warden: <strong style="color: ${p.auditPoints?.warden ? '#059669' : '#94A3B8'}">${p.auditPoints?.warden ? 'YES' : 'No'}</strong></span>
+          <span>24/7 CCTV: <strong style="color: ${p.auditPoints?.cctv ? '#059669' : '#94A3B8'}">${p.auditPoints?.cctv ? 'YES' : 'No'}</strong></span>
+          <span>Biometric Access: <strong style="color: ${p.auditPoints?.biometric ? '#059669' : '#94A3B8'}">${p.auditPoints?.biometric ? 'YES' : 'No'}</strong></span>
+          <span>Police Verification: <strong style="color: ${p.auditPoints?.police ? '#059669' : '#94A3B8'}">${p.auditPoints?.police ? 'YES' : 'No'}</strong></span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+window.renderAdminPropertyList = renderAdminPropertyList;
+
+function adminApproveSafety(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+  prop.girlsSafetyVerificationStatus = "VERIFIED";
+  prop.isVerified = true;
+  StynoDB.savePropertyListing(prop);
+  showToast(`Property "${prop.name}" awarded official Girls Safety verification!`);
+  renderAdminPropertyList();
+  renderListings();
+}
+window.adminApproveSafety = adminApproveSafety;
+
+function adminRevokeSafety(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+  prop.girlsSafetyVerificationStatus = "NONE";
+  StynoDB.savePropertyListing(prop);
+  showToast(`Girls safety verification revoked for "${prop.name}".`);
+  renderAdminPropertyList();
+  renderListings();
+}
+window.adminRevokeSafety = adminRevokeSafety;
+
+function adminTogglePropertyStatus(propertyId) {
+  const prop = StynoDB.getAllProperties().find(p => p.id === propertyId);
+  if (!prop) return;
+  prop.isAvailable = (prop.isAvailable === false) ? true : false;
+  StynoDB.savePropertyListing(prop);
+  showToast(`Property "${prop.name}" is now ${prop.isAvailable ? 'ACTIVE' : 'SUSPENDED'}.`);
+  renderAdminPropertyList();
+  renderListings();
+}
+window.adminTogglePropertyStatus = adminTogglePropertyStatus;
 
 // --------------------------------------------------------------------------
 // 18. USER OPTIONS & PREFERENCES (1:1 with ProfileScreen.kt & Complaint.kt)
@@ -5448,11 +5740,11 @@ function verifyPasscodeInOwnerDashboard(passcodeArg) {
 
   if (!code) {
     showToast("Please enter a guest passcode (e.g. STY-9941)");
-    return;
+    return { success: false, message: "Empty passcode" };
   }
 
   const bookings = StynoDB.getBookings();
-  const booking = bookings.find(b => b.passcode.toUpperCase() === code);
+  const booking = bookings.find(b => b.passcode && b.passcode.toUpperCase() === code);
 
   if (booking) {
     booking.status = "CHECKED_IN";
@@ -5461,10 +5753,13 @@ function verifyPasscodeInOwnerDashboard(passcodeArg) {
     renderBookingsList();
     if (input) input.value = "";
     showToast(`Guest Verified: ${booking.guestName} (${booking.roomType}) checked in!`);
+    return { success: true, booking };
   } else {
     showToast(`No booking found matching passcode "${code}"`);
+    return { success: false, message: "Not found" };
   }
 }
+window.verifyPasscodeInOwnerDashboard = verifyPasscodeInOwnerDashboard;
 
 function submitOwnerReply(reviewAuthor, event) {
   event.preventDefault();
