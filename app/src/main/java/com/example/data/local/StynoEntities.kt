@@ -93,6 +93,8 @@ data class CustomPropertyEntity(
     val roomTypesCsv: String,
     val ownerName: String,
     val ownerPhone: String,
+    val ownerId: String = "",
+    val ownerEmail: String = "",
     val imagesCsv: String = "",
     val description: String = "",
     val securityDeposit: Double = 0.0,

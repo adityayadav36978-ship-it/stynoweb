@@ -79,6 +79,7 @@ import com.example.ui.viewmodel.AuthViewModel
 import com.example.ui.viewmodel.LocationViewModel
 import com.example.ui.viewmodel.Screen
 import com.example.ui.viewmodel.StynoViewModel
+import com.example.ui.viewmodel.UserRole
 
 @androidx.compose.material3.ExperimentalMaterial3Api
 class MainActivity : ComponentActivity() {
@@ -114,6 +115,20 @@ fun StynoApp(
     authViewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     locationViewModel: LocationViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val authUser by authViewModel.currentUser.collectAsStateWithLifecycle()
+
+    androidx.compose.runtime.LaunchedEffect(authUser) {
+        val user = authUser
+        if (user != null) {
+            viewModel.syncAuthenticatedUser(
+                uid = user.uid,
+                email = user.email ?: "",
+                phone = user.phoneNumber ?: "",
+                displayName = user.displayName ?: ""
+            )
+        }
+    }
+
     var showSplash by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
 
     if (showSplash) {
@@ -236,19 +251,22 @@ fun StynoApp(
                         authViewModel = authViewModel,
                         stynoViewModel = viewModel,
                         onAuthSuccess = { user ->
-                            viewModel.setAuthenticated(
-                                identifier = user.email?.ifBlank { null }
-                                    ?: user.phoneNumber
-                                    ?: user.uid,
+                            viewModel.syncAuthenticatedUser(
+                                uid = user.uid,
+                                email = user.email ?: "",
                                 phone = user.phoneNumber ?: "",
-                                name = user.displayName ?: ""
+                                displayName = user.displayName ?: ""
                             )
                             val hasPendingWishlist = viewModel.pendingWishlistPropertyId.value != null
                             viewModel.savePendingWishlistPropertyIfAny()
                             if (hasPendingWishlist) {
                                 viewModel.navigateTo(Screen.SAVED)
                             } else {
-                                viewModel.navigateTo(Screen.WELCOME)
+                                if (viewModel.userRole.value == UserRole.OWNER) {
+                                    viewModel.navigateTo(Screen.OWNER_DASHBOARD)
+                                } else {
+                                    viewModel.navigateTo(Screen.HOME)
+                                }
                             }
                         },
                         onNavigateBack = {

@@ -346,6 +346,42 @@
               <div class="map-floating-preview-card" id="mapFloatingPreview" style="display: none;">
                 <!-- Populated on pin click -->
               </div>
+
+              <!-- Map Explorer Legend Key for Property Marker Colors -->
+              <div class="map-legend-card" id="mapLegendKey">
+                <div class="map-legend-header">
+                  <div class="map-legend-title">
+                    <span class="material-symbols-rounded">palette</span>
+                    <span>Marker Colors</span>
+                  </div>
+                </div>
+                <div class="map-legend-items">
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('HOSTEL')" title="Filter Hostels">
+                    <span class="legend-color-dot dot-hostel"></span>
+                    <span class="legend-label">Hostel</span>
+                  </div>
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('HOTEL')" title="Filter Hotels">
+                    <span class="legend-color-dot dot-hotel"></span>
+                    <span class="legend-label">Hotel</span>
+                  </div>
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('PG')" title="Filter PGs">
+                    <span class="legend-color-dot dot-pg"></span>
+                    <span class="legend-label">PG</span>
+                  </div>
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('FLAT')" title="Filter Flats">
+                    <span class="legend-color-dot dot-flat"></span>
+                    <span class="legend-label">Flat</span>
+                  </div>
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('ROOM')" title="Filter Rooms">
+                    <span class="legend-color-dot dot-room"></span>
+                    <span class="legend-label">Room</span>
+                  </div>
+                  <div class="map-legend-item" onclick="filterMapByPropertyType('QUICK_STAY')" title="Filter Quick Stays">
+                    <span class="legend-color-dot dot-quick"></span>
+                    <span class="legend-label">Quick Stay</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -961,28 +997,28 @@
               <div class="form-group-row">
                 <div class="form-group">
                   <label for="ownerUpiId">Primary Host UPI ID *</label>
-                  <input type="text" id="ownerUpiId" value="sharma.stays@icici" required>
+                  <input type="text" id="ownerUpiId" placeholder="e.g. yourname@okhdfcbank" required>
                 </div>
                 <div class="form-group">
                   <label for="ownerAccountHolder">Account Holder Name *</label>
-                  <input type="text" id="ownerAccountHolder" value="Vikram Sharma (Property Host)" required>
+                  <input type="text" id="ownerAccountHolder" placeholder="e.g. Legal Host / Entity Name" required>
                 </div>
               </div>
 
               <div class="form-group-row">
                 <div class="form-group">
                   <label for="ownerBankName">Bank Name *</label>
-                  <input type="text" id="ownerBankName" value="HDFC Bank" required>
+                  <input type="text" id="ownerBankName" placeholder="e.g. HDFC Bank, ICICI, SBI" required>
                 </div>
                 <div class="form-group">
                   <label for="ownerIfsc">Bank IFSC Code *</label>
-                  <input type="text" id="ownerIfsc" value="HDFC0001234" required>
+                  <input type="text" id="ownerIfsc" placeholder="e.g. HDFC0001234" required>
                 </div>
               </div>
 
               <div class="form-group">
                 <label for="ownerAccountNum">Bank Account Number *</label>
-                <input type="text" id="ownerAccountNum" value="50100438928172" required>
+                <input type="text" id="ownerAccountNum" placeholder="e.g. 50100438928172" required>
               </div>
 
               <button type="submit" class="btn btn-primary">Update Host Settlement Details</button>
@@ -2279,30 +2315,30 @@
             <div class="form-group-row">
               <div class="form-group">
                 <label for="ownerFormUpiId">Host UPI ID (VPA) *</label>
-                <input type="text" id="ownerFormUpiId" placeholder="e.g. sharma.stays@icici" value="host.owner@okhdfcbank" required>
+                <input type="text" id="ownerFormUpiId" placeholder="e.g. yourname@okhdfcbank" required>
               </div>
               <div class="form-group">
                 <label for="ownerFormAccountHolder">Registered Payee Name *</label>
-                <input type="text" id="ownerFormAccountHolder" placeholder="e.g. Vikram Sharma" value="Vikram Sharma (Host)" required>
+                <input type="text" id="ownerFormAccountHolder" placeholder="e.g. Legal Host Name" required>
               </div>
             </div>
             <div class="form-group-row">
               <div class="form-group">
                 <label for="ownerFormBankName">Settlement Bank Name</label>
-                <input type="text" id="ownerFormBankName" placeholder="e.g. HDFC Bank" value="HDFC Bank">
+                <input type="text" id="ownerFormBankName" placeholder="e.g. HDFC Bank">
               </div>
               <div class="form-group">
                 <label for="ownerFormAccountNum">Bank Account Number</label>
-                <input type="text" id="ownerFormAccountNum" placeholder="e.g. 50100438928172" value="50100438928172">
+                <input type="text" id="ownerFormAccountNum" placeholder="e.g. Account Number">
               </div>
               <div class="form-group">
                 <label for="ownerFormIfsc">IFSC Code</label>
-                <input type="text" id="ownerFormIfsc" placeholder="e.g. HDFC0001234" value="HDFC0001234">
+                <input type="text" id="ownerFormIfsc" placeholder="e.g. HDFC0001234">
               </div>
             </div>
             <div class="form-group">
               <label for="ownerFormQrUrl">Host Bharat UPI QR Code Image (URL or Upload)</label>
-              <input type="text" id="ownerFormQrUrl" placeholder="assets/styno_logo.jpg or https://..." value="assets/styno_logo.jpg">
+              <input type="text" id="ownerFormQrUrl" placeholder="Optional QR image URL">
             </div>
           </div>
 

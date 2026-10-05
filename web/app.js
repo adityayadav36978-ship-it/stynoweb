@@ -492,6 +492,7 @@ class StynoDataStore {
         this.firestore = firebase.firestore();
         console.log("Styno Firebase Firestore initialized successfully");
         
+        // Real-time properties sync
         this.firestore.collection("properties").onSnapshot((snapshot) => {
           if (!snapshot.empty) {
             const cloudProps = [];
@@ -499,11 +500,114 @@ class StynoDataStore {
             this.mergeCloudProperties(cloudProps);
           }
         }, (err) => {
-          console.log("Firestore cloud snapshot note: offline/mock fallback active", err.message);
+          console.log("Firestore cloud snapshot note: properties offline fallback", err.message);
         });
+
+        // Real-time bookings sync from both user_bookings and bookings collections
+        const mergeBookingsFromSnapshot = (snapshot) => {
+          if (!snapshot.empty) {
+            const currentBookings = this.getBookings();
+            const map = new Map();
+            currentBookings.forEach(b => map.set(b.id, b));
+            snapshot.forEach(doc => {
+              const data = doc.data();
+              const id = data.id || doc.id.replace("booking_", "");
+              map.set(id, { id, ...data });
+            });
+            localStorage.setItem(this.storageKeyBookings, JSON.stringify(Array.from(map.values())));
+            this.notifySyncListeners("Bookings", "synced");
+          }
+        };
+
+        this.firestore.collection("user_bookings").onSnapshot(mergeBookingsFromSnapshot, (err) => {
+          console.log("Firestore user_bookings sync note:", err.message);
+        });
+        this.firestore.collection("bookings").onSnapshot(mergeBookingsFromSnapshot, (err) => {
+          console.log("Firestore bookings sync note:", err.message);
+        });
+
+        // Real-time owner payments sync
+        this.firestore.collection("owner_payments").onSnapshot((snapshot) => {
+          if (!snapshot.empty) {
+            const key = "styno_owner_payments";
+            const existing = JSON.parse(localStorage.getItem(key) || "{}");
+            snapshot.forEach(doc => {
+              existing[doc.id] = { ...existing[doc.id], ...doc.data() };
+            });
+            localStorage.setItem(key, JSON.stringify(existing));
+          }
+        }, (err) => {
+          console.log("Firestore owner_payments sync note:", err.message);
+        });
+
+        // Sync authenticated user role from Cloud Firestore on boot
+        setTimeout(() => {
+          if (typeof AppState !== "undefined" && AppState.currentUser) {
+            this.syncUserRoleWithFirestore(AppState.currentUser);
+          }
+        }, 300);
       }
     } catch (e) {
       console.log("Firebase init note:", e.message);
+    }
+  }
+
+  async persistUserRoleToFirestore(uid, role, extra = {}) {
+    if (!uid || !this.firestore || uid.startsWith("guest")) return;
+    try {
+      const payload = {
+        role: role,
+        uid: uid,
+        updatedAt: Date.now(),
+        ...extra
+      };
+      await this.firestore.collection("users").doc(uid).set(payload, { merge: true });
+      await this.firestore.collection("user_profiles").doc(uid).set(payload, { merge: true });
+      console.log(`Persisted role '${role}' to Firestore for UID ${uid}`);
+    } catch (e) {
+      console.log("Persist role to Firestore note:", e.message);
+    }
+  }
+
+  async syncUserRoleWithFirestore(user) {
+    if (!user || !this.firestore) return;
+    const uid = user.uid || user.id;
+    if (!uid || uid.startsWith("guest")) return;
+
+    try {
+      let docSnap = await this.firestore.collection("users").doc(uid).get();
+      if (!docSnap.exists && user.email) {
+        const qEmail = await this.firestore.collection("users").where("email", "==", user.email.trim().toLowerCase()).limit(1).get();
+        if (!qEmail.empty) docSnap = qEmail.docs[0];
+      }
+      if (!docSnap.exists && user.phone) {
+        const cleanPhone = user.phone.replace(/\D/g, "").slice(-10);
+        const qPhone = await this.firestore.collection("users").where("phoneNumber", "==", cleanPhone).limit(1).get();
+        if (!qPhone.empty) docSnap = qPhone.docs[0];
+      }
+
+      if (docSnap && docSnap.exists) {
+        const data = docSnap.data();
+        const role = data.role || data.userRole || "GUEST";
+        user.role = role;
+        if (data.name) user.name = data.name;
+        if (data.fullName) user.name = data.fullName;
+        if (data.phone) user.phone = data.phone;
+        if (data.email) user.email = data.email;
+        saveStoredUser(user);
+
+        if (role === "OWNER") {
+          AppState.userRole = "OWNER";
+          updateOwnerToggleUI();
+          renderOwnerPropertiesList();
+          renderOwnerBookingsTable();
+        } else if (AppState.userRole === "OWNER" && role !== "OWNER") {
+          AppState.userRole = "GUEST";
+          updateOwnerToggleUI();
+        }
+      }
+    } catch (e) {
+      console.log("syncUserRoleWithFirestore note:", e.message);
     }
   }
 
@@ -540,21 +644,22 @@ class StynoDataStore {
       ownerUser = activeUser;
     }
 
-    const cleanPhone = (ownerUser.phone || "").replace(/\D/g, "");
+    const cleanUid = (ownerUser.uid || ownerUser.id || "").trim();
+    const cleanPhone = (ownerUser.phone || "").replace(/\D/g, "").slice(-10);
     const cleanEmail = (ownerUser.email || "").trim().toLowerCase();
     const cleanName = (ownerUser.name || "").trim().toLowerCase();
 
     return all.filter(p => {
-      const pOwnerPhone = (p.owner?.phone || p.ownerInfo?.phone || "").replace(/\D/g, "");
+      const pOwnerId = (p.ownerId || p.ownerUid || "").trim();
+      const pOwnerPhone = (p.owner?.phone || p.ownerInfo?.phone || "").replace(/\D/g, "").slice(-10);
       const pOwnerEmail = (p.owner?.email || p.ownerInfo?.email || "").trim().toLowerCase();
       const pOwnerName = (p.owner?.name || p.ownerInfo?.name || "").trim().toLowerCase();
-      const isMyCustom = custom.some(c => c.id === p.id && (c.ownerId === ownerUser.phone || c.ownerId === ownerUser.email || !c.ownerId));
+      const isMyCustom = custom.some(c => c.id === p.id && (c.ownerId === cleanUid || c.ownerId === ownerUser.phone || c.ownerId === ownerUser.email));
 
-      return (cleanPhone && pOwnerPhone.includes(cleanPhone)) ||
+      return (cleanUid && (pOwnerId === cleanUid || isMyCustom)) ||
              (cleanEmail && pOwnerEmail === cleanEmail) ||
-             (cleanName && pOwnerName.includes(cleanName)) ||
-             isMyCustom ||
-             (cleanEmail.includes("host") || cleanEmail.includes("owner") || cleanPhone === "9811234567");
+             (cleanPhone && pOwnerPhone && (pOwnerPhone === cleanPhone || pOwnerPhone.includes(cleanPhone) || cleanPhone.includes(pOwnerPhone))) ||
+             (cleanName && cleanName.length >= 4 && pOwnerName === cleanName);
     });
   }
 
@@ -565,7 +670,9 @@ class StynoDataStore {
 
     const activeUser = ownerUser || (typeof AppState !== "undefined" ? AppState.currentUser : null);
     if (activeUser) {
-      propData.ownerId = activeUser.phone || activeUser.email;
+      const targetUid = activeUser.uid || activeUser.id || activeUser.phone || activeUser.email;
+      propData.ownerId = targetUid;
+      propData.ownerUid = targetUid;
       if (!propData.owner) {
         propData.owner = {
           name: activeUser.name,
@@ -708,8 +815,9 @@ class StynoDataStore {
     const myProps = this.getOwnerListings(activeUser);
     const myPropIds = new Set(myProps.map(p => p.id));
     const all = this.getBookings();
+    const cleanUid = (activeUser.uid || activeUser.id || "").trim();
 
-    return all.filter(b => myPropIds.has(b.propertyId));
+    return all.filter(b => myPropIds.has(b.propertyId) || (cleanUid && (b.ownerId === cleanUid || b.ownerUid === cleanUid)));
   }
 
   saveBooking(booking) {
@@ -719,7 +827,8 @@ class StynoDataStore {
     
     if (this.firestore) {
       try {
-        this.firestore.collection("bookings").doc(booking.id).set(booking);
+        this.firestore.collection("user_bookings").doc("booking_" + booking.id).set(booking, { merge: true });
+        this.firestore.collection("bookings").doc(booking.id).set(booking, { merge: true });
       } catch (e) {}
     }
     this.notifySyncListeners(booking.propertyName, "booked");
@@ -824,6 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateHeaderBadges();
   populateOwnerLocationForm();
   updateLocationHeader();
+  updateOwnerToggleUI();
 
   // Listen to the Live Sync broadcast event
   window.addEventListener("styno_sync_event", (e) => {
@@ -913,33 +1023,60 @@ function toggleUserRole() {
   }
 }
 
-function switchToOwnerDashboard() {
-  AppState.userRole = "OWNER";
+function updateOwnerToggleUI() {
   const btn = document.getElementById("ownerToggleBtn");
   const icon = document.getElementById("ownerToggleIcon");
   const text = document.getElementById("ownerToggleText");
   const badge = document.getElementById("ownerRoleBadge");
-  
-  if (btn) btn.classList.add("active");
-  if (icon) icon.textContent = "travel_explore";
-  if (text) text.textContent = "Guest View";
-  if (badge) badge.textContent = "Host Mode";
 
+  if (AppState.userRole === "OWNER") {
+    if (btn) btn.classList.add("active");
+    if (icon) icon.textContent = "travel_explore";
+    if (text) text.textContent = "Guest View";
+    if (badge) badge.textContent = "Host Mode";
+  } else {
+    if (btn) btn.classList.remove("active");
+    if (icon) icon.textContent = "add_business";
+    if (text) text.textContent = "Owner Dashboard";
+    if (badge) badge.textContent = "0% Fee";
+  }
+}
+
+function switchToOwnerDashboard() {
+  AppState.userRole = "OWNER";
+  updateOwnerToggleUI();
+
+  if (AppState.currentUser) {
+    AppState.currentUser.role = "OWNER";
+    saveStoredUser(AppState.currentUser);
+    const targetUid = AppState.currentUser.uid || AppState.currentUser.id;
+    if (targetUid && !targetUid.startsWith("guest") && StynoDB.persistUserRoleToFirestore) {
+      StynoDB.persistUserRoleToFirestore(targetUid, "OWNER", {
+        email: AppState.currentUser.email || "",
+        phone: AppState.currentUser.phone || "",
+        fullName: AppState.currentUser.name || ""
+      });
+    }
+  }
+
+  renderOwnerPropertiesList();
+  renderOwnerBookingsTable();
   switchView("OWNER");
   showToast("Switched to Styno Host & Owner Dashboard");
 }
 
 function switchToGuestMode() {
   AppState.userRole = "GUEST";
-  const btn = document.getElementById("ownerToggleBtn");
-  const icon = document.getElementById("ownerToggleIcon");
-  const text = document.getElementById("ownerToggleText");
-  const badge = document.getElementById("ownerRoleBadge");
+  updateOwnerToggleUI();
 
-  if (btn) btn.classList.remove("active");
-  if (icon) icon.textContent = "add_business";
-  if (text) text.textContent = "Owner Dashboard";
-  if (badge) badge.textContent = "0% Fee";
+  if (AppState.currentUser) {
+    AppState.currentUser.role = "GUEST";
+    saveStoredUser(AppState.currentUser);
+    const targetUid = AppState.currentUser.uid || AppState.currentUser.id;
+    if (targetUid && !targetUid.startsWith("guest") && StynoDB.persistUserRoleToFirestore) {
+      StynoDB.persistUserRoleToFirestore(targetUid, "GUEST");
+    }
+  }
 
   switchView("HOME");
   showToast("Switched to Guest Explorer View");
@@ -1293,12 +1430,13 @@ function renderMapMarkers(properties) {
         const lng = p.longitude || 77.3910;
         bounds.push([lat, lng]);
 
+        const typeKey = (p.propertyType || "HOSTEL").toLowerCase();
         const animDelay = Math.min(idx * 0.04, 0.32);
         const markerIcon = L.divIcon({
           className: 'custom-leaflet-marker',
-          html: `<div class="map-pin" style="animation-delay: ${animDelay}s;">₹${p.startingPrice.toLocaleString('en-IN')}</div>`,
-          iconSize: [64, 32],
-          iconAnchor: [32, 16]
+          html: `<div class="map-pin pin-${typeKey}" style="animation-delay: ${animDelay}s;"><span class="pin-dot"></span>₹${p.startingPrice.toLocaleString('en-IN')}</div>`,
+          iconSize: [76, 32],
+          iconAnchor: [38, 16]
         });
 
         const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(stynoLeafletMarkers);
@@ -1315,16 +1453,29 @@ function renderMapMarkers(properties) {
 
   // Fallback DOM pins
   container.innerHTML = properties.map((p, idx) => {
+    const typeKey = (p.propertyType || "HOSTEL").toLowerCase();
     const leftPct = 15 + ((idx * 27) % 70);
     const topPct = 20 + ((idx * 33) % 60);
     const animDelay = Math.min(idx * 0.04, 0.32);
 
     return `
-      <div class="map-pin" style="left: ${leftPct}%; top: ${topPct}%; z-index: 2; animation-delay: ${animDelay}s;" onclick="showMapFloatingPreview('${p.id}')">
-        ₹${p.startingPrice.toLocaleString('en-IN')}
+      <div class="map-pin pin-${typeKey}" style="left: ${leftPct}%; top: ${topPct}%; z-index: 2; animation-delay: ${animDelay}s;" onclick="showMapFloatingPreview('${p.id}')">
+        <span class="pin-dot"></span>₹${p.startingPrice.toLocaleString('en-IN')}
       </div>
     `;
   }).join("");
+}
+
+function filterMapByPropertyType(propertyType) {
+  if (AppState.selectedCategory === propertyType) {
+    AppState.selectedCategory = null;
+    showToast("Showing all stay types on map");
+  } else {
+    AppState.selectedCategory = propertyType;
+    showToast(`Map filtered: ${propertyType} accommodations`);
+  }
+  renderCategoryTrack();
+  renderListings();
 }
 
 function showMapFloatingPreview(propertyId) {
@@ -2636,13 +2787,13 @@ window.selectCityFilter = selectCityFilter;
 
 function saveOwnerPaymentDetails(e) {
   e.preventDefault();
-  const upiId = document.getElementById("ownerUpiId")?.value.trim() || "sharma.stays@icici";
-  const accountHolder = document.getElementById("ownerAccountHolder")?.value.trim() || "Vikram Sharma (Host)";
-  const bankName = document.getElementById("ownerBankName")?.value.trim() || "HDFC Bank";
-  const ifscCode = document.getElementById("ownerIfsc")?.value.trim() || "HDFC0001234";
-  const accountNumber = document.getElementById("ownerAccountNum")?.value.trim() || "50100438928172";
+  const upiId = document.getElementById("ownerUpiId")?.value.trim() || "";
+  const accountHolder = document.getElementById("ownerAccountHolder")?.value.trim() || (AppState.currentUser?.name || "");
+  const bankName = document.getElementById("ownerBankName")?.value.trim() || "";
+  const ifscCode = document.getElementById("ownerIfsc")?.value.trim() || "";
+  const accountNumber = document.getElementById("ownerAccountNum")?.value.trim() || "";
 
-  const ownerId = AppState.currentUser?.phone || AppState.currentUser?.email || "active_owner";
+  const ownerId = AppState.currentUser?.uid || AppState.currentUser?.id || AppState.currentUser?.phone || AppState.currentUser?.email || "active_owner";
   StynoDB.saveOwnerPaymentDetails(ownerId, {
     upiId,
     accountHolder,
@@ -4913,19 +5064,47 @@ function verifyPhoneOtp() {
 
   setButtonLoading("btnPhoneVerify", true, null, "Verifying OTP...");
 
-  setTimeout(() => {
+  setTimeout(async () => {
     let user = findAccountByPhone(cleanPhone);
-    const isNew = !user;
+    let firestoreData = null;
 
-    if (!user) {
+    if (StynoDB && StynoDB.firestore) {
+      try {
+        const qPhone = await StynoDB.firestore.collection("users").where("phoneNumber", "==", cleanPhone).limit(1).get();
+        if (!qPhone.empty) {
+          firestoreData = qPhone.docs[0].data();
+          firestoreData.uid = qPhone.docs[0].id;
+        }
+      } catch (e) {
+        console.log("Firestore phone check note:", e.message);
+      }
+    }
+
+    if (firestoreData) {
       user = {
-        id: "usr_phone_" + Date.now(),
-        name: `Styno Guest (+91 ${cleanPhone.slice(0, 5)}...)`,
+        id: firestoreData.uid || firestoreData.id || ("usr_phone_" + cleanPhone),
+        uid: firestoreData.uid || firestoreData.id,
+        name: firestoreData.fullName || firestoreData.name || `Styno Member (+91 ${cleanPhone.slice(0, 5)}...)`,
+        email: firestoreData.email || `user.${cleanPhone}@styno.in`,
+        phone: cleanPhone,
+        role: firestoreData.role || firestoreData.userRole || "GUEST",
+        provider: "PHONE_OTP",
+        avatarInitials: (firestoreData.fullName || firestoreData.name || "Styno Member").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "SM",
+        kycVerified: firestoreData.kycStatus === "VERIFIED",
+        createdAt: firestoreData.createdAt || new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+      };
+      upsertAccount(user);
+    } else if (!user) {
+      user = {
+        id: "usr_phone_" + cleanPhone,
+        uid: "usr_phone_" + cleanPhone,
+        name: `Styno Member (+91 ${cleanPhone.slice(0, 5)}...)`,
         email: `user.${cleanPhone}@styno.in`,
         phone: cleanPhone,
         role: "GUEST",
         provider: "PHONE_OTP",
-        avatarInitials: "SG",
+        avatarInitials: "SM",
         kycVerified: false,
         kycDocType: "Pending",
         kycDocNumber: "",
@@ -4940,6 +5119,17 @@ function verifyPhoneOtp() {
         lastLoginAt: new Date().toISOString()
       };
       upsertAccount(user);
+      if (StynoDB && StynoDB.firestore) {
+        StynoDB.firestore.collection("users").doc(user.id).set({
+          uid: user.id,
+          phoneNumber: cleanPhone,
+          phone: cleanPhone,
+          role: "GUEST",
+          name: user.name,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt
+        }, { merge: true });
+      }
     } else {
       user.lastLoginAt = new Date().toISOString();
       upsertAccount(user);
@@ -4984,7 +5174,36 @@ async function handleEmailSignIn(event) {
 
   setButtonLoading("btnEmailSignInSubmit", true, null, "Verifying Credentials...");
 
-  const user = findAccountByEmail(email);
+  let user = findAccountByEmail(email);
+  if (!user && StynoDB && StynoDB.firestore) {
+    try {
+      const qEmail = await StynoDB.firestore.collection("users").where("email", "==", email.toLowerCase()).limit(1).get();
+      if (!qEmail.empty) {
+        const firestoreData = qEmail.docs[0].data();
+        const fUid = qEmail.docs[0].id;
+        user = {
+          id: fUid,
+          uid: fUid,
+          name: firestoreData.fullName || firestoreData.name || "Styno Member",
+          email: email,
+          phone: firestoreData.phoneNumber || firestoreData.phone || "9876543210",
+          role: firestoreData.role || firestoreData.userRole || "GUEST",
+          provider: firestoreData.provider || "EMAIL",
+          passwordHash: firestoreData.passwordHash || null,
+          passwordSalt: firestoreData.passwordSalt || null,
+          avatarInitials: (firestoreData.fullName || firestoreData.name || "SM").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "SM",
+          kycVerified: firestoreData.kycStatus === "VERIFIED",
+          createdAt: firestoreData.createdAt || new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          isLoggedIn: true
+        };
+        upsertAccount(user);
+      }
+    } catch (e) {
+      console.log("Firestore email lookup note:", e.message);
+    }
+  }
+
   if (!user) {
     setButtonLoading("btnEmailSignInSubmit", false);
     showAuthError("No registered account found with this email. Please Sign Up.");
@@ -5114,6 +5333,35 @@ async function handleEmailSignUp(event) {
   upsertAccount(newUser);
   saveStoredUser(newUser);
 
+  if (StynoDB && StynoDB.firestore) {
+    try {
+      StynoDB.firestore.collection("users").doc(newUser.id).set({
+        uid: newUser.id,
+        email: newUser.email,
+        phoneNumber: newUser.phone,
+        phone: newUser.phone,
+        fullName: newUser.name,
+        name: newUser.name,
+        role: newUser.role,
+        provider: "EMAIL",
+        passwordHash: newUser.passwordHash,
+        passwordSalt: newUser.passwordSalt,
+        createdAt: newUser.createdAt,
+        lastLoginAt: newUser.lastLoginAt
+      }, { merge: true });
+      StynoDB.firestore.collection("user_profiles").doc(newUser.id).set({
+        uid: newUser.id,
+        email: newUser.email,
+        phoneNumber: newUser.phone,
+        fullName: newUser.name,
+        role: newUser.role,
+        createdAt: newUser.createdAt
+      }, { merge: true });
+    } catch (e) {
+      console.log("Firestore email signup note:", e.message);
+    }
+  }
+
   showAuthSuccess(`Account created! Welcome to STYNO, ${name}.`);
 
   setTimeout(() => {
@@ -5132,16 +5380,56 @@ async function handleSocialLogin(provider) {
   const btnId = provider === "Google" ? "btnGoogleLogin" : "btnAppleLogin";
   setButtonLoading(btnId, true, null, `Connecting with ${provider}...`);
 
-  setTimeout(() => {
+  setTimeout(async () => {
     const isGoogle = provider === "Google";
     const socialEmail = isGoogle ? "adityayadav36978@gmail.com" : "aditya.apple@styno.in";
     let user = findAccountByEmail(socialEmail);
-    const isNew = !user;
+    let firestoreData = null;
 
-    if (!user) {
+    if (StynoDB && StynoDB.firestore) {
+      try {
+        const qEmail = await StynoDB.firestore.collection("users").where("email", "==", socialEmail.trim().toLowerCase()).limit(1).get();
+        if (!qEmail.empty) {
+          firestoreData = qEmail.docs[0].data();
+          firestoreData.uid = qEmail.docs[0].id;
+        }
+      } catch (e) {
+        console.log("Firestore email check note:", e.message);
+      }
+    }
+
+    const isNew = !user && !firestoreData;
+
+    if (firestoreData) {
+      user = {
+        id: firestoreData.uid || firestoreData.id || ("usr_" + provider.toLowerCase() + "_" + Date.now()),
+        uid: firestoreData.uid || firestoreData.id,
+        name: firestoreData.fullName || firestoreData.name || (isGoogle ? "Aditya Yadav (Google)" : "Aditya Yadav (Apple)"),
+        email: socialEmail,
+        phone: firestoreData.phone || firestoreData.phoneNumber || "9876543210",
+        role: firestoreData.role || firestoreData.userRole || "GUEST",
+        provider: provider.toUpperCase(),
+        avatarInitials: "AY",
+        kycVerified: true,
+        kycDocType: `${provider} Authenticated ID`,
+        kycDocNumber: isGoogle ? "GID-92014" : "AID-58219",
+        dietType: "PURE_VEG",
+        messPreference: "ALL_MEALS",
+        foodNotes: "",
+        roomPref: "DOUBLE",
+        curfewPref: "MODERATE",
+        bio: `STYNO ${provider} Verified Member`,
+        brokerageSaved: 14500,
+        createdAt: firestoreData.createdAt || new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        isLoggedIn: true
+      };
+      upsertAccount(user);
+    } else if (!user) {
       // New Social User Onboarding
       user = {
         id: "usr_" + provider.toLowerCase() + "_" + Date.now(),
+        uid: "usr_" + provider.toLowerCase() + "_" + Date.now(),
         name: isGoogle ? "Aditya Yadav (Google)" : "Aditya Yadav (Apple)",
         email: socialEmail,
         phone: "9876543210",
@@ -5164,6 +5452,17 @@ async function handleSocialLogin(provider) {
         isNewUser: true
       };
       upsertAccount(user);
+      if (StynoDB && StynoDB.firestore) {
+        StynoDB.firestore.collection("users").doc(user.id).set({
+          uid: user.id,
+          email: socialEmail,
+          fullName: user.name,
+          role: "GUEST",
+          provider: provider.toUpperCase(),
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt
+        }, { merge: true });
+      }
     } else {
       // Existing Social User Login
       user.lastLoginAt = new Date().toISOString();
@@ -5175,6 +5474,16 @@ async function handleSocialLogin(provider) {
     user.sessionToken = generateSessionToken();
     saveStoredUser(user);
     setButtonLoading(btnId, false);
+
+    if (user.role === "OWNER") {
+      AppState.userRole = "OWNER";
+      updateOwnerToggleUI();
+      renderOwnerPropertiesList();
+      renderOwnerBookingsTable();
+    } else {
+      AppState.userRole = "GUEST";
+      updateOwnerToggleUI();
+    }
 
     const msg = isNew 
       ? `Welcome to STYNO, ${user.name}! Your account is now active.`

@@ -1280,6 +1280,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _userUid = MutableStateFlow(_userPreferences.value.authUid.ifBlank { prefs.getString("auth_uid", "") ?: "" })
+    val userUid: StateFlow<String> = _userUid.asStateFlow()
+
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
@@ -1289,26 +1292,29 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     private val _userEmail = MutableStateFlow("")
     val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
-    // Isolated Owner Properties (Only properties belonging to this host's authenticated phone/email/id)
+    // Isolated Owner Properties (Only properties belonging to this host's authenticated UID/phone/email)
     val ownerProperties: StateFlow<List<Property>> = combine(
         allProperties,
+        _userUid,
         _userPhone,
         _userEmail,
         _userName
-    ) { props, phone, email, name ->
-        val cleanPhone = phone.trim().replace(" ", "").replace("-", "")
+    ) { props, uid, phone, email, name ->
+        val cleanUid = uid.trim()
+        val cleanPhone = phone.trim().replace(Regex("[^0-9]"), "").takeLast(10)
         val cleanEmail = email.trim().lowercase()
         val cleanName = name.trim().lowercase()
         
         props.filter { p ->
-            val pPhone = p.ownerInfo.phone.trim().replace(" ", "").replace("-", "")
+            val pOwnerId = (p.ownerId.ifBlank { p.resolvedOwnerId }).trim()
+            val pPhone = p.ownerInfo.phone.trim().replace(Regex("[^0-9]"), "").takeLast(10)
             val pEmail = p.ownerInfo.email.trim().lowercase()
             val pName = p.ownerInfo.name.trim().lowercase()
             
-            (cleanPhone.isNotEmpty() && (pPhone.contains(cleanPhone) || cleanPhone.contains(pPhone))) ||
-            (cleanEmail.isNotEmpty() && (pEmail == cleanEmail || pEmail.contains(cleanEmail))) ||
-            (cleanName.isNotEmpty() && pName.contains(cleanName)) ||
-            (cleanEmail.contains("host") || cleanEmail.contains("owner") || cleanPhone == "9811234567")
+            (cleanUid.isNotEmpty() && (pOwnerId == cleanUid || p.resolvedOwnerId == cleanUid)) ||
+            (cleanEmail.isNotEmpty() && pEmail == cleanEmail) ||
+            (cleanPhone.isNotEmpty() && pPhone.isNotEmpty() && (pPhone == cleanPhone || pPhone.contains(cleanPhone) || cleanPhone.contains(pPhone))) ||
+            (cleanName.isNotEmpty() && cleanName.length >= 4 && pName == cleanName)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1339,11 +1345,17 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     // Owner Bookings stream (Strict Data Isolation: Only reservations for this host's properties)
     val ownerBookings: StateFlow<List<Booking>> = combine(
         repository.bookingsFlow,
-        ownerProperties
-    ) { allBookings, myProps ->
+        ownerProperties,
+        _userUid,
+        _userEmail
+    ) { allBookings, myProps, uid, email ->
         val myPropIds = myProps.map { it.id }.toSet()
+        val cleanUid = uid.trim()
+        val cleanEmail = email.trim().lowercase()
         allBookings.filter { b ->
-            myPropIds.contains(b.propertyId)
+            myPropIds.contains(b.propertyId) ||
+            (cleanUid.isNotEmpty() && b.ownerAccountHolderName == cleanUid) ||
+            (cleanEmail.isNotEmpty() && b.propertyContactPhone.contains(cleanEmail))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1371,6 +1383,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         val initialPrefs = _userPreferences.value
         if (initialPrefs.isAuthenticated && initialPrefs.hasCompletedOnboarding) {
             _userRole.value = initialPrefs.userRole
+            if (initialPrefs.authUid.isNotBlank()) {
+                _userUid.value = initialPrefs.authUid
+            }
             _selectedCity.value = initialPrefs.selectedCity
             _selectedGlobalLocation.value = initialPrefs.toGlobalLocationItem()
             _isLoggedIn.value = true
@@ -1539,13 +1554,22 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _currentScreen.value = if (updated.userRole == UserRole.OWNER) Screen.OWNER_DASHBOARD else Screen.HOME
     }
 
-    fun setAuthenticated(identifier: String, phone: String, name: String = "") {
+    fun setAuthenticated(identifier: String, phone: String, name: String = "", uid: String = "") {
         val email = if (identifier.contains("@")) identifier else ""
         val ph = if (phone.isNotBlank()) phone else if (!identifier.contains("@")) identifier else ""
+        val effectiveUid = uid.ifBlank {
+            _userUid.value.ifBlank {
+                prefs.getString("auth_uid", "") ?: (if (email.isNotBlank()) "usr_${email.replace("@", "_").replace(".", "_")}" else "")
+            }
+        }
+        if (effectiveUid.isNotBlank()) {
+            _userUid.value = effectiveUid
+        }
         val updated = _userPreferences.value.copy(
             isAuthenticated = true,
             hasCompletedOnboarding = true,
             hasCompletedLocationOnboarding = true,
+            authUid = effectiveUid,
             authIdentifier = identifier,
             authPhone = ph
         )
@@ -1561,15 +1585,58 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             .putBoolean("is_authenticated", true)
             .putBoolean("has_completed_onboarding", true)
             .putBoolean("has_completed_location_onboarding", true)
+            .putString("auth_uid", effectiveUid)
             .putString("auth_identifier", identifier)
             .putString("auth_phone", ph)
             .apply()
+
+        // Fetch user profile and authoritative role from Cloud Firestore
+        refreshUserProfileFromFirestore(lookupId = effectiveUid.ifBlank { email.ifBlank { ph } })
 
         if (_userPreferences.value.userRole == UserRole.OWNER) {
             _currentScreen.value = Screen.OWNER_DASHBOARD
         } else {
             _currentScreen.value = Screen.HOME
         }
+    }
+
+    fun syncAuthenticatedUser(
+        uid: String,
+        email: String = "",
+        phone: String = "",
+        displayName: String = ""
+    ) {
+        if (uid.isBlank()) return
+        _userUid.value = uid
+        val effectiveEmail = email.ifBlank { _userEmail.value }
+        val effectivePhone = phone.ifBlank { _userPhone.value }
+        if (effectiveEmail.isNotBlank()) _userEmail.value = effectiveEmail
+        if (effectivePhone.isNotBlank()) _userPhone.value = effectivePhone
+        if (displayName.isNotBlank()) _userName.value = displayName
+        _isLoggedIn.value = true
+
+        val updated = _userPreferences.value.copy(
+            isAuthenticated = true,
+            hasCompletedOnboarding = true,
+            hasCompletedLocationOnboarding = true,
+            authUid = uid,
+            authIdentifier = effectiveEmail.ifBlank { effectivePhone.ifBlank { uid } },
+            authPhone = effectivePhone
+        )
+        _userPreferences.value = updated
+        prefs.edit()
+            .putBoolean("is_authenticated", true)
+            .putBoolean("has_completed_onboarding", true)
+            .putString("auth_uid", uid)
+            .putString("auth_identifier", updated.authIdentifier)
+            .putString("auth_phone", effectivePhone)
+            .apply()
+
+        // Always query Cloud Firestore by UID as single source of truth
+        refreshUserProfileFromFirestore(lookupId = uid)
+        refreshPropertiesFromFirestore()
+        syncBookingsWithFirestore()
+        syncWishlistWithFirestore()
     }
 
     fun setGuestAuthentication() {
@@ -2610,6 +2677,26 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _userRole.value = role
         prefs.edit().putString("user_role", role.name).apply()
         _userPreferences.value = _userPreferences.value.copy(userRole = role)
+
+        // Persist role directly to Cloud Firestore against the authenticated user's UID
+        viewModelScope.launch {
+            val uid = _userUid.value.ifBlank { _userEmail.value.ifBlank { _userPhone.value } }
+            if (uid.isNotBlank()) {
+                repository.updateUserRoleInFirestore(
+                    uid = uid,
+                    role = role.name,
+                    email = _userEmail.value,
+                    phone = _userPhone.value
+                )
+            }
+            if (role == UserRole.OWNER) {
+                if (uid.isNotBlank()) {
+                    repository.fetchOwnerPaymentProfile(uid)
+                }
+                refreshPropertiesFromFirestore()
+                syncBookingsWithFirestore()
+            }
+        }
         if (role == UserRole.OWNER) {
             if (!_isLoggedIn.value && !_userPreferences.value.isAuthenticated) {
                 navigateTo(Screen.AUTH)
@@ -2696,23 +2783,60 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logOut() = logout()
 
-    fun refreshUserProfileFromFirestore() {
+    fun refreshUserProfileFromFirestore(lookupId: String? = null) {
+        val targetId = lookupId?.ifBlank { null }
+            ?: _userUid.value.ifBlank { null }
+            ?: _userEmail.value.ifBlank { null }
+            ?: _userPhone.value.ifBlank { null }
+            ?: return
+
         viewModelScope.launch {
-            val res = repository.fetchUserProfileFromFirestore(_userEmail.value)
+            val res = repository.fetchUserProfileFromFirestore(targetId)
             res.onSuccess { profile ->
-                _userName.value = profile.fullName
-                _userPhone.value = profile.phoneNumber
-                _userEmail.value = profile.email
+                if (profile.fullName.isNotBlank()) _userName.value = profile.fullName
+                if (profile.phoneNumber.isNotBlank()) _userPhone.value = profile.phoneNumber
+                if (profile.email.isNotBlank()) _userEmail.value = profile.email
+                if (profile.uid.isNotBlank()) _userUid.value = profile.uid
                 _kycStatus.value = profile.kycStatus
                 _kycDocType.value = profile.kycDocType
                 _kycMaskedId.value = profile.kycMaskedId
+
+                // Persistently restore the authoritative role from Cloud Firestore
+                if (profile.role.equals("OWNER", ignoreCase = true)) {
+                    _userRole.value = UserRole.OWNER
+                    _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.OWNER)
+                    prefs.edit().putString("user_role", UserRole.OWNER.name).apply()
+                } else if (profile.role.equals("ADMIN", ignoreCase = true)) {
+                    _userRole.value = UserRole.ADMIN
+                    _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.ADMIN)
+                    prefs.edit().putString("user_role", UserRole.ADMIN.name).apply()
+                } else if (profile.role.equals("GUEST", ignoreCase = true)) {
+                    if (_userRole.value != UserRole.OWNER && _userRole.value != UserRole.ADMIN) {
+                        _userRole.value = UserRole.GUEST
+                        _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.GUEST)
+                        prefs.edit().putString("user_role", UserRole.GUEST.name).apply()
+                    }
+                }
+
+                // If owner, fetch owner payment setup and sync owner bookings
+                val effectiveOwnerId = profile.uid.ifBlank { _userUid.value }
+                if (effectiveOwnerId.isNotBlank()) {
+                    repository.fetchOwnerPaymentProfile(effectiveOwnerId)
+                }
+                syncBookingsWithFirestore()
             }
         }
     }
 
     fun syncBookingsWithFirestore() {
         viewModelScope.launch {
-            repository.syncBookingsWithFirestore(_userEmail.value)
+            val ownerProps = ownerProperties.value
+            val propIds = ownerProps.map { it.id }.toSet()
+            repository.syncBookingsWithFirestore(
+                userId = _userEmail.value.ifBlank { _userUid.value },
+                ownerUid = _userUid.value,
+                ownerPropertyIds = propIds
+            )
         }
     }
 
@@ -3530,6 +3654,8 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             roomTypesCsv = property.roomOptions.joinToString("; ") { "${it.name}:${it.price.toInt()}:${it.sharingType}" },
             ownerName = property.ownerInfo.name.ifBlank { _userName.value },
             ownerPhone = property.ownerInfo.phone.ifBlank { _userPhone.value },
+            ownerId = property.ownerId.ifBlank { _userUid.value },
+            ownerEmail = property.ownerInfo.email.ifBlank { _userEmail.value },
             imagesCsv = imagesJoined,
             description = property.description,
             securityDeposit = property.securityDepositAmount,
@@ -3630,6 +3756,8 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             roomTypesCsv = roomTypesJoined,
             ownerName = property.ownerInfo.name.ifBlank { _userName.value },
             ownerPhone = property.ownerInfo.phone.ifBlank { _userPhone.value },
+            ownerId = property.ownerId.ifBlank { _userUid.value },
+            ownerEmail = property.ownerInfo.email.ifBlank { _userEmail.value },
             imagesCsv = imagesJoined,
             description = property.description,
             securityDeposit = property.securityDepositAmount,
@@ -3738,7 +3866,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             amenitiesCsv = amenities.joinToString(", "),
             roomTypesCsv = "Standard Room",
             ownerName = _userName.value,
-            ownerPhone = _userPhone.value
+            ownerPhone = _userPhone.value,
+            ownerId = _userUid.value,
+            ownerEmail = _userEmail.value
         )
         viewModelScope.launch {
             repository.createCustomProperty(entity)

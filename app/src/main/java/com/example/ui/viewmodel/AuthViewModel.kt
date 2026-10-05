@@ -345,7 +345,7 @@ class AuthViewModel(
         _currentUser.value = user
         _uiState.value = AuthUiState.Authenticated(user, isNewUser = false)
         viewModelScope.launch {
-            syncUserProfileToFirestore(user)
+            syncUserProfileToFirestore(user, explicitRole = role)
         }
         onSuccess?.invoke(user)
     }
@@ -766,14 +766,40 @@ class AuthViewModel(
 
     /**
      * Sync authenticated user profile data to Firestore user_profiles and users collections securely.
+     * Crucial: Preserves existing role (e.g. OWNER) in Cloud Firestore instead of overwriting with default.
      */
-    private suspend fun syncUserProfileToFirestore(authUser: AuthUser) {
+    suspend fun syncUserProfileToFirestore(authUser: AuthUser, explicitRole: String? = null) {
         try {
             val firestore = FirebaseFirestore.getInstance()
             val identifier = authUser.email?.ifBlank { null }
                 ?: authUser.phoneNumber?.filter { it.isDigit() }
                 ?: authUser.uid
             val sanitizedDocId = "usr_" + identifier.replace("@", "_").replace(".", "_")
+
+            // Read existing persistent role if already present in Cloud Firestore
+            var resolvedRole = explicitRole
+            if (resolvedRole.isNullOrBlank()) {
+                try {
+                    val uidDoc = firestore.collection("users").document(authUser.uid).get().awaitTask()
+                    if (uidDoc.exists()) {
+                        resolvedRole = uidDoc.getString("role") ?: uidDoc.getString("userRole")
+                    }
+                    if (resolvedRole.isNullOrBlank()) {
+                        val profileDoc = firestore.collection("user_profiles").document(sanitizedDocId).get().awaitTask()
+                        if (profileDoc.exists()) {
+                            resolvedRole = profileDoc.getString("role") ?: profileDoc.getString("userRole")
+                        }
+                    }
+                } catch (readErr: Exception) {
+                    Log.w(TAG, "Notice reading existing role from Firestore: ${readErr.message}")
+                }
+            }
+
+            val finalRole = when {
+                !resolvedRole.isNullOrBlank() && !resolvedRole.equals("traveler", ignoreCase = true) -> resolvedRole
+                authUser.email?.contains("host.demo", ignoreCase = true) == true -> "OWNER"
+                else -> "GUEST"
+            }
 
             val profileData = hashMapOf(
                 "id" to sanitizedDocId,
@@ -786,7 +812,7 @@ class AuthViewModel(
                 "provider" to (authUser.providerId ?: "PASSWORD"),
                 "providerId" to (authUser.providerId ?: "PASSWORD"),
                 "platform" to "Android",
-                "role" to "traveler",
+                "role" to finalRole,
                 "isEmailVerified" to authUser.isEmailVerified,
                 "lastLoginAt" to System.currentTimeMillis(),
                 "isCloudSynced" to true
@@ -794,12 +820,36 @@ class AuthViewModel(
             firestore.collection("user_profiles").document(sanitizedDocId)
                 .set(profileData, SetOptions.merge())
                 .awaitTask()
+            firestore.collection("user_profiles").document(authUser.uid)
+                .set(profileData, SetOptions.merge())
+                .awaitTask()
             firestore.collection("users").document(authUser.uid)
                 .set(profileData, SetOptions.merge())
                 .awaitTask()
-            Log.i(TAG, "Synced profile to Firestore for user: $sanitizedDocId and uid: ${authUser.uid}")
+            Log.i(TAG, "Synced profile to Firestore for user: $sanitizedDocId and uid: ${authUser.uid} with persistent role: $finalRole")
         } catch (e: Exception) {
             Log.w(TAG, "Firestore user profile sync warning: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Retrieve the persistent role for a user UID directly from Cloud Firestore.
+     */
+    suspend fun getPersistedRoleFromFirestore(uid: String): String? {
+        return try {
+            val firestore = FirebaseFirestore.getInstance()
+            val userDoc = firestore.collection("users").document(uid).get().awaitTask()
+            if (userDoc.exists()) {
+                userDoc.getString("role") ?: userDoc.getString("userRole")
+            } else {
+                val profileDoc = firestore.collection("user_profiles").document(uid).get().awaitTask()
+                if (profileDoc.exists()) {
+                    profileDoc.getString("role") ?: profileDoc.getString("userRole")
+                } else null
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get persisted role from Firestore: ${e.message}")
+            null
         }
     }
 

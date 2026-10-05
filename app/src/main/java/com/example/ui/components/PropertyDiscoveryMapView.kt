@@ -87,6 +87,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -179,6 +181,7 @@ fun PropertyDiscoveryMapView(
     var selectedCategoryFilter by remember { mutableStateOf<PropertyType?>(null) }
     var maxRadiusFilterKm by remember { mutableDoubleStateOf(35.0) }
     var isVerifiedOnly by remember { mutableStateOf(false) }
+    var showLegend by remember { mutableStateOf(false) }
 
     // Filter properties based on radius, category, verification
     val filteredProperties = remember(properties, selectedCategoryFilter, maxRadiusFilterKm, isVerifiedOnly, userCoordinates) {
@@ -585,6 +588,45 @@ fun PropertyDiscoveryMapView(
                     )
                 }
             }
+
+            // Property Types Legend Toggle
+            Surface(
+                shape = CircleShape,
+                color = if (showLegend) StynoBluePrimary else MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
+                modifier = Modifier.size(38.dp)
+            ) {
+                IconButton(
+                    onClick = { showLegend = !showLegend },
+                    modifier = Modifier.testTag("discovery_map_legend_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = "Map Marker Colors Legend",
+                        tint = if (showLegend) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        // Map Legend Key Overlay Card
+        AnimatedVisibility(
+            visible = showLegend,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 96.dp, end = 12.dp)
+                .zIndex(20f)
+        ) {
+            PropertyMapLegendCard(
+                onDismiss = { showLegend = false },
+                selectedType = selectedCategoryFilter,
+                onSelectType = { type ->
+                    selectedCategoryFilter = if (selectedCategoryFilter == type) null else type
+                }
+            )
         }
 
         // 4. Selected Property Floating Detail Preview Card at Bottom

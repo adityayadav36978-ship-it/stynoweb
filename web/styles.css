@@ -1278,6 +1278,112 @@ body.styno-app-body {
 }
 
 /* ==========================================================================
+   MAP EXPLORER LEGEND KEY & PROPERTY TYPE PIN COLORS
+   ========================================================================== */
+.map-legend-card {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 500;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 230px;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.map-legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+.map-legend-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0F2B5C;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.map-legend-title .material-symbols-rounded {
+  font-size: 1rem;
+  color: #2563EB;
+}
+
+.map-legend-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.6rem;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  padding: 0.15rem 0.25rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.map-legend-item:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.legend-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dot-hostel, .pin-hostel .pin-dot { background-color: #0F2B5C; }
+.dot-hotel, .pin-hotel .pin-dot { background-color: #7C3AED; }
+.dot-pg, .pin-pg .pin-dot { background-color: #0D9488; }
+.dot-flat, .pin-flat .pin-dot { background-color: #10B981; }
+.dot-room, .pin-room .pin-dot { background-color: #2563EB; }
+.dot-quick, .pin-quick_stay .pin-dot, .pin-quick .pin-dot { background-color: #D97706; }
+
+.map-pin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.map-pin .pin-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.map-pin.pin-hostel { border-color: #0F2B5C; color: #0F2B5C; }
+.map-pin.pin-hotel { border-color: #7C3AED; color: #7C3AED; }
+.map-pin.pin-pg { border-color: #0D9488; color: #0D9488; }
+.map-pin.pin-flat { border-color: #10B981; color: #10B981; }
+.map-pin.pin-room { border-color: #2563EB; color: #2563EB; }
+.map-pin.pin-quick_stay, .map-pin.pin-quick { border-color: #D97706; color: #D97706; }
+
+/* ==========================================================================
    FLOATING MAP PREVIEW CARD (Responsive & Prominent Book CTA)
    ========================================================================== */
 .map-floating-preview-card {

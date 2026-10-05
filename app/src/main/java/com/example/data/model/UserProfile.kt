@@ -2,6 +2,8 @@ package com.example.data.model
 
 data class UserProfile(
     val id: String = "usr_default",
+    val uid: String = "",
+    val role: String = "GUEST",
     val email: String = "",
     val fullName: String = "",
     val phoneNumber: String = "",

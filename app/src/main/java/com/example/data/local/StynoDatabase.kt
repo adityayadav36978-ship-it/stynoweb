@@ -18,7 +18,7 @@ import androidx.room.RoomDatabase
         PropertyDraftEntity::class,
         SafetyConcernReportEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 

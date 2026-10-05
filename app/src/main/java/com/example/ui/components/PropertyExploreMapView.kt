@@ -87,6 +87,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -164,6 +166,7 @@ fun PropertyExploreMapView(
 
     var mapType by remember { mutableStateOf(MapType.NORMAL) }
     var isClusteringEnabled by remember { mutableStateOf(true) }
+    var showLegend by remember { mutableStateOf(false) }
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -660,6 +663,25 @@ fun PropertyExploreMapView(
             }
         }
 
+        // Map Legend Key Overlay Card (Explaining property marker colors)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showLegend,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 62.dp, end = 12.dp)
+                .zIndex(20f)
+        ) {
+            PropertyMapLegendCard(
+                onDismiss = { showLegend = false },
+                selectedType = selectedCategory,
+                onSelectType = { type ->
+                    viewModel.selectCategory(if (selectedCategory == type) null else type)
+                }
+            )
+        }
+
         // 3. Floating Right Map Controls (Map Type, Fit All Bounds, My Location, Zoom In/Out)
         Column(
             modifier = Modifier
@@ -667,6 +689,24 @@ fun PropertyExploreMapView(
                 .padding(end = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Marker Colors Legend Toggle FAB
+            FloatingActionButton(
+                onClick = { showLegend = !showLegend },
+                shape = CircleShape,
+                containerColor = if (showLegend) StynoBluePrimary else MaterialTheme.colorScheme.surface,
+                contentColor = if (showLegend) Color.White else MaterialTheme.colorScheme.onSurface,
+                elevation = FloatingActionButtonDefaults.elevation(4.dp),
+                modifier = Modifier
+                    .size(40.dp)
+                    .testTag("map_legend_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Palette,
+                    contentDescription = "Property Marker Colors Legend",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
             // Map Type Cycle Toggle (Normal -> Hybrid -> Satellite -> Terrain -> Normal)
             FloatingActionButton(
                 onClick = {
@@ -931,7 +971,8 @@ fun PropertyMapPriceMarker(
             .replace(".00", "")
     }
 
-    val backgroundColor = if (isSelected) StynoAccent else StynoBluePrimary
+    val typeColor = getPropertyTypeColor(property.propertyType)
+    val backgroundColor = if (isSelected) StynoAccent else typeColor
     val textColor = Color.White
 
     Column(

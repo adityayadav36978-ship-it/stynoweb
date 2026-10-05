@@ -57,6 +57,8 @@ import com.example.data.model.SafetyValidationEngine
 import com.example.data.model.SafetyValidationResult
 import com.example.data.model.StynoPrivacyHelper
 import com.example.data.local.SafetyConcernReportEntity
+import com.google.android.gms.tasks.Task
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
@@ -64,6 +66,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +77,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -755,12 +760,12 @@ class StynoRepository(
                 ownerInfo = OwnerInfo(
                     name = custom.ownerName,
                     phone = custom.ownerPhone,
-                    email = "host@styno.com",
+                    email = custom.ownerEmail.ifBlank { "host@styno.com" },
                     verifiedHost = (vStat == VerificationStatus.VERIFIED)
                 ),
-                ownerId = "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}",
+                ownerId = custom.ownerId.ifBlank { "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}" },
                 ownerPaymentDetails = OwnerPaymentDetails(
-                    ownerId = "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}",
+                    ownerId = custom.ownerId.ifBlank { "owner_${custom.ownerPhone.filter { it.isDigit() }.ifBlank { custom.id }}" },
                     isUpiIdEnabled = custom.ownerUpiId.isNotBlank(),
                     upiId = custom.ownerUpiId,
                     isBankAccountEnabled = custom.ownerAccountNumber.isNotBlank(),
@@ -897,36 +902,59 @@ class StynoRepository(
                             else -> fetchedAmenities.take(5)
                         }
 
-                        Property(
-                            id = id,
-                            name = name,
-                            propertyType = pType,
-                            genderSuitability = gSuit,
-                            address = address,
-                            city = city,
-                            area = area,
-                            nearbyLandmark = landmark,
-                            startingPrice = price,
-                            durationType = DurationType.MONTHLY,
-                            rating = rating,
-                            reviewCount = reviews,
-                            verificationStatus = VerificationStatus.VERIFIED,
-                            latitude = lat,
-                            longitude = lon,
-                            isAvailable = true,
-                            featured = true,
-                            imageDrawableNames = listOf("img_hostel_modern", "img_pg_room", "img_apartment_flat"),
-                            shortFacilities = fetchedFacilities.ifEmpty { listOf("High-Speed Wi-Fi", "Nutritious Food", "CCTV & Security", "AC", "Laundry") },
-                            allAmenities = fetchedAmenities.ifEmpty { listOf("High-Speed Wi-Fi", "3-Time Meals Included", "Air Conditioner", "Attached Washroom", "RO Purified Water", "24/7 Power Backup") },
-                            roomOptions = listOf(
-                                RoomOption("rm-f-1", "Premium Sharing", "2 Sharing", price, DurationType.MONTHLY, true, true, 3000.0, true, 3)
-                            ),
-                            ownerInfo = OwnerInfo(
-                                name = doc.getString("ownerName") ?: "Property Host",
-                                phone = doc.getString("ownerPhone") ?: "+91 98765 00000",
-                                email = "host@styno.com"
+                            val rawOwnerId = doc.getString("ownerId") ?: doc.getString("ownerUid") ?: ""
+                            val docOwnerName = doc.getString("ownerName") ?: "Property Host"
+                            val docOwnerPhone = doc.getString("ownerPhone") ?: "+91 98765 00000"
+                            val docOwnerEmail = doc.getString("ownerEmail") ?: "host@styno.com"
+                            val ownerUpi = doc.getString("ownerUpiId") ?: ""
+                            val ownerAcc = doc.getString("ownerAccountNumber") ?: ""
+
+                            Property(
+                                id = id,
+                                name = name,
+                                propertyType = pType,
+                                genderSuitability = gSuit,
+                                address = address,
+                                city = city,
+                                area = area,
+                                nearbyLandmark = landmark,
+                                startingPrice = price,
+                                durationType = DurationType.MONTHLY,
+                                rating = rating,
+                                reviewCount = reviews,
+                                verificationStatus = VerificationStatus.VERIFIED,
+                                latitude = lat,
+                                longitude = lon,
+                                isAvailable = true,
+                                featured = true,
+                                imageDrawableNames = listOf("img_hostel_modern", "img_pg_room", "img_apartment_flat"),
+                                shortFacilities = fetchedFacilities.ifEmpty { listOf("High-Speed Wi-Fi", "Nutritious Food", "CCTV & Security", "AC", "Laundry") },
+                                allAmenities = fetchedAmenities.ifEmpty { listOf("High-Speed Wi-Fi", "3-Time Meals Included", "Air Conditioner", "Attached Washroom", "RO Purified Water", "24/7 Power Backup") },
+                                roomOptions = listOf(
+                                    RoomOption("rm-f-1", "Premium Sharing", "2 Sharing", price, DurationType.MONTHLY, true, true, 3000.0, true, 3)
+                                ),
+                                ownerId = rawOwnerId,
+                                ownerInfo = OwnerInfo(
+                                    name = docOwnerName,
+                                    phone = docOwnerPhone,
+                                    email = docOwnerEmail
+                                ),
+                                ownerPaymentDetails = OwnerPaymentDetails(
+                                    ownerId = rawOwnerId,
+                                    upiId = ownerUpi,
+                                    isUpiIdEnabled = ownerUpi.isNotBlank(),
+                                    accountNumber = ownerAcc,
+                                    isBankAccountEnabled = ownerAcc.isNotBlank(),
+                                    accountHolderName = doc.getString("ownerAccountHolderName") ?: "",
+                                    bankName = doc.getString("ownerBankName") ?: "",
+                                    ifscCode = doc.getString("ownerIfscCode") ?: "",
+                                    settlementMode = doc.getString("ownerSettlementMode") ?: "Instant UPI Settlement (0% fee)",
+                                    isVerified = doc.getBoolean("ownerIsVerifiedAccount") ?: true,
+                                    isVerifiedForPayouts = true,
+                                    isQrCodeEnabled = doc.getBoolean("ownerIsQrCodeEnabled") ?: false,
+                                    qrCodeImageUrl = doc.getString("ownerQrCodeImageUrl") ?: ""
+                                )
                             )
-                        )
                     } catch (e: Exception) {
                         null
                     }
@@ -1073,6 +1101,13 @@ class StynoRepository(
                         }
 
                         if (matchesType && matchesCity && matchesGender && matchesMinPrice && matchesMaxPrice && matchesAmenities) {
+                            val rawOwnerId = doc.getString("ownerId") ?: doc.getString("ownerUid") ?: ""
+                            val docOwnerName = doc.getString("ownerName") ?: "Property Host"
+                            val docOwnerPhone = doc.getString("ownerPhone") ?: "+91 98765 00000"
+                            val docOwnerEmail = doc.getString("ownerEmail") ?: "host@styno.com"
+                            val ownerUpi = doc.getString("ownerUpiId") ?: ""
+                            val ownerAcc = doc.getString("ownerAccountNumber") ?: ""
+
                             Property(
                                 id = id,
                                 name = name,
@@ -1097,10 +1132,26 @@ class StynoRepository(
                                 roomOptions = listOf(
                                     RoomOption("rm-f-1", "Premium Sharing", "2 Sharing", price, DurationType.MONTHLY, true, true, 3000.0, true, 3)
                                 ),
+                                ownerId = rawOwnerId,
                                 ownerInfo = OwnerInfo(
-                                    name = doc.getString("ownerName") ?: "Property Host",
-                                    phone = doc.getString("ownerPhone") ?: "+91 98765 00000",
-                                    email = "host@styno.com"
+                                    name = docOwnerName,
+                                    phone = docOwnerPhone,
+                                    email = docOwnerEmail
+                                ),
+                                ownerPaymentDetails = OwnerPaymentDetails(
+                                    ownerId = rawOwnerId,
+                                    upiId = ownerUpi,
+                                    isUpiIdEnabled = ownerUpi.isNotBlank(),
+                                    accountNumber = ownerAcc,
+                                    isBankAccountEnabled = ownerAcc.isNotBlank(),
+                                    accountHolderName = doc.getString("ownerAccountHolderName") ?: "",
+                                    bankName = doc.getString("ownerBankName") ?: "",
+                                    ifscCode = doc.getString("ownerIfscCode") ?: "",
+                                    settlementMode = doc.getString("ownerSettlementMode") ?: "Instant UPI Settlement (0% fee)",
+                                    isVerified = doc.getBoolean("ownerIsVerifiedAccount") ?: true,
+                                    isVerifiedForPayouts = true,
+                                    isQrCodeEnabled = doc.getBoolean("ownerIsQrCodeEnabled") ?: false,
+                                    qrCodeImageUrl = doc.getString("ownerQrCodeImageUrl") ?: ""
                                 )
                             )
                         } else null
@@ -1390,198 +1441,52 @@ class StynoRepository(
         stynoDao.deleteWishlistCollection(collectionId)
     }
 
-    // Bookings flow from Room
+    // Bookings flow from Room (Single source of truth: real local DB synced with Cloud Firestore)
     val bookingsFlow: Flow<List<Booking>> = stynoDao.getAllBookings().map { localList ->
-        if (localList.isEmpty()) {
-            // Provide default initial sample bookings if database is empty for rich UX
-            listOf(
-                Booking(
-                    id = "STY-2026-8104",
-                    propertyId = "prop-hostel-02",
-                    propertyName = "Styno Apex Boys Techno Hostel",
-                    propertyType = PropertyType.HOSTEL,
-                    propertyImage = "img_pg_room",
-                    address = "12th Cross, Electronic City Phase 1, Bengaluru",
-                    roomTypeName = "Single Studio (AC)",
-                    checkInDate = "26 Aug 2026",
-                    checkInTime = "11:00 AM",
-                    checkOutDate = "30 Aug 2026",
-                    durationText = "4 Days (Active Stay)",
-                    guestName = "Aditya Yadav",
-                    guestPhone = "+91 98765 43210",
-                    guestEmail = "adityayadav36978@gmail.com",
-                    guestIdProofType = "Aadhaar Card",
-                    basePrice = 3200.0,
-                    serviceFee = 99.0,
-                    taxes = 0.0,
-                    discount = 150.0,
-                    finalAmount = 3149.0,
-                    securityDeposit = 2000.0,
-                    digitalPasscode = "STY-8104",
-                    status = BookingStatus.ACTIVE,
-                    paymentMethod = "UPI (Google Pay)",
-                    paymentStatus = "Paid Online (Verified)",
-                    bookedAtTimestamp = System.currentTimeMillis() - 172800000L
-                ),
-                Booking(
-                    id = "STY-2026-8942",
-                    propertyId = "prop-hostel-01",
-                    propertyName = "Styno Orchid Girls Elite Hostel",
-                    propertyType = PropertyType.HOSTEL,
-                    propertyImage = "img_hostel_modern",
-                    address = "Plot 42, Knowledge Park III, Delhi NCR",
-                    roomTypeName = "Double Sharing Premium (AC)",
-                    checkInDate = "01 Sep 2026",
-                    checkInTime = "10:00 AM",
-                    checkOutDate = "30 Sep 2026",
-                    durationText = "1 Month (Monthly Stay)",
-                    guestName = "Aditya Yadav",
-                    guestPhone = "+91 98765 43210",
-                    guestEmail = "adityayadav36978@gmail.com",
-                    guestIdProofType = "Aadhaar Card",
-                    basePrice = 7200.0,
-                    serviceFee = 149.0,
-                    taxes = 0.0,
-                    discount = 200.0,
-                    finalAmount = 7149.0,
-                    securityDeposit = 4000.0,
-                    digitalPasscode = "STY-9941",
-                    status = BookingStatus.UPCOMING,
-                    paymentMethod = "UPI (Google Pay)",
-                    paymentStatus = "Paid Online (Verified)",
-                    bookedAtTimestamp = System.currentTimeMillis() - 86400000L
-                ),
-                Booking(
-                    id = "STY-2026-9531",
-                    propertyId = "prop-hotel-01",
-                    propertyName = "Styno Grand Boulevard Luxury Hotel",
-                    propertyType = PropertyType.HOTEL,
-                    propertyImage = "img_hotel_suite",
-                    address = "MG Road, Bandra West, Mumbai",
-                    roomTypeName = "Deluxe Executive Suite",
-                    checkInDate = "12 Sep 2026",
-                    checkInTime = "12:00 PM",
-                    checkOutDate = "15 Sep 2026",
-                    durationText = "3 Nights (Weekend Stay)",
-                    guestName = "Aditya Yadav",
-                    guestPhone = "+91 98765 43210",
-                    guestEmail = "adityayadav36978@gmail.com",
-                    guestIdProofType = "Aadhaar Card",
-                    basePrice = 7497.0,
-                    serviceFee = 199.0,
-                    taxes = 350.0,
-                    discount = 500.0,
-                    finalAmount = 7546.0,
-                    securityDeposit = 0.0,
-                    digitalPasscode = "STY-9531",
-                    status = BookingStatus.UPCOMING,
-                    paymentMethod = "UPI (PhonePe)",
-                    paymentStatus = "Paid Online (Verified)",
-                    bookedAtTimestamp = System.currentTimeMillis() - 43200000L
-                ),
-                Booking(
-                    id = "STY-2026-7210",
-                    propertyId = "prop-quick-01",
-                    propertyName = "Styno Transit Pods & Quick Stay",
-                    propertyType = PropertyType.QUICK_STAY,
-                    propertyImage = "img_hotel_suite",
-                    address = "New Delhi Railway Station Platform 1",
-                    roomTypeName = "6 Hours Relax & Shower Cabin",
-                    checkInDate = "15 Aug 2026",
-                    checkInTime = "02:00 PM",
-                    checkOutDate = "15 Aug 2026",
-                    durationText = "6 Hours (Quick Stay)",
-                    guestName = "Aditya Yadav",
-                    guestPhone = "+91 98765 43210",
-                    guestEmail = "adityayadav36978@gmail.com",
-                    guestIdProofType = "Aadhaar Card",
-                    basePrice = 499.0,
-                    serviceFee = 49.0,
-                    taxes = 0.0,
-                    discount = 50.0,
-                    finalAmount = 498.0,
-                    securityDeposit = 0.0,
-                    digitalPasscode = "STY-1834",
-                    status = BookingStatus.COMPLETED,
-                    paymentMethod = "UPI (Paytm)",
-                    paymentStatus = "Completed",
-                    bookedAtTimestamp = System.currentTimeMillis() - 864000000L
-                ),
-                Booking(
-                    id = "STY-2026-6420",
-                    propertyId = "prop-pg-01",
-                    propertyName = "Styno Prime Co-Living & PG",
-                    propertyType = PropertyType.PG,
-                    propertyImage = "img_apartment_flat",
-                    address = "Hiranandani Estate, Thane West, Mumbai",
-                    roomTypeName = "Single Occupancy Studio",
-                    checkInDate = "01 Jul 2026",
-                    checkInTime = "10:00 AM",
-                    checkOutDate = "31 Jul 2026",
-                    durationText = "1 Month (Monthly Stay)",
-                    guestName = "Aditya Yadav",
-                    guestPhone = "+91 98765 43210",
-                    guestEmail = "adityayadav36978@gmail.com",
-                    guestIdProofType = "Aadhaar Card",
-                    basePrice = 8500.0,
-                    serviceFee = 149.0,
-                    taxes = 0.0,
-                    discount = 300.0,
-                    finalAmount = 8349.0,
-                    securityDeposit = 5000.0,
-                    digitalPasscode = "STY-6420",
-                    status = BookingStatus.COMPLETED,
-                    paymentMethod = "UPI (Google Pay)",
-                    paymentStatus = "Completed",
-                    bookedAtTimestamp = System.currentTimeMillis() - 4320000000L
-                )
-            )
-        } else {
-            localList.map { item ->
-                val pType = runCatching { PropertyType.valueOf(item.propertyType) }.getOrDefault(PropertyType.HOSTEL)
-                val status = runCatching { BookingStatus.valueOf(item.status) }.getOrDefault(BookingStatus.UPCOMING)
+        localList.map { item ->
+            val pType = runCatching { PropertyType.valueOf(item.propertyType) }.getOrDefault(PropertyType.HOSTEL)
+            val status = runCatching { BookingStatus.valueOf(item.status) }.getOrDefault(BookingStatus.UPCOMING)
 
-                Booking(
-                    id = item.id,
-                    propertyId = item.propertyId,
-                    propertyName = item.propertyName,
-                    propertyType = pType,
-                    propertyImage = item.propertyImage,
-                    address = item.address,
-                    roomTypeName = item.roomTypeName,
-                    checkInDate = item.checkInDate,
-                    checkInTime = item.checkInTime,
-                    checkOutDate = item.checkOutDate,
-                    durationText = item.durationText,
-                    guestName = item.guestName,
-                    guestPhone = item.guestPhone,
-                    guestEmail = item.guestEmail,
-                    guestIdProofType = item.guestIdProofType,
-                    basePrice = item.basePrice,
-                    serviceFee = item.serviceFee,
-                    taxes = item.taxes,
-                    discount = item.discount,
-                    finalAmount = item.finalAmount,
-                    securityDeposit = item.securityDeposit,
-                    digitalPasscode = item.digitalPasscode,
-                    status = status,
-                    paymentMethod = item.paymentMethod,
-                    paymentStatus = item.paymentStatus,
-                    transactionId = if (item.transactionId.isNotBlank()) item.transactionId else "txn_stripe_legacy_${item.id}",
-                    paymentGateway = item.paymentGateway,
-                    bookedAtTimestamp = item.bookedAtTimestamp,
-                    propertyContactPhone = item.propertyContactPhone,
-                    ownerUpiId = item.ownerUpiId,
-                    ownerAccountHolderName = item.ownerAccountHolderName,
-                    ownerBankName = item.ownerBankName,
-                    ownerPayoutStatus = item.ownerPayoutStatus
-                )
-            }
+            Booking(
+                id = item.id,
+                propertyId = item.propertyId,
+                propertyName = item.propertyName,
+                propertyType = pType,
+                propertyImage = item.propertyImage,
+                address = item.address,
+                roomTypeName = item.roomTypeName,
+                checkInDate = item.checkInDate,
+                checkInTime = item.checkInTime,
+                checkOutDate = item.checkOutDate,
+                durationText = item.durationText,
+                guestName = item.guestName,
+                guestPhone = item.guestPhone,
+                guestEmail = item.guestEmail,
+                guestIdProofType = item.guestIdProofType,
+                basePrice = item.basePrice,
+                serviceFee = item.serviceFee,
+                taxes = item.taxes,
+                discount = item.discount,
+                finalAmount = item.finalAmount,
+                securityDeposit = item.securityDeposit,
+                digitalPasscode = item.digitalPasscode,
+                status = status,
+                paymentMethod = item.paymentMethod,
+                paymentStatus = item.paymentStatus,
+                transactionId = if (item.transactionId.isNotBlank()) item.transactionId else "txn_stripe_legacy_${item.id}",
+                paymentGateway = item.paymentGateway,
+                bookedAtTimestamp = item.bookedAtTimestamp,
+                propertyContactPhone = item.propertyContactPhone,
+                ownerUpiId = item.ownerUpiId,
+                ownerAccountHolderName = item.ownerAccountHolderName,
+                ownerBankName = item.ownerBankName,
+                ownerPayoutStatus = item.ownerPayoutStatus
+            )
         }
     }
 
     /**
-     * Fetches user profile from Cloud Firestore or seeds initial profile if not present.
+     * Fetches user profile and persistent role from Cloud Firestore by UID (single source of truth).
      */
     suspend fun fetchUserProfileFromFirestore(
         userId: String = "adityayadav36978@gmail.com"
@@ -1589,34 +1494,66 @@ class StynoRepository(
         _profileSyncStatus.value = ProfileSyncStatus.SYNCING
         _profileSyncMessage.value = "Fetching profile from Firestore..."
         try {
+            val firestore = FirebaseFirestore.getInstance()
             val sanitizedUser = userId.replace("@", "_").replace(".", "_")
-            val docId = "usr_$sanitizedUser"
+            val docId = if (userId.startsWith("usr_")) userId else "usr_$sanitizedUser"
 
-            val snapshot = suspendCancellableCoroutine { continuation ->
+            // Multi-path lookup: 1. users/{uid}, 2. user_profiles/{uid}, 3. user_profiles/{docId}
+            var snapshot: DocumentSnapshot? = null
+            try {
+                val s1 = firestore.collection("users").document(userId).get().awaitTask()
+                if (s1.exists()) snapshot = s1
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "users/{uid} fetch notice: ${e.message}")
+            }
+
+            if (snapshot == null || !snapshot.exists()) {
                 try {
-                    val firestore = FirebaseFirestore.getInstance()
-                    firestore.collection("user_profiles").document(docId)
-                        .get()
-                        .addOnSuccessListener { docSnapshot ->
-                            continuation.resume(docSnapshot)
-                        }
-                        .addOnFailureListener { error ->
-                            Log.w("StynoRepository", "Firestore profile fetch error: ${error.localizedMessage}")
-                            continuation.resume(null)
-                        }
+                    val s2 = firestore.collection("user_profiles").document(userId).get().awaitTask()
+                    if (s2.exists()) snapshot = s2
                 } catch (e: Exception) {
-                    Log.w("StynoRepository", "Firestore profile fetch catch: ${e.localizedMessage}")
-                    continuation.resume(null)
+                    Log.w("StynoRepository", "user_profiles/{uid} fetch notice: ${e.message}")
+                }
+            }
+
+            if (snapshot == null || !snapshot.exists()) {
+                try {
+                    val s3 = firestore.collection("user_profiles").document(docId).get().awaitTask()
+                    if (s3.exists()) snapshot = s3
+                } catch (e: Exception) {
+                    Log.w("StynoRepository", "user_profiles/{docId} fetch notice: ${e.message}")
+                }
+            }
+
+            if (snapshot == null || !snapshot.exists()) {
+                try {
+                    if (userId.contains("@")) {
+                        val q = firestore.collection("users").whereEqualTo("email", userId.trim().lowercase()).limit(1).get().awaitTask()
+                        if (!q.isEmpty) snapshot = q.documents.firstOrNull()
+                    } else if (userId.length >= 10 && userId.any { it.isDigit() }) {
+                        val cleanDigits = userId.replace(Regex("[^0-9]"), "").takeLast(10)
+                        val q = firestore.collection("users").whereEqualTo("phoneNumber", cleanDigits).limit(1).get().awaitTask()
+                        if (!q.isEmpty) snapshot = q.documents.firstOrNull()
+                    }
+                } catch (e: Exception) {
+                    Log.w("StynoRepository", "user query fallback notice: ${e.message}")
                 }
             }
 
             val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
 
             if (snapshot != null && snapshot.exists()) {
+                val fetchedRole = snapshot.getString("role")
+                    ?: snapshot.getString("userRole")
+                    ?: (if (userId.contains("host", ignoreCase = true)) "OWNER" else "GUEST")
+                val resolvedUid = snapshot.getString("uid") ?: userId
+
                 val fetchedProfile = UserProfile(
                     id = snapshot.getString("id") ?: docId,
-                    email = snapshot.getString("email") ?: userId,
-                    fullName = snapshot.getString("fullName") ?: "",
+                    uid = resolvedUid,
+                    role = fetchedRole,
+                    email = snapshot.getString("email") ?: (if (userId.contains("@")) userId else ""),
+                    fullName = snapshot.getString("fullName") ?: snapshot.getString("displayName") ?: "",
                     phoneNumber = snapshot.getString("phoneNumber") ?: "",
                     alternatePhone = snapshot.getString("alternatePhone") ?: "",
                     gender = snapshot.getString("gender") ?: "",
@@ -1639,13 +1576,44 @@ class StynoRepository(
                     lastSyncTime = "Cloud synced at $timeFormat",
                     isCloudSynced = true
                 )
+
+                // Sync owner payment details if present
+                if (fetchedRole.equals("OWNER", ignoreCase = true)) {
+                    val upi = snapshot.getString("ownerUpiId") ?: ""
+                    val acc = snapshot.getString("ownerAccountNumber") ?: ""
+                    if (upi.isNotBlank() || acc.isNotBlank()) {
+                        val paymentDetails = OwnerPaymentDetails(
+                            ownerId = resolvedUid,
+                            upiId = upi,
+                            isUpiIdEnabled = upi.isNotBlank(),
+                            accountNumber = acc,
+                            isBankAccountEnabled = acc.isNotBlank(),
+                            accountHolderName = snapshot.getString("ownerAccountHolderName") ?: fetchedProfile.fullName,
+                            bankName = snapshot.getString("ownerBankName") ?: "",
+                            ifscCode = snapshot.getString("ownerIfscCode") ?: "",
+                            settlementMode = snapshot.getString("ownerSettlementMode") ?: "Instant UPI Settlement (0% fee)",
+                            isVerified = true,
+                            isVerifiedForPayouts = true
+                        )
+                        val map = _ownerPaymentProfiles.value.toMutableMap()
+                        map[resolvedUid] = paymentDetails
+                        _ownerPaymentProfiles.value = map
+                    }
+                }
+
                 _userProfileState.value = fetchedProfile
                 _profileSyncStatus.value = ProfileSyncStatus.SYNCED
                 _profileSyncMessage.value = "Synced with Firestore at $timeFormat"
                 Result.success(fetchedProfile)
             } else {
-                // Seed initial profile into Firestore
-                val current = _userProfileState.value.copy(email = userId, id = docId, lastSyncTime = "Cloud synced at $timeFormat")
+                // Initial profile creation in Firestore
+                val current = _userProfileState.value.copy(
+                    email = if (userId.contains("@")) userId else _userProfileState.value.email,
+                    id = docId,
+                    uid = userId,
+                    role = if (userId.contains("host", ignoreCase = true)) "OWNER" else "GUEST",
+                    lastSyncTime = "Cloud synced at $timeFormat"
+                )
                 saveUserProfile(current)
                 _profileSyncStatus.value = ProfileSyncStatus.SYNCED
                 _profileSyncMessage.value = "Synced with Firestore at $timeFormat"
@@ -1659,17 +1627,19 @@ class StynoRepository(
     }
 
     /**
-     * Saves user contact information & personal profile to Cloud Firestore.
+     * Saves user contact information & personal profile to Cloud Firestore against UID.
      */
     suspend fun saveUserProfile(profile: UserProfile): Result<Boolean> = withContext(Dispatchers.IO) {
         _profileSyncStatus.value = ProfileSyncStatus.SYNCING
         try {
             val sanitizedUser = profile.email.replace("@", "_").replace(".", "_")
             val docId = if (profile.id.isNotBlank() && profile.id != "usr_default") profile.id else "usr_$sanitizedUser"
+            val targetUid = profile.uid.ifBlank { profile.id.ifBlank { docId } }
             val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
 
             val updatedProfile = profile.copy(
                 id = docId,
+                uid = targetUid,
                 lastSyncTime = "Cloud synced at $timeFormat",
                 isCloudSynced = true
             )
@@ -1677,6 +1647,8 @@ class StynoRepository(
 
             val profileMap = hashMapOf<String, Any>(
                 "id" to docId,
+                "uid" to targetUid,
+                "role" to updatedProfile.role,
                 "email" to updatedProfile.email,
                 "fullName" to updatedProfile.fullName,
                 "phoneNumber" to updatedProfile.phoneNumber,
@@ -1702,15 +1674,18 @@ class StynoRepository(
             )
 
             val firestore = FirebaseFirestore.getInstance()
+            // Save to both users/{uid} and user_profiles/{docId}
+            firestore.collection("users").document(targetUid)
+                .set(profileMap, SetOptions.merge())
+                .awaitTask()
             firestore.collection("user_profiles").document(docId)
                 .set(profileMap, SetOptions.merge())
-                .addOnSuccessListener {
-                    Log.d("StynoRepository", "User profile saved to Firestore: $docId")
-                }
-                .addOnFailureListener { e ->
-                    Log.w("StynoRepository", "User profile Firestore write error: ${e.localizedMessage}")
-                }
+                .awaitTask()
+            firestore.collection("user_profiles").document(targetUid)
+                .set(profileMap, SetOptions.merge())
+                .awaitTask()
 
+            Log.d("StynoRepository", "User profile synced to Firestore: $targetUid with role: ${updatedProfile.role}")
             _profileSyncStatus.value = ProfileSyncStatus.SYNCED
             _profileSyncMessage.value = "Synced with Firestore at $timeFormat"
             Result.success(true)
@@ -1722,68 +1697,170 @@ class StynoRepository(
     }
 
     /**
-     * Synchronizes user bookings with Cloud Firestore.
+     * Persistently updates the user's role in Cloud Firestore against their authenticated UID.
+     */
+    suspend fun updateUserRoleInFirestore(
+        uid: String,
+        role: String,
+        email: String? = null,
+        phone: String? = null
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            val updateData = hashMapOf<String, Any>(
+                "role" to role,
+                "uid" to uid,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            firestore.collection("users").document(uid).set(updateData, SetOptions.merge()).awaitTask()
+            firestore.collection("user_profiles").document(uid).set(updateData, SetOptions.merge()).awaitTask()
+            if (!email.isNullOrBlank()) {
+                val sanitizedEmail = "usr_" + email.replace("@", "_").replace(".", "_")
+                firestore.collection("user_profiles").document(sanitizedEmail).set(updateData, SetOptions.merge()).awaitTask()
+            }
+            val current = _userProfileState.value
+            _userProfileState.value = current.copy(role = role)
+            Log.i("StynoRepository", "Persisted role $role in Firestore for UID $uid")
+            Result.success(true)
+        } catch (e: Exception) {
+            Log.w("StynoRepository", "Failed to persist role in Firestore: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetches owner payment profile from Cloud Firestore.
+     */
+    suspend fun fetchOwnerPaymentProfile(ownerId: String): OwnerPaymentDetails? = withContext(Dispatchers.IO) {
+        try {
+            val firestore = FirebaseFirestore.getInstance()
+            var snapshot: DocumentSnapshot? = null
+            try {
+                val s1 = firestore.collection("owner_payment_profiles").document(ownerId).get().awaitTask()
+                if (s1.exists()) snapshot = s1
+            } catch (e: Exception) { }
+
+            if (snapshot == null || !snapshot.exists()) {
+                try {
+                    val s1b = firestore.collection("owner_payments").document(ownerId).get().awaitTask()
+                    if (s1b.exists()) snapshot = s1b
+                } catch (e: Exception) { }
+            }
+
+            if (snapshot == null || !snapshot.exists()) {
+                try {
+                    val s2 = firestore.collection("users").document(ownerId).get().awaitTask()
+                    if (s2.exists() && (s2.getString("ownerUpiId") != null || s2.getString("upiId") != null)) snapshot = s2
+                } catch (e: Exception) { }
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                val upi = snapshot.getString("ownerUpiId") ?: snapshot.getString("upiId") ?: ""
+                val acc = snapshot.getString("ownerAccountNumber") ?: snapshot.getString("accountNumber") ?: ""
+                val details = OwnerPaymentDetails(
+                    ownerId = ownerId,
+                    accountHolderName = snapshot.getString("ownerAccountHolderName") ?: snapshot.getString("accountHolderName") ?: "",
+                    bankName = snapshot.getString("ownerBankName") ?: snapshot.getString("bankName") ?: "",
+                    accountNumber = acc,
+                    ifscCode = snapshot.getString("ownerIfscCode") ?: snapshot.getString("ifscCode") ?: "",
+                    upiId = upi,
+                    settlementMode = snapshot.getString("ownerSettlementMode") ?: snapshot.getString("settlementMode") ?: "Instant UPI Settlement (0% fee)",
+                    isVerified = true,
+                    isVerifiedForPayouts = true,
+                    isUpiIdEnabled = upi.isNotBlank(),
+                    isQrCodeEnabled = snapshot.getBoolean("ownerIsQrCodeEnabled") ?: false,
+                    qrCodeImageUrl = snapshot.getString("ownerQrCodeImageUrl") ?: "",
+                    isBankAccountEnabled = acc.isNotBlank()
+                )
+                val profiles = _ownerPaymentProfiles.value.toMutableMap()
+                profiles[ownerId] = details
+                _ownerPaymentProfiles.value = profiles
+                details
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Synchronizes user & owner bookings with Cloud Firestore.
      */
     suspend fun syncBookingsWithFirestore(
-        userId: String = "adityayadav36978@gmail.com"
+        userId: String = "",
+        ownerUid: String = "",
+        ownerPropertyIds: Set<String> = emptySet()
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
-            val snapshot: QuerySnapshot? = suspendCancellableCoroutine { continuation ->
-                try {
-                    val firestore = FirebaseFirestore.getInstance()
-                    firestore.collection("user_bookings")
-                        .whereEqualTo("guestEmail", userId)
-                        .get()
-                        .addOnSuccessListener { querySnapshot ->
-                            continuation.resume(querySnapshot)
-                        }
-                        .addOnFailureListener {
-                            continuation.resume(null)
-                        }
-                } catch (e: Exception) {
-                    continuation.resume(null)
-                }
+            val firestore = FirebaseFirestore.getInstance()
+            val allDocuments = mutableListOf<DocumentSnapshot>()
+            try {
+                val s1 = firestore.collection("user_bookings").get().awaitTask()
+                allDocuments.addAll(s1.documents)
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "user_bookings fetch note: ${e.message}")
+            }
+            try {
+                val s2 = firestore.collection("bookings").get().awaitTask()
+                allDocuments.addAll(s2.documents)
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "bookings fetch note: ${e.message}")
             }
 
             var merged = 0
-            if (snapshot != null && !snapshot.isEmpty) {
-                val entities = snapshot.documents.mapNotNull { doc ->
+            if (allDocuments.isNotEmpty()) {
+                val cleanUser = userId.trim().lowercase()
+                val cleanOwnerUid = ownerUid.trim()
+                val seenIds = mutableSetOf<String>()
+
+                val entities = allDocuments.mapNotNull { doc ->
                     try {
-                        LocalBookingEntity(
-                            id = doc.getString("id") ?: doc.id,
-                            propertyId = doc.getString("propertyId") ?: "prop-01",
-                            propertyName = doc.getString("propertyName") ?: "Styno Stay",
-                            propertyType = doc.getString("propertyType") ?: "HOSTEL",
-                            propertyImage = doc.getString("propertyImage") ?: "img_hostel_modern",
-                            address = doc.getString("address") ?: "Delhi NCR",
-                            roomTypeName = doc.getString("roomTypeName") ?: "Standard Room",
-                            checkInDate = doc.getString("checkInDate") ?: "01 Sep 2026",
-                            checkInTime = doc.getString("checkInTime") ?: "10:00 AM",
-                            checkOutDate = doc.getString("checkOutDate") ?: "30 Sep 2026",
-                            durationText = doc.getString("durationText") ?: "1 Month",
-                            guestName = doc.getString("guestName") ?: "",
-                            guestPhone = doc.getString("guestPhone") ?: "",
-                            guestEmail = doc.getString("guestEmail") ?: userId,
-                            guestIdProofType = doc.getString("guestIdProofType") ?: "Aadhaar Card",
-                            basePrice = doc.getDouble("basePrice") ?: 6000.0,
-                            serviceFee = doc.getDouble("serviceFee") ?: 149.0,
-                            taxes = doc.getDouble("taxes") ?: 0.0,
-                            discount = doc.getDouble("discount") ?: 0.0,
-                            finalAmount = doc.getDouble("finalAmount") ?: 6149.0,
-                            securityDeposit = doc.getDouble("securityDeposit") ?: 3000.0,
-                            digitalPasscode = doc.getString("digitalPasscode") ?: "STY-9941",
-                            status = doc.getString("status") ?: "UPCOMING",
-                            paymentMethod = doc.getString("paymentMethod") ?: "UPI",
-                            paymentStatus = doc.getString("paymentStatus") ?: "Paid Online",
-                            transactionId = doc.getString("transactionId") ?: ("txn_stripe_" + doc.id),
-                            paymentGateway = doc.getString("paymentGateway") ?: "Stripe",
-                            bookedAtTimestamp = doc.getLong("bookedAtTimestamp") ?: System.currentTimeMillis(),
-                            propertyContactPhone = doc.getString("propertyContactPhone") ?: "",
-                            ownerUpiId = doc.getString("ownerUpiId") ?: "",
-                            ownerAccountHolderName = doc.getString("ownerAccountHolderName") ?: "",
-                            ownerBankName = doc.getString("ownerBankName") ?: "",
-                            ownerPayoutStatus = doc.getString("ownerPayoutStatus") ?: "Settlement Scheduled (Instant UPI / NEFT)"
-                        )
+                        val docId = doc.getString("id") ?: doc.id
+                        if (!seenIds.add(docId)) return@mapNotNull null
+                        val propId = doc.getString("propertyId") ?: ""
+                        val bGuestEmail = (doc.getString("guestEmail") ?: "").trim().lowercase()
+                        val bGuestPhone = (doc.getString("guestPhone") ?: "").trim()
+                        val bOwnerId = doc.getString("ownerId") ?: doc.getString("ownerUid") ?: ""
+
+                        val isMyGuestBooking = cleanUser.isNotBlank() && (bGuestEmail == cleanUser || (cleanUser.length >= 10 && bGuestPhone.contains(cleanUser.takeLast(10))))
+                        val isMyOwnerBooking = cleanOwnerUid.isNotBlank() && (bOwnerId == cleanOwnerUid || ownerPropertyIds.contains(propId))
+
+                        if (isMyGuestBooking || isMyOwnerBooking || (cleanUser.isBlank() && cleanOwnerUid.isBlank())) {
+                            LocalBookingEntity(
+                                id = doc.getString("id") ?: doc.id,
+                                propertyId = propId,
+                                propertyName = doc.getString("propertyName") ?: "Styno Stay",
+                                propertyType = doc.getString("propertyType") ?: "HOSTEL",
+                                propertyImage = doc.getString("propertyImage") ?: "img_hostel_modern",
+                                address = doc.getString("address") ?: "Delhi NCR",
+                                roomTypeName = doc.getString("roomTypeName") ?: "Standard Room",
+                                checkInDate = doc.getString("checkInDate") ?: "01 Sep 2026",
+                                checkInTime = doc.getString("checkInTime") ?: "10:00 AM",
+                                checkOutDate = doc.getString("checkOutDate") ?: "30 Sep 2026",
+                                durationText = doc.getString("durationText") ?: "1 Month",
+                                guestName = doc.getString("guestName") ?: "",
+                                guestPhone = doc.getString("guestPhone") ?: "",
+                                guestEmail = doc.getString("guestEmail") ?: userId,
+                                guestIdProofType = doc.getString("guestIdProofType") ?: "Aadhaar Card",
+                                basePrice = doc.getDouble("basePrice") ?: (doc.getLong("basePrice")?.toDouble() ?: 5000.0),
+                                serviceFee = doc.getDouble("serviceFee") ?: (doc.getLong("serviceFee")?.toDouble() ?: 0.0),
+                                taxes = doc.getDouble("taxes") ?: (doc.getLong("taxes")?.toDouble() ?: 0.0),
+                                discount = doc.getDouble("discount") ?: (doc.getLong("discount")?.toDouble() ?: 0.0),
+                                finalAmount = doc.getDouble("finalAmount") ?: (doc.getLong("finalAmount")?.toDouble() ?: (doc.getDouble("basePrice") ?: 5000.0)),
+                                securityDeposit = doc.getDouble("securityDeposit") ?: (doc.getLong("securityDeposit")?.toDouble() ?: 0.0),
+                                digitalPasscode = doc.getString("digitalPasscode") ?: "ST-8821",
+                                status = doc.getString("status") ?: "CONFIRMED",
+                                paymentMethod = doc.getString("paymentMethod") ?: "UPI",
+                                paymentStatus = doc.getString("paymentStatus") ?: "PAID",
+                                transactionId = doc.getString("transactionId") ?: "",
+                                paymentGateway = doc.getString("paymentGateway") ?: "Stripe",
+                                bookedAtTimestamp = doc.getLong("bookedAtTimestamp") ?: System.currentTimeMillis(),
+                                propertyContactPhone = doc.getString("propertyContactPhone") ?: doc.getString("ownerPhone") ?: "+91 98765 00000",
+                                ownerUpiId = doc.getString("ownerUpiId") ?: "",
+                                ownerAccountHolderName = doc.getString("ownerAccountHolderName") ?: "",
+                                ownerBankName = doc.getString("ownerBankName") ?: "",
+                                ownerPayoutStatus = doc.getString("ownerPayoutStatus") ?: "Settlement Scheduled (Instant UPI / NEFT)"
+                            )
+                        } else null
                     } catch (e: Exception) {
                         null
                     }
@@ -1906,6 +1983,8 @@ class StynoRepository(
                 "bookedAtTimestamp" to booking.bookedAtTimestamp,
                 "propertyContactPhone" to booking.propertyContactPhone,
                 "ownerUpiId" to booking.ownerUpiId,
+                "ownerId" to (property?.ownerId?.ifBlank { property.resolvedOwnerId } ?: ""),
+                "ownerUid" to (property?.ownerId?.ifBlank { property.resolvedOwnerId } ?: ""),
                 "ownerAccountHolderName" to booking.ownerAccountHolderName,
                 "ownerBankName" to booking.ownerBankName,
                 "ownerPayoutStatus" to booking.ownerPayoutStatus,
@@ -2059,6 +2138,9 @@ class StynoRepository(
                 "amenities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                 "allAmenities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                 "shortFacilities" to sanitizedCustom.amenitiesCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(5),
+                "ownerId" to sanitizedCustom.ownerId,
+                "ownerUid" to sanitizedCustom.ownerId,
+                "ownerEmail" to sanitizedCustom.ownerEmail,
                 "ownerName" to sanitizedCustom.ownerName,
                 "ownerPhone" to sanitizedCustom.ownerPhone,
                 "description" to sanitizedCustom.description,
@@ -2181,6 +2263,34 @@ class StynoRepository(
             )
             firestore.collection("properties").document(propertyId)
                 .set(updateMap, SetOptions.merge())
+
+            val paymentProfileMap = hashMapOf<String, Any>(
+                "ownerId" to targetOwnerId,
+                "accountHolderName" to details.accountHolderName,
+                "bankName" to details.bankName,
+                "accountNumber" to details.accountNumber,
+                "ifscCode" to details.ifscCode,
+                "upiId" to details.upiId,
+                "settlementMode" to details.settlementMode,
+                "isVerifiedAccount" to details.isVerifiedAccount,
+                "isUpiIdEnabled" to details.isUpiIdEnabled,
+                "isQrCodeEnabled" to details.isQrCodeEnabled,
+                "qrCodeImageUrl" to (details.qrCodeImageUrl ?: ""),
+                "isBankAccountEnabled" to details.isBankAccountEnabled,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            firestore.collection("owner_payment_profiles").document(targetOwnerId)
+                .set(paymentProfileMap, SetOptions.merge())
+            firestore.collection("owner_payments").document(targetOwnerId)
+                .set(paymentProfileMap, SetOptions.merge())
+            firestore.collection("users").document(targetOwnerId)
+                .set(hashMapOf<String, Any>("ownerPaymentDetails" to paymentProfileMap), SetOptions.merge())
+            if (requestingOwnerId != null && requestingOwnerId != targetOwnerId) {
+                firestore.collection("owner_payment_profiles").document(requestingOwnerId)
+                    .set(paymentProfileMap, SetOptions.merge())
+                firestore.collection("owner_payments").document(requestingOwnerId)
+                    .set(paymentProfileMap, SetOptions.merge())
+            }
         } catch (e: Exception) {
             Log.w("StynoRepository", "Payment details update Firestore error: ${e.localizedMessage}")
         }
@@ -3033,6 +3143,20 @@ class StynoRepository(
             entity?.let { PropertyCacheHelper.entityToProperty(it) }
         } catch (e: Exception) {
             null
+        }
+    }
+}
+
+private suspend fun <T> Task<T>.awaitTask(): T {
+    return suspendCancellableCoroutine { continuation ->
+        addOnSuccessListener { result ->
+            if (continuation.isActive) continuation.resume(result)
+        }
+        addOnFailureListener { exception ->
+            if (continuation.isActive) continuation.resumeWithException(exception)
+        }
+        addOnCanceledListener {
+            if (continuation.isActive) continuation.cancel()
         }
     }
 }

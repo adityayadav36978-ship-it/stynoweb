@@ -7,6 +7,7 @@ data class UserPreferences(
     val hasCompletedOnboarding: Boolean = false,
     val hasCompletedLocationOnboarding: Boolean = false,
     val userRole: UserRole = UserRole.GUEST,
+    val authUid: String = "",
     val authIdentifier: String = "",
     val authPhone: String = "",
     val selectedCountry: String = "India",
