@@ -2811,11 +2811,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
                     _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.ADMIN)
                     prefs.edit().putString("user_role", UserRole.ADMIN.name).apply()
                 } else if (profile.role.equals("GUEST", ignoreCase = true)) {
-                    if (_userRole.value != UserRole.OWNER && _userRole.value != UserRole.ADMIN) {
-                        _userRole.value = UserRole.GUEST
-                        _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.GUEST)
-                        prefs.edit().putString("user_role", UserRole.GUEST.name).apply()
-                    }
+                    _userRole.value = UserRole.GUEST
+                    _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.GUEST)
+                    prefs.edit().putString("user_role", UserRole.GUEST.name).apply()
                 }
 
                 // If owner, fetch owner payment setup and sync owner bookings
