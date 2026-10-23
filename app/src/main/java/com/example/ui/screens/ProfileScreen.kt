@@ -136,6 +136,7 @@ import com.example.ui.theme.StynoAmber
 import com.example.ui.theme.StynoBlueLight
 import com.example.ui.theme.StynoBluePrimary
 import com.example.ui.theme.StynoEmerald
+import com.example.ui.viewmodel.AuthViewModel
 import com.example.ui.viewmodel.Screen
 import com.example.ui.viewmodel.StynoViewModel
 import com.example.ui.viewmodel.UserRole
@@ -146,6 +147,7 @@ import java.util.Locale
 @Composable
 fun ProfileScreen(
     viewModel: StynoViewModel,
+    authViewModel: AuthViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -2088,6 +2090,7 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         showLogoutConfirmDialog = false
+                        authViewModel?.signOut(context)
                         viewModel.logout()
                         Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
                     },

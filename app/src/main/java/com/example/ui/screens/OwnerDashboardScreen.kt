@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -58,6 +60,7 @@ import androidx.compose.material.icons.filled.Person
 import com.example.ui.components.CategorySharingSetupCard
 import com.example.ui.components.PropertyPhotoItem
 import com.example.ui.components.StynoAppLogo
+import com.example.ui.screens.owner.OwnerMenuManagementSection
 import com.example.data.model.BookingStatus
 import com.example.ui.screens.wizard.PropertyWizardState
 import androidx.compose.ui.draw.clip
@@ -143,13 +146,16 @@ fun OwnerDashboardScreen(
     val propertyDrafts by viewModel.propertyDrafts.collectAsStateWithLifecycle()
     val isLoggedIn by viewModel.isLoggedIn.collectAsStateWithLifecycle()
 
+    val propertyMenus by viewModel.propertyMenus.collectAsStateWithLifecycle()
+    var managingPropertyFoodMenu by remember { mutableStateOf<Property?>(null) }
+
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
         "My Properties (${allProperties.size})",
         "Bookings (${bookings.size})",
         "Quick Stay ⚡",
         "Payment Setup 💳",
-        "Canteen & Food Media",
+        "Food & Menu 🍲",
         "Reviews & Host Responses",
         "Earnings & Stats",
         "Host Verification"
@@ -165,76 +171,9 @@ fun OwnerDashboardScreen(
     var managingPropertySharing by remember { mutableStateOf<Property?>(null) }
     var respondingToReviewData by remember { mutableStateOf<Pair<Property, Review>?>(null) }
 
-    if (!isLoggedIn) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .statusBarsPadding()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(StynoEmerald.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Apartment,
-                    contentDescription = null,
-                    tint = StynoEmerald,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Host Account Required",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Please sign in to manage your property listings, room allocations, food menus, and view earnings.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { viewModel.navigateTo(Screen.AUTH) },
-                colors = ButtonDefaults.buttonColors(containerColor = StynoEmerald),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Text(
-                    text = "Sign In as Host",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = {
-                    viewModel.setUserRole(com.example.ui.viewmodel.UserRole.GUEST)
-                    viewModel.navigateTo(Screen.HOME)
-                },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Text(
-                    text = "Return to Stays (Guest Mode)",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                )
-            }
-        }
-        return
+    // Intercept hardware and gesture back navigation so Owner is protected and never thrown into the User home screen
+    BackHandler {
+        viewModel.navigateTo(Screen.WELCOME)
     }
 
     Column(
@@ -261,10 +200,10 @@ fun OwnerDashboardScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = { viewModel.navigateTo(Screen.HOME) },
+                            onClick = { viewModel.navigateTo(Screen.WELCOME) },
                             modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Role Selection")
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         StynoAppLogo(
@@ -355,6 +294,48 @@ fun OwnerDashboardScreen(
                                 )
                             }
                         )
+                    }
+                }
+            }
+        }
+
+        if (!isLoggedIn) {
+            Surface(
+                color = StynoEmerald.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.2f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Apartment,
+                            contentDescription = null,
+                            tint = StynoEmerald,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Host Studio (Active Mode) • Cloud Sync Ready",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    TextButton(
+                        onClick = { viewModel.navigateTo(Screen.AUTH) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("Sign In / Host Account", fontWeight = FontWeight.Bold, color = StynoEmerald, fontSize = 11.sp)
                     }
                 }
             }
@@ -473,6 +454,104 @@ fun OwnerDashboardScreen(
                     }
 
                     item {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, StynoEmerald.copy(alpha = 0.25f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = StynoEmerald.copy(alpha = 0.15f),
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Apartment,
+                                                    contentDescription = null,
+                                                    tint = StynoEmerald,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Owner Listing & Management Tools",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Direct access to original Owner Phases 1–10",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = StynoEmerald.copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = "Items 1–10",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = StynoEmerald,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                OwnerPhaseItemRow(1, "1. Property Type Selection", "Hostel, PG, Hotel, Flat, Single Room, Quick Stay", Icons.Default.Apartment) {
+                                    viewModel.openWizardAtStep(1)
+                                }
+                                OwnerPhaseItemRow(2, "2. Basic Info & Location", "Property name, address, city, area & landmark", Icons.Default.Place) {
+                                    viewModel.openWizardAtStep(2)
+                                }
+                                OwnerPhaseItemRow(3, "3. Property Details & Media", "Photos, videos, elevator, floor & availability", Icons.Default.PhotoLibrary) {
+                                    viewModel.openWizardAtStep(3)
+                                }
+                                OwnerPhaseItemRow(4, "4. Room Types & Pricing", "Single/Twin/Triple sharing, AC & non-AC pricing", Icons.Default.Bed) {
+                                    viewModel.openWizardAtStep(4)
+                                }
+                                OwnerPhaseItemRow(5, "5. Amenities & Facilities", "High-Speed Wi-Fi, RO Water, Biometric security", Icons.Default.CheckCircle) {
+                                    viewModel.openWizardAtStep(5)
+                                }
+                                OwnerPhaseItemRow(6, "6. Food & Canteen Services", "Daily 3-time meals, timing & canteen photo hub", Icons.Default.RestaurantMenu) {
+                                    selectedTab = 4
+                                }
+                                OwnerPhaseItemRow(7, "7. Category & Quick Stay Slots", "Hourly transit options (3h, 6h, 12h, 24h) & rules", Icons.Default.Bolt) {
+                                    selectedTab = 2
+                                }
+                                OwnerPhaseItemRow(8, "8. Customer Stay Preview", "Live interactive preview of how residents view listing", Icons.Default.Visibility) {
+                                    viewModel.openWizardAtStep(8)
+                                }
+                                OwnerPhaseItemRow(9, "9. Publish Listing & Drafts", "Save listing drafts and publish live to STYNO network", Icons.Default.Publish) {
+                                    viewModel.openWizardAtStep(9)
+                                }
+                                OwnerPhaseItemRow(10, "10. Payment Setup & Settlements", "Host UPI ID, bank IFSC, account holder & 0% fee", Icons.Default.Payment) {
+                                    selectedTab = 3
+                                }
+                            }
+                        }
+                    }
+
+                    item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -496,7 +575,10 @@ fun OwnerDashboardScreen(
                             onEditInfo = { editingPropertyInfo = property },
                             onEditPricing = { editingPropertyPricing = property },
                             onManageRooms = { managingPropertyRooms = property },
-                            onUploadFoodMedia = { uploadingFoodMediaProperty = property },
+                            onUploadFoodMedia = {
+                                managingPropertyFoodMenu = property
+                                selectedTab = 4
+                            },
                             onManageQuickStay = { managingPropertyQuickStay = property },
                             onManagePayout = { managingPropertyPayout = property },
                             onManageSharing = { managingPropertySharing = property },
@@ -559,20 +641,36 @@ fun OwnerDashboardScreen(
                     }
                 }
 
-                // TAB 4: CANTEEN & DAILY FOOD MEDIA
+                // TAB 4: FOOD & MENU MANAGEMENT HUB
                 4 -> {
                     item {
                         OwnerSectionHeader(
-                            icon = Icons.Default.Restaurant,
-                            title = "Canteen & Daily Food Hub",
-                            subtitle = "Upload fresh 24h food photos, kitchen hygiene videos, and update meal timings"
+                            icon = Icons.Default.RestaurantMenu,
+                            title = "Food & Canteen Menu Hub",
+                            subtitle = "Manage food menu items, categories, pricing, availability & 24h meal photos"
                         )
                     }
 
-                    items(allProperties) { property ->
-                        FoodMediaPropertyCard(
-                            property = property,
-                            onUploadMedia = { uploadingFoodMediaProperty = property }
+                    item {
+                        OwnerMenuManagementSection(
+                            properties = allProperties,
+                            propertyMenus = propertyMenus,
+                            onAddItem = { propId, item ->
+                                viewModel.addFoodMenuItemToOwnerProperty(propId, item)
+                            },
+                            onUpdateItem = { propId, item ->
+                                viewModel.updateFoodMenuItemInOwnerProperty(propId, item)
+                            },
+                            onToggleItem = { propId, itemId, isAvail ->
+                                viewModel.toggleFoodMenuItemInOwnerProperty(propId, itemId, isAvail)
+                            },
+                            onDeleteItem = { propId, itemId ->
+                                viewModel.deleteFoodMenuItemFromOwnerProperty(propId, itemId)
+                            },
+                            onUploadMedia = { property ->
+                                uploadingFoodMediaProperty = property
+                            },
+                            initialSelectedPropertyId = managingPropertyFoodMenu?.id
                         )
                     }
                 }
@@ -2585,5 +2683,66 @@ private fun EditSharingDialog(
             }
         }
     )
+}
+
+@Composable
+private fun OwnerPhaseItemRow(
+    number: Int,
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag("owner_item_$number")
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = StynoEmerald.copy(alpha = 0.12f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "$number",
+                        fontWeight = FontWeight.Bold,
+                        color = StynoEmerald,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
 }
 

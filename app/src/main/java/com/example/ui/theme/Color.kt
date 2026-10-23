@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.Color
 
 // STYNO Brand Palette - Luxury Midnight & Vibrant Indigo
 val StynoBluePrimary = Color(0xFF0F2B5C)       // Deep Royal Navy / Obsidian Blue
+val StynoBlueVariant = Color(0xFF1565C0)
+val StynoBlueSecondary = Color(0xFF1E88E5)
 val StynoBlueLight = Color(0xFF2563EB)         // Vibrant Indigo Blue Accent
 val StynoBlueDark = Color(0xFF0A1128)          // Deep Midnight Slate
 val StynoBlueTint = Color(0xFFEFF6FF)          // Soft Blue Tint
@@ -25,6 +27,17 @@ val StynoNavyBlue = Color(0xFF0F172A)
 val StynoTeal = Color(0xFF0D9488)
 val StynoDarkNavy = Color(0xFF0A0F1D)
 val StynoSurfaceNavy = Color(0xFF1E293B)
+
+val StynoDark = Color(0xFF0A192F)
+val StynoTextPrimary = Color(0xFF0D1B2A)
+val StynoTextSecondary = Color(0xFF5A6B82)
+val StynoTextMuted = Color(0xFF8D99AE)
+
+val StynoBackground = Color(0xFFF8FAFD)
+val StynoSurface = Color(0xFFFFFFFF)
+val StynoSurfaceVariant = Color(0xFFEEF3F9)
+val StynoBorder = Color(0xFFE2E8F0)
+val StynoCardShadow = Color(0x140D47A1)
 
 // Light Theme Neutrals - Crisp, luminous, high-contrast
 val BackgroundLight = Color(0xFFF8FAFC)        // Crisp Off-White / Pearl Canvas

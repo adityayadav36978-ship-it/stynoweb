@@ -864,7 +864,8 @@ private fun PhoneOtpContent(
     onVerifyOtp: () -> Unit,
     onSwitchToEmail: () -> Unit,
     onGoogleSignIn: () -> Unit,
-    onAppleSignIn: () -> Unit = {}
+    onAppleSignIn: () -> Unit = {},
+    onGuestContinue: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1167,6 +1168,22 @@ private fun PhoneOtpContent(
                 text = "Sign In with Email & Password instead",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Guest Continue
+        TextButton(
+            onClick = onGuestContinue,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("btn_auth_guest_otp")
+        ) {
+            Text(
+                text = "Explore Stays as Guest",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

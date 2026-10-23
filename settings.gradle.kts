@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Styno"
+rootProject.name = "STYNO"
 
 include(":app")

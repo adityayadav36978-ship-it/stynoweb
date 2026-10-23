@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,7 +43,8 @@ fun OwnerPaymentSetupSection(
     allBookings: List<Booking>,
     onSavePaymentDetails: (propertyId: String, details: OwnerPaymentDetails) -> Unit,
     onUploadQrCode: ((Uri, String) -> String)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToAddProperty: () -> Unit = {}
 ) {
     if (properties.isEmpty()) {
         Card(
@@ -72,10 +74,22 @@ fun OwnerPaymentSetupSection(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Add a property listing to set up your payout bank account and manage booking earnings.",
+                    text = "Add a property listing to set up your payout bank account and manage booking earnings. Direct bank & UPI QR settlements are configured per listing.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onNavigateToAddProperty,
+                    colors = ButtonDefaults.buttonColors(containerColor = StynoEmerald),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("payment_empty_add_property_button")
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("List Property with Payout Setup", fontWeight = FontWeight.Bold)
+                }
             }
         }
         return

@@ -425,49 +425,9 @@ fun PropertyCard(
                     )
                 }
 
-                // Official STYNO Girls Safety Verification Trust Badge
-                if (property.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFFFF1F2),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = "Official Girls Safety Verified Seal",
-                                tint = Color(0xFFE11D48),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Column {
-                                Text(
-                                    text = "GIRLS SAFETY VERIFIED",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFFBE123C),
-                                    letterSpacing = 0.5.sp
-                                )
-                                Text(
-                                    text = "Audited by STYNO Trust Team • Female Warden & 24/7 Security",
-                                    fontSize = 9.sp,
-                                    color = Color(0xFF9F1239),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Facilities Chips Row
+                // Facilities & Highlights Chips Row
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -497,6 +457,33 @@ fun PropertyCard(
                             },
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
+                    }
+
+                    if (property.girlsSafetyVerification.status == GirlsSafetyVerificationStatus.VERIFIED) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFFFF1F2),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shield,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE11D48),
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Girls Safety Verified",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFBE123C)
+                                )
+                            }
+                        }
                     }
 
                     property.shortFacilities.take(3).forEach { facility ->

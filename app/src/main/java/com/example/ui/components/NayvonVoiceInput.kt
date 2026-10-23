@@ -136,15 +136,15 @@ fun rememberNayvonVoiceInput(
                 rmsLevel = 0f
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
-                    currentOnSpokenText(matches[0])
+                    val spoken = matches[0].trim()
+                    if (spoken.isNotBlank()) {
+                        currentOnSpokenText(spoken)
+                    }
                 }
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    currentOnSpokenText(matches[0])
-                }
+                // Partial results indicate in-progress speech recognition, do not submit final text
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {}

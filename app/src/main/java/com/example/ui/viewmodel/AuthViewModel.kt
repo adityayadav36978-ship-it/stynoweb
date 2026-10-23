@@ -501,20 +501,12 @@ class AuthViewModel(
                 if (isCancelled) {
                     Log.d(TAG, "Google sign-in cancelled by user")
                     _uiState.value = AuthUiState.Idle
+                    onError?.invoke("Google Sign-In was cancelled.")
                 } else {
-                    Log.w(TAG, "Credential Manager unavailable, switching to verified Google fallback: ${e.message}")
-                    val fallbackUser = AuthUser(
-                        uid = "styno_google_${System.currentTimeMillis()}",
-                        email = "adityayadav36978@gmail.com",
-                        displayName = "Aditya Yadav",
-                        photoUrl = null,
-                        isEmailVerified = true,
-                        providerId = "google.com"
-                    )
-                    _currentUser.value = fallbackUser
-                    _uiState.value = AuthUiState.Authenticated(fallbackUser)
-                    syncUserProfileToFirestore(fallbackUser)
-                    onSuccess?.invoke(fallbackUser)
+                    Log.e(TAG, "Google Sign-In error: ${e.message}", e)
+                    val errorMsg = e.localizedMessage ?: "Google Sign-In failed"
+                    _uiState.value = AuthUiState.Error(errorMsg, e)
+                    onError?.invoke(errorMsg)
                 }
             }
         }
@@ -746,19 +738,9 @@ class AuthViewModel(
                     _uiState.value = AuthUiState.Idle
                     onError("Apple Sign-In was cancelled.")
                 } else {
-                    Log.w(TAG, "Apple provider unavailable on emulator, proceeding with Apple verified fallback")
-                    val fallbackUser = AuthUser(
-                        uid = "styno_apple_${System.currentTimeMillis()}",
-                        email = "aditya.apple@icloud.com",
-                        displayName = "Aditya (Apple ID)",
-                        photoUrl = null,
-                        isEmailVerified = true,
-                        providerId = "apple.com"
-                    )
-                    _currentUser.value = fallbackUser
-                    _uiState.value = AuthUiState.Authenticated(fallbackUser)
-                    syncUserProfileToFirestore(fallbackUser)
-                    onSuccess(fallbackUser)
+                    val errMsg = e.localizedMessage ?: "Apple Sign-In failed"
+                    _uiState.value = AuthUiState.Error(errMsg, e)
+                    onError(errMsg)
                 }
             }
         }
@@ -797,6 +779,7 @@ class AuthViewModel(
 
             val finalRole = when {
                 !resolvedRole.isNullOrBlank() && !resolvedRole.equals("traveler", ignoreCase = true) -> resolvedRole
+                explicitRole?.equals("OWNER", ignoreCase = true) == true -> "OWNER"
                 authUser.email?.contains("host.demo", ignoreCase = true) == true -> "OWNER"
                 else -> "GUEST"
             }

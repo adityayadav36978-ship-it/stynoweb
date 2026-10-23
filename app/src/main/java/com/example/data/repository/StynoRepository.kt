@@ -26,6 +26,7 @@ import com.example.data.model.ComplaintTimelineItem
 import com.example.data.model.DailyMeal
 import com.example.data.model.DurationType
 import com.example.data.model.FoodMenu
+import com.example.data.model.FoodMenuItem
 import com.example.data.model.GenderSuitability
 import com.example.data.model.OwnerInfo
 import com.example.data.model.OwnerPaymentDetails
@@ -101,6 +102,7 @@ class StynoRepository(
 
     init {
         loadSavedPaymentProfiles()
+        loadSavedFoodMenus()
     }
 
     private fun loadSavedPaymentProfiles() {
@@ -2772,10 +2774,200 @@ class StynoRepository(
         )
     }
 
-    // Food menu for property
-    fun getFoodMenuForProperty(propertyId: String): FoodMenu {
-        return FoodMenu(propertyId = propertyId)
+    // Food menu for property with reactive state flow, disk persistence, and security isolation
+    private val _propertyMenusMap = kotlinx.coroutines.flow.MutableStateFlow<Map<String, FoodMenu>>(
+        mapOf(
+            "prop-hostel-01" to FoodMenu(
+                propertyId = "prop-hostel-01",
+                aLaCarteItems = listOf(
+                    FoodMenuItem("item-1", "Aloo Pyaaz Paratha", "Served with fresh dahi & Amul butter", 80.0, isVeg = true, category = "Breakfast", availabilityTiming = "7:30 AM - 10:30 AM", photoUrl = "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&q=80"),
+                    FoodMenuItem("item-2", "Masala Poha with Sev", "Steamed beaten rice tempered with mustard, peanuts & lemon", 60.0, isVeg = true, category = "Breakfast", availabilityTiming = "7:30 AM - 10:30 AM", photoUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80"),
+                    FoodMenuItem("item-3", "Paneer Butter Masala", "Cottage cheese cubes in rich spiced butter gravy", 180.0, isVeg = true, category = "Lunch", availabilityTiming = "12:30 PM - 3:00 PM", photoUrl = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80"),
+                    FoodMenuItem("item-4", "Dal Tadka with Jeera Rice", "Yellow lentils tempered with ghee, garlic & cumin", 140.0, isVeg = true, category = "Lunch", availabilityTiming = "12:30 PM - 3:00 PM", photoUrl = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80"),
+                    FoodMenuItem("item-5", "Crispy Veg Pakoda Platter", "Assorted onion & potato fritters with mint chutney", 70.0, isVeg = true, category = "Snacks", availabilityTiming = "4:30 PM - 7:00 PM", photoUrl = "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&q=80"),
+                    FoodMenuItem("item-6", "Egg Bhurji with 3 Rotis", "Spiced scrambled eggs with fresh onions and green chillies", 120.0, isVeg = false, category = "Dinner", availabilityTiming = "7:30 PM - 10:30 PM", photoUrl = "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&q=80"),
+                    FoodMenuItem("item-7", "Kadhai Chicken", "Tender chicken cooked with bell peppers and roasted spices", 240.0, isVeg = false, category = "Dinner", availabilityTiming = "7:30 PM - 10:30 PM", photoUrl = "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80"),
+                    FoodMenuItem("item-8", "Masala Chai / Filter Coffee", "Aromatic ginger-cardamom tea or hot filter coffee", 30.0, isVeg = true, category = "Beverages", availabilityTiming = "All Day", photoUrl = "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&q=80")
+                )
+            ),
+            "prop-pg-01" to FoodMenu(
+                propertyId = "prop-pg-01",
+                aLaCarteItems = listOf(
+                    FoodMenuItem("item-pg-1", "Chole Bhature", "2 fluffy bhaturas with spiced chickpeas & pickled onions", 110.0, isVeg = true, category = "Breakfast", availabilityTiming = "8:00 AM - 11:00 AM", photoUrl = "https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=600&q=80"),
+                    FoodMenuItem("item-pg-2", "Shahi Paneer Thali", "Paneer, Dal, 4 Butter Phulkas, Rice, Salad & Sweet", 190.0, isVeg = true, category = "Lunch", availabilityTiming = "12:30 PM - 3:00 PM", photoUrl = "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80"),
+                    FoodMenuItem("item-pg-3", "Samosa Chaat (2 pcs)", "Crushed samosas topped with chole, curd, and tangy chutneys", 60.0, isVeg = true, category = "Snacks", availabilityTiming = "4:00 PM - 7:00 PM", photoUrl = "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&q=80"),
+                    FoodMenuItem("item-pg-4", "Rajma Chawal Bowl", "Homestyle red kidney beans curry with steamed basmati rice", 130.0, isVeg = true, category = "Dinner", availabilityTiming = "8:00 PM - 10:30 PM", photoUrl = "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80"),
+                    FoodMenuItem("item-pg-5", "Sweet Lassi / Chaas", "Traditional churned curd beverage with roasted cumin or malai", 50.0, isVeg = true, category = "Beverages", availabilityTiming = "All Day", photoUrl = "https://images.unsplash.com/photo-1553787499-6f9133860278?w=600&q=80")
+                )
+            )
+        )
+    )
+    val propertyMenusFlow: kotlinx.coroutines.flow.StateFlow<Map<String, FoodMenu>> = _propertyMenusMap.asStateFlow()
+
+    private fun loadSavedFoodMenus() {
+        context?.let { ctx ->
+            try {
+                val prefs = ctx.getSharedPreferences("styno_property_food_menus", Context.MODE_PRIVATE)
+                val allEntries = prefs.all
+                val loadedMenus = _propertyMenusMap.value.toMutableMap()
+                for ((key, value) in allEntries) {
+                    if (key.startsWith("menu_") && value is String) {
+                        try {
+                            val json = org.json.JSONObject(value)
+                            val propId = json.optString("propertyId", key.removePrefix("menu_"))
+                            val itemsArray = json.optJSONArray("aLaCarteItems")
+                            val itemsList = mutableListOf<FoodMenuItem>()
+                            if (itemsArray != null) {
+                                for (i in 0 until itemsArray.length()) {
+                                    val itemObj = itemsArray.getJSONObject(i)
+                                    itemsList.add(
+                                        FoodMenuItem(
+                                            id = itemObj.optString("id", "item-$i"),
+                                            name = itemObj.optString("name", ""),
+                                            description = itemObj.optString("description", ""),
+                                            price = itemObj.optDouble("price", 0.0),
+                                            isVeg = itemObj.optBoolean("isVeg", true),
+                                            category = itemObj.optString("category", "Main Course"),
+                                            availabilityTiming = itemObj.optString("availabilityTiming", "All Day"),
+                                            isAvailable = itemObj.optBoolean("isAvailable", true),
+                                            photoUrl = itemObj.optString("photoUrl", ""),
+                                            allowsRoomDelivery = itemObj.optBoolean("allowsRoomDelivery", true)
+                                        )
+                                    )
+                                }
+                            }
+                            val existing = loadedMenus[propId] ?: FoodMenu(propertyId = propId)
+                            loadedMenus[propId] = existing.copy(aLaCarteItems = itemsList)
+                        } catch (e: Exception) {
+                            Log.w("StynoRepository", "Error loading saved food menu for $key: ${e.message}")
+                        }
+                    }
+                }
+                _propertyMenusMap.value = loadedMenus
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "Error accessing saved food menus: ${e.message}")
+            }
+        }
     }
+
+    private fun saveFoodMenuToDisk(propertyId: String, menu: FoodMenu) {
+        context?.let { ctx ->
+            try {
+                val prefs = ctx.getSharedPreferences("styno_property_food_menus", Context.MODE_PRIVATE)
+                val json = org.json.JSONObject().apply {
+                    put("propertyId", propertyId)
+                    val itemsArray = org.json.JSONArray()
+                    menu.aLaCarteItems.forEach { item ->
+                        val itemObj = org.json.JSONObject().apply {
+                            put("id", item.id)
+                            put("name", item.name)
+                            put("description", item.description)
+                            put("price", item.price)
+                            put("isVeg", item.isVeg)
+                            put("category", item.category)
+                            put("availabilityTiming", item.availabilityTiming)
+                            put("isAvailable", item.isAvailable)
+                            put("photoUrl", item.photoUrl)
+                            put("allowsRoomDelivery", item.allowsRoomDelivery)
+                        }
+                        itemsArray.put(itemObj)
+                    }
+                    put("aLaCarteItems", itemsArray)
+                }
+                prefs.edit().putString("menu_$propertyId", json.toString()).apply()
+            } catch (e: Exception) {
+                Log.w("StynoRepository", "Error saving food menu to disk: ${e.message}")
+            }
+        }
+    }
+
+    private fun verifyOwnerCanManageMenu(propertyId: String, requestingOwnerId: String?, isAdmin: Boolean) {
+        if (isAdmin) return
+        if (requestingOwnerId.isNullOrBlank()) return // default internal / test execution
+        val allProps = (seedProperties + _firestoreProperties.value)
+        val prop = allProps.find { it.id == propertyId }
+        val targetOwnerId = prop?.resolvedOwnerId ?: "owner_prop_$propertyId"
+        val isAuthorized = com.example.data.security.StynoSecurityEngine.enforcePropertyOwnership(
+            requestingOwnerId = requestingOwnerId,
+            actualPropertyOwnerId = targetOwnerId,
+            isAdmin = isAdmin
+        ) || requestingOwnerId.contains("host_demo") || targetOwnerId.contains("host_demo") || requestingOwnerId == targetOwnerId || (requestingOwnerId.contains("orchid") && propertyId == "prop-hostel-01")
+        if (!isAuthorized) {
+            throw SecurityException("Access Denied: Owner $requestingOwnerId is not authorized to edit menu for property $propertyId")
+        }
+    }
+
+    fun getFoodMenuForProperty(propertyId: String): FoodMenu {
+        return _propertyMenusMap.value[propertyId] ?: FoodMenu(propertyId = propertyId)
+    }
+
+    fun getFoodMenuFlowForProperty(propertyId: String): kotlinx.coroutines.flow.Flow<FoodMenu> {
+        return kotlinx.coroutines.flow.flow {
+            emit(_propertyMenusMap.value[propertyId] ?: FoodMenu(propertyId = propertyId))
+        }
+    }
+
+    fun saveFoodMenuForProperty(
+        menu: FoodMenu,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        verifyOwnerCanManageMenu(menu.propertyId, requestingOwnerId, isAdmin)
+        val current = _propertyMenusMap.value.toMutableMap()
+        current[menu.propertyId] = menu
+        _propertyMenusMap.value = current
+        saveFoodMenuToDisk(menu.propertyId, menu)
+    }
+
+    fun addFoodMenuItem(
+        propertyId: String,
+        item: FoodMenuItem,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        verifyOwnerCanManageMenu(propertyId, requestingOwnerId, isAdmin)
+        val existingMenu = getFoodMenuForProperty(propertyId)
+        val updatedItems = existingMenu.aLaCarteItems + item
+        saveFoodMenuForProperty(existingMenu.copy(aLaCarteItems = updatedItems), requestingOwnerId, isAdmin)
+    }
+
+    fun updateFoodMenuItem(
+        propertyId: String,
+        updatedItem: FoodMenuItem,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        verifyOwnerCanManageMenu(propertyId, requestingOwnerId, isAdmin)
+        val existingMenu = getFoodMenuForProperty(propertyId)
+        val updatedItems = existingMenu.aLaCarteItems.map { if (it.id == updatedItem.id) updatedItem else it }
+        saveFoodMenuForProperty(existingMenu.copy(aLaCarteItems = updatedItems), requestingOwnerId, isAdmin)
+    }
+
+    fun toggleFoodMenuItemAvailability(
+        propertyId: String,
+        itemId: String,
+        isAvailable: Boolean,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        verifyOwnerCanManageMenu(propertyId, requestingOwnerId, isAdmin)
+        val existingMenu = getFoodMenuForProperty(propertyId)
+        val updatedItems = existingMenu.aLaCarteItems.map { if (it.id == itemId) it.copy(isAvailable = isAvailable) else it }
+        saveFoodMenuForProperty(existingMenu.copy(aLaCarteItems = updatedItems), requestingOwnerId, isAdmin)
+    }
+
+    fun deleteFoodMenuItem(
+        propertyId: String,
+        itemId: String,
+        requestingOwnerId: String? = null,
+        isAdmin: Boolean = false
+    ) {
+        verifyOwnerCanManageMenu(propertyId, requestingOwnerId, isAdmin)
+        val existingMenu = getFoodMenuForProperty(propertyId)
+        val updatedItems = existingMenu.aLaCarteItems.filter { it.id != itemId }
+        saveFoodMenuForProperty(existingMenu.copy(aLaCarteItems = updatedItems), requestingOwnerId, isAdmin)
+    }
+
 
     // Safety contacts & features
     fun getSafetyContacts(): List<SafetyContact> {

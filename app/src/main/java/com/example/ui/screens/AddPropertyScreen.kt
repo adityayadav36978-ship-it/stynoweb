@@ -53,6 +53,7 @@ fun AddPropertyScreen(
 ) {
     val activeEditingProperty by viewModel.activeEditingProperty.collectAsStateWithLifecycle()
     val activeEditingDraft by viewModel.activeEditingDraft.collectAsStateWithLifecycle()
+    val wizardTargetStep by viewModel.wizardTargetStep.collectAsStateWithLifecycle()
     val savedDrafts by viewModel.propertyDrafts.collectAsStateWithLifecycle()
     val currentUserName by viewModel.userName.collectAsStateWithLifecycle()
     val currentUserPhone by viewModel.userPhone.collectAsStateWithLifecycle()
@@ -76,6 +77,13 @@ fun AddPropertyScreen(
                 )
             }
         )
+    }
+
+    LaunchedEffect(wizardTargetStep) {
+        wizardTargetStep?.let { targetStep ->
+            wizardState = wizardState.copy(currentStep = targetStep)
+            viewModel.clearWizardTargetStep()
+        }
     }
 
     // Success Published Dialog State

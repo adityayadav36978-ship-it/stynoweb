@@ -413,13 +413,13 @@ const INDIA_GEOGRAPHIC_DATA = (typeof INDIA_ADMINISTRATIVE_DATA !== "undefined" 
 // --------------------------------------------------------------------------
 
 const STYNO_CATEGORIES = [
-  { key: null, name: "All Stays", icon: "explore", emoji: "✨" },
-  { key: "HOTEL", name: "Hotel", icon: "hotel", emoji: "🏨" },
-  { key: "HOSTEL", name: "Hostel", icon: "apartment", emoji: "🏢" },
-  { key: "PG", name: "PG", icon: "bed", emoji: "🛏️" },
-  { key: "QUICK_STAY", name: "Quick Stay", icon: "bolt", emoji: "⚡" },
-  { key: "FLAT", name: "Flat", icon: "home", emoji: "🏠" },
-  { key: "ROOM", name: "Room", icon: "meeting_room", emoji: "🚪" }
+  { key: null, name: "All Stays", icon: "explore", emoji: "✨", image: "assets/img_hotel_suite.jpg", badge: "All" },
+  { key: "HOTEL", name: "Hotels", icon: "hotel", emoji: "🏨", image: "assets/img_hotel_suite.jpg", badge: "Instant 24/7" },
+  { key: "HOSTEL", name: "Hostels", icon: "apartment", emoji: "🏢", image: "assets/img_hostel_modern.jpg", badge: "From ₹5,499" },
+  { key: "PG", name: "PGs", icon: "bed", emoji: "🛏️", image: "assets/img_pg_room.jpg", badge: "0% Brokerage" },
+  { key: "QUICK_STAY", name: "Quick Stays", icon: "bolt", emoji: "⚡", image: "assets/img_quick_stay.jpg", badge: "From ₹299" },
+  { key: "FLAT", name: "Flats", icon: "home", emoji: "🏠", image: "assets/img_apartment_flat.jpg", badge: "Furnished" },
+  { key: "ROOM", name: "Rooms", icon: "meeting_room", emoji: "🚪", image: "assets/img_single_room.jpg", badge: "Deposit Free" }
 ];
 
 // --------------------------------------------------------------------------
@@ -490,7 +490,10 @@ class StynoDataStore {
           authDomain: "styno-stays.firebaseapp.com"
         });
         this.firestore = firebase.firestore();
-        console.log("Styno Firebase Firestore initialized successfully");
+        if (firebase.auth) {
+          this.auth = firebase.auth();
+        }
+        console.log("Styno Firebase Firestore & Auth initialized successfully");
         
         // Real-time properties sync
         this.firestore.collection("properties").onSnapshot((snapshot) => {
@@ -601,8 +604,8 @@ class StynoDataStore {
           updateOwnerToggleUI();
           renderOwnerPropertiesList();
           renderOwnerBookingsTable();
-        } else if (AppState.userRole === "OWNER" && role !== "OWNER") {
-          AppState.userRole = "GUEST";
+        } else if (role === "ADMIN") {
+          AppState.userRole = "ADMIN";
           updateOwnerToggleUI();
         }
       }
@@ -792,18 +795,19 @@ class StynoDataStore {
     if (!activeUser || !activeUser.isLoggedIn) return [];
 
     const all = this.getBookings();
-    const cleanPhone = (activeUser.phone || "").replace(/\D/g, "");
+    const cleanPhone = (activeUser.phone || "").replace(/\D/g, "").slice(-10);
     const cleanEmail = (activeUser.email || "").trim().toLowerCase();
-    const cleanName = (activeUser.name || "").trim().toLowerCase();
+    const cleanUid = (activeUser.uid || activeUser.id || "").trim();
 
     return all.filter(b => {
-      const bPhone = (b.guestPhone || "").replace(/\D/g, "");
+      const bPhone = (b.guestPhone || "").replace(/\D/g, "").slice(-10);
       const bEmail = (b.guestEmail || "").trim().toLowerCase();
-      const bName = (b.guestName || "").trim().toLowerCase();
+      const bUserId = (b.userId || b.userUid || "").trim();
 
-      return (cleanPhone && bPhone.includes(cleanPhone)) ||
-             (cleanEmail && bEmail === cleanEmail) ||
-             (cleanName && bName.includes(cleanName));
+      if (cleanUid && bUserId && (bUserId === cleanUid || bUserId === activeUser.id)) return true;
+      if (cleanEmail && bEmail && bEmail === cleanEmail) return true;
+      if (cleanPhone && cleanPhone.length >= 10 && bPhone === cleanPhone) return true;
+      return false;
     });
   }
 
@@ -845,13 +849,17 @@ class StynoDataStore {
     }
   }
 
-  // Saved Wishlist
-  getSavedPropertyIds() {
-    return JSON.parse(localStorage.getItem(this.storageKeySaved) || "[]");
+  // Saved Wishlist with strict per-user isolation
+  getSavedPropertyIds(user = null) {
+    const active = user || (typeof AppState !== "undefined" ? AppState.currentUser : null);
+    const key = (active && active.isLoggedIn && active.id) ? `${this.storageKeySaved}_${active.id}` : `${this.storageKeySaved}_guest`;
+    return JSON.parse(localStorage.getItem(key) || "[]");
   }
 
-  toggleSaveProperty(propertyId) {
-    let saved = this.getSavedPropertyIds();
+  toggleSaveProperty(propertyId, user = null) {
+    const active = user || (typeof AppState !== "undefined" ? AppState.currentUser : null);
+    const key = (active && active.isLoggedIn && active.id) ? `${this.storageKeySaved}_${active.id}` : `${this.storageKeySaved}_guest`;
+    let saved = JSON.parse(localStorage.getItem(key) || "[]");
     const idx = saved.indexOf(propertyId);
     let isSaved = false;
     if (idx >= 0) {
@@ -861,8 +869,54 @@ class StynoDataStore {
       saved.push(propertyId);
       isSaved = true;
     }
-    localStorage.setItem(this.storageKeySaved, JSON.stringify(saved));
+    localStorage.setItem(key, JSON.stringify(saved));
     return isSaved;
+  }
+
+  // Property Food Menu with reactive updates and persistence
+  getPropertyFoodMenu(propertyId) {
+    const defaultSeedMenus = {
+      "prop-hostel-01": {
+        propertyId: "prop-hostel-01",
+        todayDate: "Today's Fresh Menu",
+        aLaCarteItems: [
+          { id: "item-1", name: "Aloo Pyaaz Paratha", description: "Served with fresh dahi & Amul butter", price: 80, isVeg: true, category: "Breakfast", availabilityTiming: "7:30 AM - 10:30 AM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&q=80" },
+          { id: "item-2", name: "Masala Poha with Sev", description: "Steamed beaten rice tempered with mustard, peanuts & lemon", price: 60, isVeg: true, category: "Breakfast", availabilityTiming: "7:30 AM - 10:30 AM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80" },
+          { id: "item-3", name: "Paneer Butter Masala", description: "Cottage cheese cubes in rich spiced butter gravy", price: 180, isVeg: true, category: "Lunch", availabilityTiming: "12:30 PM - 3:00 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=80" },
+          { id: "item-4", name: "Dal Tadka with Jeera Rice", description: "Yellow lentils tempered with ghee, garlic & cumin", price: 140, isVeg: true, category: "Lunch", availabilityTiming: "12:30 PM - 3:00 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80" },
+          { id: "item-5", name: "Crispy Veg Pakoda Platter", description: "Assorted onion & potato fritters with mint chutney", price: 70, isVeg: true, category: "Snacks", availabilityTiming: "4:30 PM - 7:00 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&q=80" },
+          { id: "item-6", name: "Egg Bhurji with 3 Rotis", description: "Spiced scrambled eggs with fresh onions and green chillies", price: 120, isVeg: false, category: "Dinner", availabilityTiming: "7:30 PM - 10:30 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&q=80" },
+          { id: "item-7", name: "Kadhai Chicken", description: "Tender chicken cooked with bell peppers and roasted spices", price: 240, isVeg: false, category: "Dinner", availabilityTiming: "7:30 PM - 10:30 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&q=80" },
+          { id: "item-8", name: "Masala Chai / Filter Coffee", description: "Aromatic ginger-cardamom tea or hot filter coffee", price: 30, isVeg: true, category: "Beverages", availabilityTiming: "All Day", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=600&q=80" }
+        ]
+      },
+      "prop-pg-01": {
+        propertyId: "prop-pg-01",
+        todayDate: "Today's Fresh Menu",
+        aLaCarteItems: [
+          { id: "item-pg-1", name: "Chole Bhature", description: "2 fluffy bhaturas with spiced chickpeas & pickled onions", price: 110, isVeg: true, category: "Breakfast", availabilityTiming: "8:00 AM - 11:00 AM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=600&q=80" },
+          { id: "item-pg-2", name: "Shahi Paneer Thali", description: "Paneer, Dal, 4 Butter Phulkas, Rice, Salad & Sweet", price: 190, isVeg: true, category: "Lunch", availabilityTiming: "12:30 PM - 3:00 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&q=80" },
+          { id: "item-pg-3", name: "Samosa Chaat (2 pcs)", description: "Crushed samosas topped with chole, curd, and tangy chutneys", price: 60, isVeg: true, category: "Snacks", availabilityTiming: "4:00 PM - 7:00 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&q=80" },
+          { id: "item-pg-4", name: "Rajma Chawal Bowl", description: "Homestyle red kidney beans curry with steamed basmati rice", price: 130, isVeg: true, category: "Dinner", availabilityTiming: "8:00 PM - 10:30 PM", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80" },
+          { id: "item-pg-5", name: "Sweet Lassi / Chaas", description: "Traditional churned curd beverage with roasted cumin or malai", price: 50, isVeg: true, category: "Beverages", availabilityTiming: "All Day", isAvailable: true, photoUrl: "https://images.unsplash.com/photo-1553787499-6f9133860278?w=600&q=80" }
+        ]
+      }
+    };
+    const stored = JSON.parse(localStorage.getItem("styno_property_food_menus_v2") || "{}");
+    if (stored[propertyId]) return stored[propertyId];
+    if (defaultSeedMenus[propertyId]) return defaultSeedMenus[propertyId];
+    return {
+      propertyId: propertyId,
+      todayDate: "Today's Fresh Menu",
+      aLaCarteItems: []
+    };
+  }
+
+  savePropertyFoodMenu(propertyId, menu) {
+    const stored = JSON.parse(localStorage.getItem("styno_property_food_menus_v2") || "{}");
+    stored[propertyId] = menu;
+    localStorage.setItem("styno_property_food_menus_v2", JSON.stringify(stored));
+    this.notifySyncListeners(propertyId, "food_menu_updated");
   }
 
   notifySyncListeners(propertyName = "Listing", action = "synced") {
@@ -1028,19 +1082,38 @@ function updateOwnerToggleUI() {
   const icon = document.getElementById("ownerToggleIcon");
   const text = document.getElementById("ownerToggleText");
   const badge = document.getElementById("ownerRoleBadge");
+  const bNavIcon = document.getElementById("bNavProfileIcon");
+  const bNavLabel = document.getElementById("bNavProfileLabel");
 
   if (AppState.userRole === "OWNER") {
     if (btn) btn.classList.add("active");
     if (icon) icon.textContent = "travel_explore";
     if (text) text.textContent = "Guest View";
     if (badge) badge.textContent = "Host Mode";
+    if (bNavIcon) bNavIcon.textContent = "real_estate_agent";
+    if (bNavLabel) bNavLabel.textContent = "Host";
   } else {
     if (btn) btn.classList.remove("active");
     if (icon) icon.textContent = "add_business";
     if (text) text.textContent = "Owner Dashboard";
     if (badge) badge.textContent = "0% Fee";
+    if (bNavIcon) bNavIcon.textContent = "person";
+    if (bNavLabel) bNavLabel.textContent = "Profile";
   }
 }
+
+function handleBottomNavProfileClick() {
+  if (AppState.userRole === "OWNER") {
+    if (AppState.currentView === "OWNER") {
+      switchView("PROFILE");
+    } else {
+      switchView("OWNER");
+    }
+  } else {
+    switchView("PROFILE");
+  }
+}
+window.handleBottomNavProfileClick = handleBottomNavProfileClick;
 
 function switchToOwnerDashboard() {
   AppState.userRole = "OWNER";
@@ -1099,17 +1172,28 @@ function renderCategoryTrack() {
     
     const isActive = AppState.selectedCategory === cat.key;
     return `
-      <button class="category-tab-btn ${isActive ? 'active' : ''}" onclick="selectCategory('${cat.key || ''}')">
-        <span class="material-symbols-rounded">${cat.icon}</span>
-        <span>${cat.name}</span>
-        <span class="cat-badge">${count}</span>
-      </button>
+      <div class="category-square-card ${isActive ? 'active' : ''}" onclick="selectCategory('${cat.key || ''}')" title="Filter by ${cat.name}">
+        <div class="cat-img-box">
+          <img src="${cat.image || 'assets/img_hotel_suite.jpg'}" alt="${cat.name}" class="cat-square-img" loading="lazy" onerror="this.src='assets/img_hotel_suite.jpg'">
+          <span class="cat-icon-badge"><span class="material-symbols-rounded">${cat.icon}</span></span>
+        </div>
+        <div class="cat-card-info">
+          <span class="cat-micro-badge">${cat.badge || 'Verified'}</span>
+          <span class="cat-title">${cat.name}</span>
+          <span class="cat-count-sub">${count} Stays</span>
+        </div>
+      </div>
     `;
   }).join("");
 }
 
 function selectCategory(catKey) {
-  AppState.selectedCategory = catKey || null;
+  // Toggle category on/off
+  if (AppState.selectedCategory === (catKey || null)) {
+    AppState.selectedCategory = null;
+  } else {
+    AppState.selectedCategory = catKey || null;
+  }
   renderCategoryTrack();
   renderListings();
 }
@@ -1771,7 +1855,10 @@ function renderSavedList() {
 function selectOwnerSubTab(tabName) {
   AppState.activeOwnerTab = tabName;
   document.querySelectorAll(".owner-tab-item").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".owner-sub-content").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".owner-sub-content").forEach(c => {
+    c.classList.remove("active");
+    c.style.display = "none";
+  });
 
   const tabBtnMap = {
     PROPERTIES: "tabOwnerProps",
@@ -1932,6 +2019,20 @@ function openAddPropertyModal() {
   populateOwnerLocationForm();
   openModal("addPropertyModal");
 }
+
+function openWizardAtStep(step) {
+  openAddPropertyModal();
+  setTimeout(() => {
+    const modalBody = document.querySelector("#addPropertyModal .modal-body");
+    if (!modalBody) return;
+    const sections = modalBody.querySelectorAll(".form-section-title");
+    if (sections && sections.length >= step && step >= 1) {
+      sections[step - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 150);
+}
+window.openWizardAtStep = openWizardAtStep;
+
 
 function populateOwnerLocationForm() {
   const countrySelect = document.getElementById("ownerCountry");
@@ -4600,13 +4701,42 @@ function getStoredUsersAccounts() {
     const raw = localStorage.getItem(STYNO_ACCOUNTS_KEY);
     if (raw) {
       const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length > 0) return list;
+      if (Array.isArray(list) && list.length > 0) {
+        let updated = false;
+        list.forEach(a => {
+          if (a.email === "adityayadav36978@gmail.com" && a.passwordSalt === "salt_aditya_2026") {
+            if (a.passwordHash !== "b2def26502a228a9be5316360d47372c6a378ffc5058d2682eae2d456603fade") {
+              a.passwordHash = "b2def26502a228a9be5316360d47372c6a378ffc5058d2682eae2d456603fade";
+              delete a.fallbackPlain;
+              updated = true;
+            }
+          }
+          if (a.email === "host@styno.com" && a.passwordSalt === "salt_host_2026") {
+            if (a.passwordHash !== "f36c4375458d49b65537de5db0c22dee35494746fa4cb1d7924f05da311b783e") {
+              a.passwordHash = "f36c4375458d49b65537de5db0c22dee35494746fa4cb1d7924f05da311b783e";
+              delete a.fallbackPlain;
+              updated = true;
+            }
+          }
+          if (a.email === "admin@styno.com" && a.passwordSalt === "salt_admin_2026") {
+            if (a.passwordHash !== "193a7d552e73e8d8e546807031bb389ccfd5d7fcbf62daffe53815903dd0f6a4") {
+              a.passwordHash = "193a7d552e73e8d8e546807031bb389ccfd5d7fcbf62daffe53815903dd0f6a4";
+              delete a.fallbackPlain;
+              updated = true;
+            }
+          }
+        });
+        if (updated) {
+          localStorage.setItem(STYNO_ACCOUNTS_KEY, JSON.stringify(list));
+        }
+        return list;
+      }
     }
   } catch (e) {
     console.error("Error loading accounts registry", e);
   }
 
-  // Pre-seed default accounts with precomputed security parameters
+  // Pre-seed default accounts with exact SHA-256 password hashes (no plaintext fallback)
   const seedAccounts = [
     {
       id: "usr_aditya_default",
@@ -4616,9 +4746,8 @@ function getStoredUsersAccounts() {
       role: "GUEST",
       provider: "EMAIL",
       passwordSalt: "salt_aditya_2026",
-      // Salted SHA-256 for "StynoPass@2026"
-      passwordHash: "7b47b4d32a9e525a7516df56847dbe637dbba27f3d5ee1e843cfca1751fa049b",
-      fallbackPlain: "StynoPass@2026",
+      // Salted SHA-256 hash for password "StynoPass@2026"
+      passwordHash: "b2def26502a228a9be5316360d47372c6a378ffc5058d2682eae2d456603fade",
       avatarInitials: "AY",
       kycVerified: true,
       kycDocType: "Aadhaar Card (UIDAI)",
@@ -4641,8 +4770,8 @@ function getStoredUsersAccounts() {
       role: "OWNER",
       provider: "EMAIL",
       passwordSalt: "salt_host_2026",
-      passwordHash: "f1a84f3c7e01b3d68bc817349a1f9e205166298533cfd29c3621458e0a29b4ef",
-      fallbackPlain: "HostPass@2026",
+      // Salted SHA-256 hash for password "HostPass@2026"
+      passwordHash: "f36c4375458d49b65537de5db0c22dee35494746fa4cb1d7924f05da311b783e",
       avatarInitials: "VM",
       kycVerified: true,
       kycDocType: "GST & Property Registration",
@@ -4665,8 +4794,8 @@ function getStoredUsersAccounts() {
       role: "ADMIN",
       provider: "EMAIL",
       passwordSalt: "salt_admin_2026",
-      passwordHash: "46f888795c739e830e38a20de29c488390bc7d7f7e9e3e7f4851eb3d5c5896cb",
-      fallbackPlain: "AdminPass@2026",
+      // Salted SHA-256 hash for password "AdminPass@2026"
+      passwordHash: "193a7d552e73e8d8e546807031bb389ccfd5d7fcbf62daffe53815903dd0f6a4",
       avatarInitials: "SA",
       kycVerified: true,
       kycDocType: "Official STYNO Administrator ID",
@@ -4690,24 +4819,6 @@ function getStoredUsersAccounts() {
 function saveStoredUsersAccounts(accounts) {
   localStorage.setItem(STYNO_ACCOUNTS_KEY, JSON.stringify(accounts));
 }
-
-// Dynamically align password hashes with Web Crypto upon first launch
-(async function syncSeedPasswordHashes() {
-  try {
-    const accounts = getStoredUsersAccounts();
-    let updated = false;
-    for (const acc of accounts) {
-      if (acc.fallbackPlain) {
-        acc.passwordHash = await hashAuthPassword(acc.fallbackPlain, acc.passwordSalt);
-        delete acc.fallbackPlain; // Discard plaintext password immediately
-        updated = true;
-      }
-    }
-    if (updated) {
-      saveStoredUsersAccounts(accounts);
-    }
-  } catch (e) {}
-})();
 
 function findAccountByEmail(email) {
   if (!email) return null;
@@ -4769,7 +4880,7 @@ function clearActiveSession() {
 function initAuthSession() {
   const session = getActiveSession();
 
-  if (session && session.isLoggedIn === true) {
+  if (session && session.isLoggedIn === true && session.userId && session.token) {
     let account = null;
     if (session.userId) account = findAccountById(session.userId);
     if (!account && session.email) account = findAccountByEmail(session.email);
@@ -4779,46 +4890,25 @@ function initAuthSession() {
       AppState.currentUser = {
         ...account,
         isLoggedIn: true,
-        sessionToken: session.token || generateSessionToken()
+        sessionToken: session.token
       };
       localStorage.setItem(STYNO_USER_STORAGE_KEY, JSON.stringify(AppState.currentUser));
       return AppState.currentUser;
     }
   }
 
-  // If user explicitly logged out in previous session
-  if (session && session.isLoggedIn === false) {
-    AppState.currentUser = {
-      id: "guest_session",
-      name: "Guest Explorer",
-      email: "",
-      phone: "",
-      role: "GUEST",
-      isLoggedIn: false,
-      avatarInitials: "GE",
-      brokerageSaved: 0
-    };
-    localStorage.setItem(STYNO_USER_STORAGE_KEY, JSON.stringify(AppState.currentUser));
-    return AppState.currentUser;
-  }
-
-  // First time app launch: load default user with active session
-  const accounts = getStoredUsersAccounts();
-  const defaultUser = accounts[0];
+  // Not logged in or logged out: user is strictly unauthenticated guest
   AppState.currentUser = {
-    ...defaultUser,
-    isLoggedIn: true,
-    sessionToken: generateSessionToken()
+    id: "guest",
+    name: "Guest Explorer",
+    email: "",
+    phone: "",
+    role: "GUEST",
+    isLoggedIn: false,
+    avatarInitials: "GE",
+    brokerageSaved: 0
   };
   localStorage.setItem(STYNO_USER_STORAGE_KEY, JSON.stringify(AppState.currentUser));
-  saveActiveSession({
-    userId: defaultUser.id,
-    email: defaultUser.email,
-    role: defaultUser.role,
-    isLoggedIn: true,
-    token: AppState.currentUser.sessionToken,
-    loginTimestamp: new Date().toISOString()
-  });
   return AppState.currentUser;
 }
 
@@ -4910,6 +5000,23 @@ function setButtonLoading(buttonId, isLoading, defaultHtml, loadingText) {
 function openAuthModal(mode = "PHONE_OTP", redirectAction = null) {
   AppState.pendingRedirectAction = redirectAction;
   clearAuthAlerts();
+  
+  // Clear any previously typed credentials from modal inputs
+  const sEmail = document.getElementById("signInEmail");
+  const sPass = document.getElementById("signInPassword");
+  const upName = document.getElementById("signUpFullName");
+  const upEmail = document.getElementById("signUpEmail");
+  const upPhone = document.getElementById("signUpPhone");
+  const upPass = document.getElementById("signUpPassword");
+  const upConfirm = document.getElementById("signUpConfirmPassword");
+  if (sEmail) sEmail.value = "";
+  if (sPass) sPass.value = "";
+  if (upName) upName.value = "";
+  if (upEmail) upEmail.value = "";
+  if (upPhone) upPhone.value = "";
+  if (upPass) upPass.value = "";
+  if (upConfirm) upConfirm.value = "";
+
   switchAuthMode(mode);
   openModal("authModal");
 }
@@ -5156,10 +5263,10 @@ async function handleEmailSignIn(event) {
 
   const emailInput = document.getElementById("signInEmail");
   const passInput = document.getElementById("signInPassword");
-  const email = emailInput ? emailInput.value.trim() : "";
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
   const password = passInput ? passInput.value : "";
 
-  // Validation
+  // Strict Validation
   if (!email || !email.includes("@") || !email.includes(".")) {
     showAuthError("Please enter a valid email address.");
     if (emailInput) emailInput.focus();
@@ -5177,7 +5284,7 @@ async function handleEmailSignIn(event) {
   let user = findAccountByEmail(email);
   if (!user && StynoDB && StynoDB.firestore) {
     try {
-      const qEmail = await StynoDB.firestore.collection("users").where("email", "==", email.toLowerCase()).limit(1).get();
+      const qEmail = await StynoDB.firestore.collection("users").where("email", "==", email).limit(1).get();
       if (!qEmail.empty) {
         const firestoreData = qEmail.docs[0].data();
         const fUid = qEmail.docs[0].id;
@@ -5186,7 +5293,7 @@ async function handleEmailSignIn(event) {
           uid: fUid,
           name: firestoreData.fullName || firestoreData.name || "Styno Member",
           email: email,
-          phone: firestoreData.phoneNumber || firestoreData.phone || "9876543210",
+          phone: firestoreData.phoneNumber || firestoreData.phone || "",
           role: firestoreData.role || firestoreData.userRole || "GUEST",
           provider: firestoreData.provider || "EMAIL",
           passwordHash: firestoreData.passwordHash || null,
@@ -5195,7 +5302,7 @@ async function handleEmailSignIn(event) {
           kycVerified: firestoreData.kycStatus === "VERIFIED",
           createdAt: firestoreData.createdAt || new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
-          isLoggedIn: true
+          isLoggedIn: false
         };
         upsertAccount(user);
       }
@@ -5206,27 +5313,33 @@ async function handleEmailSignIn(event) {
 
   if (!user) {
     setButtonLoading("btnEmailSignInSubmit", false);
-    showAuthError("No registered account found with this email. Please Sign Up.");
+    showAuthError("No registered account found with this email. Please check your spelling or sign up.");
     return;
   }
 
-  // Validate password hash
-  let isPasswordValid = false;
-  if (user.passwordHash && user.passwordSalt) {
-    const computedHash = await hashAuthPassword(password, user.passwordSalt);
-    isPasswordValid = (computedHash === user.passwordHash);
-  } else if (user.provider === "GOOGLE" || user.provider === "APPLE") {
+  // Provider Check
+  if (user.provider === "GOOGLE") {
     setButtonLoading("btnEmailSignInSubmit", false);
-    showAuthError(`This account was registered via ${user.provider}. Please use Continue with ${user.provider}.`);
+    showAuthError("This account was registered using Google. Please click 'Continue with Google' to sign in.");
     return;
-  } else {
-    // Fallback comparison for edge cases
-    isPasswordValid = (password === "StynoPass@2026" || password === "HostPass@2026");
+  }
+  if (user.provider === "APPLE") {
+    setButtonLoading("btnEmailSignInSubmit", false);
+    showAuthError("This account was registered using Apple. Please click 'Continue with Apple' to sign in.");
+    return;
   }
 
-  if (!isPasswordValid) {
+  if (!user.passwordHash || !user.passwordSalt) {
     setButtonLoading("btnEmailSignInSubmit", false);
-    showAuthError("Incorrect password. Please verify your credentials or use Forgot Password.");
+    showAuthError("This account does not have a password configured. Please use your original sign-in method or reset password.");
+    return;
+  }
+
+  // Cryptographic hash validation (NO bypass, NO fallback passwords)
+  const computedHash = await hashAuthPassword(password, user.passwordSalt);
+  if (computedHash !== user.passwordHash) {
+    setButtonLoading("btnEmailSignInSubmit", false);
+    showAuthError("Incorrect password. Please verify your credentials and try again.");
     return;
   }
 
@@ -5257,6 +5370,7 @@ async function handleEmailSignUp(event) {
   const phoneInput = document.getElementById("signUpPhone");
   const roleInput = document.getElementById("signUpRole");
   const passInput = document.getElementById("signUpPassword");
+  const confirmInput = document.getElementById("signUpConfirmPassword");
 
   const name = nameInput ? nameInput.value.trim() : "";
   const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
@@ -5264,16 +5378,18 @@ async function handleEmailSignUp(event) {
   const cleanPhone = rawPhone.replace(/\D/g, "").slice(-10);
   const role = roleInput ? roleInput.value : "GUEST";
   const password = passInput ? passInput.value : "";
+  const confirmPassword = confirmInput ? confirmInput.value : "";
 
   // Strict field validations
   if (!name || name.length < 2) {
-    showAuthError("Please enter your full legal name.");
+    showAuthError("Please enter your full legal name (at least 2 characters).");
     if (nameInput) nameInput.focus();
     return;
   }
 
-  if (!email || !email.includes("@") || !email.includes(".")) {
-    showAuthError("Please enter a valid email address.");
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    showAuthError("Please enter a valid email address (e.g. name@example.com).");
     if (emailInput) emailInput.focus();
     return;
   }
@@ -5290,11 +5406,28 @@ async function handleEmailSignUp(event) {
     return;
   }
 
-  // Check existing user collision
+  if (confirmInput && confirmPassword !== password) {
+    showAuthError("Passwords do not match. Please verify your password confirmation.");
+    if (confirmInput) confirmInput.focus();
+    return;
+  }
+
+  // Check collision in local accounts
   const existing = findAccountByEmail(email);
   if (existing) {
-    showAuthError("An account with this email already exists. Please Sign In instead.");
+    showAuthError("An account with this email address already exists. Please Sign In instead.");
     return;
+  }
+
+  // Check collision in Firestore
+  if (StynoDB && StynoDB.firestore) {
+    try {
+      const q = await StynoDB.firestore.collection("users").where("email", "==", email).limit(1).get();
+      if (!q.empty) {
+        showAuthError("An account with this email address already exists. Please Sign In instead.");
+        return;
+      }
+    } catch (e) {}
   }
 
   setButtonLoading("btnEmailSignUpSubmit", true, null, "Creating STYNO Account...");
@@ -5372,130 +5505,143 @@ async function handleEmailSignUp(event) {
 }
 
 /**
- * Social Authentication (Google / Apple)
- * Handles both new user onboarding and existing user recognition.
+ * Real Social Authentication (Google Identity Services OAuth)
  */
 async function handleSocialLogin(provider) {
   clearAuthAlerts();
   const btnId = provider === "Google" ? "btnGoogleLogin" : "btnAppleLogin";
-  setButtonLoading(btnId, true, null, `Connecting with ${provider}...`);
 
-  setTimeout(async () => {
-    const isGoogle = provider === "Google";
-    const socialEmail = isGoogle ? "adityayadav36978@gmail.com" : "aditya.apple@styno.in";
-    let user = findAccountByEmail(socialEmail);
-    let firestoreData = null;
+  if (provider === "Apple") {
+    showAuthError("Sign in with Apple requires Apple Developer Team Service ID and configured domains. Please sign in with Email & Password or Google.");
+    return;
+  }
 
-    if (StynoDB && StynoDB.firestore) {
-      try {
-        const qEmail = await StynoDB.firestore.collection("users").where("email", "==", socialEmail.trim().toLowerCase()).limit(1).get();
-        if (!qEmail.empty) {
-          firestoreData = qEmail.docs[0].data();
-          firestoreData.uid = qEmail.docs[0].id;
-        }
-      } catch (e) {
-        console.log("Firestore email check note:", e.message);
-      }
-    }
+  if (provider !== "Google") {
+    showAuthError(`Provider ${provider} is not supported.`);
+    return;
+  }
 
-    const isNew = !user && !firestoreData;
+  // Google OAuth via Google Identity Services
+  setButtonLoading(btnId, true, null, "Opening Google Sign-In...");
 
-    if (firestoreData) {
-      user = {
-        id: firestoreData.uid || firestoreData.id || ("usr_" + provider.toLowerCase() + "_" + Date.now()),
-        uid: firestoreData.uid || firestoreData.id,
-        name: firestoreData.fullName || firestoreData.name || (isGoogle ? "Aditya Yadav (Google)" : "Aditya Yadav (Apple)"),
-        email: socialEmail,
-        phone: firestoreData.phone || firestoreData.phoneNumber || "9876543210",
-        role: firestoreData.role || firestoreData.userRole || "GUEST",
-        provider: provider.toUpperCase(),
-        avatarInitials: "AY",
-        kycVerified: true,
-        kycDocType: `${provider} Authenticated ID`,
-        kycDocNumber: isGoogle ? "GID-92014" : "AID-58219",
-        dietType: "PURE_VEG",
-        messPreference: "ALL_MEALS",
-        foodNotes: "",
-        roomPref: "DOUBLE",
-        curfewPref: "MODERATE",
-        bio: `STYNO ${provider} Verified Member`,
-        brokerageSaved: 14500,
-        createdAt: firestoreData.createdAt || new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        isLoggedIn: true
-      };
-      upsertAccount(user);
-    } else if (!user) {
-      // New Social User Onboarding
-      user = {
-        id: "usr_" + provider.toLowerCase() + "_" + Date.now(),
-        uid: "usr_" + provider.toLowerCase() + "_" + Date.now(),
-        name: isGoogle ? "Aditya Yadav (Google)" : "Aditya Yadav (Apple)",
-        email: socialEmail,
-        phone: "9876543210",
-        role: "GUEST",
-        provider: provider.toUpperCase(),
-        avatarInitials: "AY",
-        kycVerified: true,
-        kycDocType: `${provider} Authenticated ID`,
-        kycDocNumber: isGoogle ? "GID-92014" : "AID-58219",
-        dietType: "PURE_VEG",
-        messPreference: "ALL_MEALS",
-        foodNotes: "",
-        roomPref: "DOUBLE",
-        curfewPref: "MODERATE",
-        bio: `STYNO ${provider} Verified Member`,
-        brokerageSaved: 14500,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        isLoggedIn: true,
-        isNewUser: true
-      };
-      upsertAccount(user);
-      if (StynoDB && StynoDB.firestore) {
-        StynoDB.firestore.collection("users").doc(user.id).set({
-          uid: user.id,
-          email: socialEmail,
-          fullName: user.name,
-          role: "GUEST",
-          provider: provider.toUpperCase(),
-          createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt
-        }, { merge: true });
-      }
-    } else {
-      // Existing Social User Login
-      user.lastLoginAt = new Date().toISOString();
-      user.provider = provider.toUpperCase();
-      user.isLoggedIn = true;
-      upsertAccount(user);
-    }
-
-    user.sessionToken = generateSessionToken();
-    saveStoredUser(user);
+  if (typeof window === "undefined" || !window.google || !window.google.accounts || !window.google.accounts.oauth2) {
     setButtonLoading(btnId, false);
+    showAuthError("Google Identity Services library is not loaded. Please check your internet connection.");
+    return;
+  }
 
-    if (user.role === "OWNER") {
-      AppState.userRole = "OWNER";
-      updateOwnerToggleUI();
-      renderOwnerPropertiesList();
-      renderOwnerBookingsTable();
-    } else {
-      AppState.userRole = "GUEST";
-      updateOwnerToggleUI();
-    }
+  const configuredClientId = window.STYNO_GOOGLE_CLIENT_ID || "732313288789-web-client.apps.googleusercontent.com";
 
-    const msg = isNew 
-      ? `Welcome to STYNO, ${user.name}! Your account is now active.`
-      : `Welcome back, ${user.name}! Signed in via ${provider}.`;
+  try {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: configuredClientId,
+      scope: "email profile openid",
+      callback: async (tokenResponse) => {
+        if (tokenResponse.error) {
+          setButtonLoading(btnId, false);
+          showAuthError("Google OAuth error: " + (tokenResponse.error_description || tokenResponse.error));
+          return;
+        }
 
-    showAuthSuccess(msg);
+        if (!tokenResponse.access_token) {
+          setButtonLoading(btnId, false);
+          showAuthError("Google authentication did not return a valid access token.");
+          return;
+        }
 
-    setTimeout(() => {
-      closeModal("authModal");
-      handlePostAuthRedirect(user, isNew);
-    }, 450);
-  }, 400);
+        try {
+          // Fetch verified user profile from Google UserInfo endpoint
+          const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+          });
+          if (!res.ok) {
+            throw new Error(`Google profile request failed (HTTP ${res.status})`);
+          }
+
+          const googleUser = await res.json();
+          const googleEmail = (googleUser.email || "").toLowerCase().trim();
+
+          if (!googleEmail) {
+            throw new Error("Google did not return a verified email address.");
+          }
+
+          let user = findAccountByEmail(googleEmail);
+          const isNew = !user;
+
+          if (!user) {
+            const uid = "usr_g_" + (googleUser.sub || Date.now());
+            user = {
+              id: uid,
+              uid: uid,
+              name: googleUser.name || "Google User",
+              email: googleEmail,
+              phone: "",
+              role: "GUEST",
+              provider: "GOOGLE",
+              avatarInitials: (googleUser.name || "GU").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+              photoUrl: googleUser.picture || "",
+              kycVerified: true,
+              kycDocType: "Google Authenticated ID",
+              kycDocNumber: "GID-" + (googleUser.sub ? googleUser.sub.slice(-6) : "VERIFIED"),
+              dietType: "PURE_VEG",
+              messPreference: "ALL_MEALS",
+              bio: "Verified Google Member • Styno 0% Brokerage",
+              brokerageSaved: 0,
+              createdAt: new Date().toISOString(),
+              lastLoginAt: new Date().toISOString(),
+              isLoggedIn: true
+            };
+            upsertAccount(user);
+
+            if (StynoDB && StynoDB.firestore) {
+              try {
+                StynoDB.firestore.collection("users").doc(user.id).set({
+                  uid: user.id,
+                  email: user.email,
+                  fullName: user.name,
+                  role: user.role,
+                  provider: "GOOGLE",
+                  photoUrl: user.photoUrl,
+                  createdAt: user.createdAt,
+                  lastLoginAt: user.lastLoginAt
+                }, { merge: true });
+              } catch (e) {}
+            }
+          } else {
+            user.lastLoginAt = new Date().toISOString();
+            user.isLoggedIn = true;
+            if (googleUser.picture) user.photoUrl = googleUser.picture;
+            upsertAccount(user);
+          }
+
+          user.sessionToken = generateSessionToken();
+          saveStoredUser(user);
+          setButtonLoading(btnId, false);
+          showAuthSuccess(`Google authentication verified! Welcome, ${user.name}`);
+
+          setTimeout(() => {
+            closeModal("authModal");
+            handlePostAuthRedirect(user, isNew);
+          }, 400);
+        } catch (fetchErr) {
+          setButtonLoading(btnId, false);
+          showAuthError("Google user profile verification failed: " + fetchErr.message);
+        }
+      },
+      error_callback: (err) => {
+        setButtonLoading(btnId, false);
+        const errMsg = err && err.type === "popup_closed"
+          ? "Google Sign-In popup was closed before completion."
+          : (err?.message || "Google Sign-In failed or was cancelled.");
+        showAuthError(errMsg);
+      }
+    });
+
+    tokenClient.requestAccessToken({ prompt: "select_account" });
+  } catch (err) {
+    setButtonLoading(btnId, false);
+    showAuthError("Google OAuth configuration required: " + err.message + " (Please ensure a registered Google OAuth Web Client ID with authorized JavaScript origins is configured).");
+  }
 }
 
 /**
@@ -5537,6 +5683,15 @@ function handleForgotPassword(event) {
  * Handles post-authentication routing and pending user actions
  */
 function handlePostAuthRedirect(user, isNew = false) {
+  // If user signed in via role gateway, set and persist their chosen role
+  if (AppState.targetAuthRole) {
+    user.role = AppState.targetAuthRole;
+    AppState.userRole = AppState.targetAuthRole;
+    AppState.targetAuthRole = null;
+    saveStoredUser(user);
+    updateOwnerToggleUI();
+  }
+
   // 1. Check for pending redirect action (e.g. quick booking or owner dashboard attempt)
   if (AppState.pendingRedirectAction) {
     const action = AppState.pendingRedirectAction;
@@ -5544,10 +5699,12 @@ function handlePostAuthRedirect(user, isNew = false) {
     if (action.type === "BOOK_STAY" && action.stayId) {
       openPropertyDetail(action.stayId);
       showToast("Signed in! You can now complete your booking with 0% brokerage.");
+      updateAuthUI();
       return;
     } else if (action.type === "OWNER_PORTAL") {
       switchToOwnerDashboard();
       showToast("Switched to Property Owner & Host Portal");
+      updateAuthUI();
       return;
     }
   }
@@ -5557,11 +5714,30 @@ function handlePostAuthRedirect(user, isNew = false) {
     switchToOwnerDashboard();
     showToast(isNew ? "Welcome Host! Start listing your properties with 0% brokerage." : "Welcome back to Host Portal!");
   } else {
+    switchView("HOME");
     showToast(isNew ? `Welcome to STYNO, ${user.name}!` : `Signed in as ${user.name}`);
     renderBookingsList();
     renderSavedList();
   }
+  updateAuthUI();
 }
+
+function startLoginForRole(role) {
+  AppState.targetAuthRole = role;
+  if (role === 'OWNER') {
+    switchToOwnerDashboard();
+    showToast("Switched to STYNO Host & Property Owner Portal");
+    return;
+  }
+  const user = AppState.currentUser || getStoredUser();
+  if (user && user.isLoggedIn) {
+    switchToGuestMode();
+    showToast("Browsing verified stays as User / Guest");
+    return;
+  }
+  openAuthModal('SIGN_IN', { type: 'USER_PORTAL' });
+}
+window.startLoginForRole = startLoginForRole;
 
 /**
  * Logs out the active user session cleanly without deleting user accounts or data.
@@ -5581,12 +5757,16 @@ function logoutUser() {
   };
 
   localStorage.setItem(STYNO_USER_STORAGE_KEY, JSON.stringify(AppState.currentUser));
+  sessionStorage.clear();
+  AppState.userRole = "GUEST";
+  updateOwnerToggleUI();
   updateAuthUI();
   
   // Re-render protected views into their unauthenticated/guest state
   renderBookingsList();
   renderOwnerPropertiesList();
   renderOwnerBookingsTable();
+  renderSavedList();
   updateHeaderBadges();
 
   showToast("You have been signed out from STYNO");
@@ -5612,6 +5792,28 @@ function updateAuthUI() {
       adminBtn.style.display = "inline-flex";
     } else {
       adminBtn.style.display = "none";
+    }
+  }
+
+  // Update Home Role Gateway section (USER LOGIN vs OWNER LOGIN)
+  const gatewayGrid = document.getElementById("homeRoleGatewayGrid");
+  const sessionBanner = document.getElementById("homeActiveSessionBanner");
+  const sessionName = document.getElementById("homeActiveSessionName");
+  const sessionTag = document.getElementById("homeActiveSessionTag");
+  const sessionIcon = document.getElementById("homeActiveSessionIcon");
+  const btnOwnerDash = document.getElementById("btnHomeGoToOwnerDashboard");
+
+  if (gatewayGrid && sessionBanner) {
+    if (user && user.isLoggedIn) {
+      gatewayGrid.style.display = "none";
+      sessionBanner.style.display = "flex";
+      if (sessionName) sessionName.textContent = `${user.name} (${user.email || user.phone || 'Active'})`;
+      if (sessionTag) sessionTag.textContent = user.role === 'OWNER' ? 'OWNER SECTION • ACTIVE SESSION' : 'USER SECTION • ACTIVE SESSION';
+      if (sessionIcon) sessionIcon.textContent = user.role === 'OWNER' ? 'apartment' : 'check_circle';
+      if (btnOwnerDash) btnOwnerDash.style.display = user.role === 'OWNER' ? 'inline-flex' : 'none';
+    } else {
+      gatewayGrid.style.display = "grid";
+      sessionBanner.style.display = "none";
     }
   }
 
@@ -6156,10 +6358,32 @@ function selectRoleFromWelcome(role) {
     switchToOwnerDashboard();
     showToast("Switched to STYNO Host & Property Owner Portal");
   } else {
-    switchView("HOME");
+    switchToGuestMode();
     showToast("Browsing verified stays as User / Guest");
   }
 }
+window.selectRoleFromWelcome = selectRoleFromWelcome;
+
+function previewFirstOwnerProperty() {
+  const hostProps = AppState.properties.filter(p => p.isOwnerListing) || AppState.properties;
+  if (hostProps.length > 0) {
+    openPropertyDetail(hostProps[0].id);
+    showToast(`Opening customer preview for ${hostProps[0].name}`);
+  } else if (AppState.properties.length > 0) {
+    openPropertyDetail(AppState.properties[0].id);
+  } else {
+    showToast("Add a stay first to preview resident view");
+  }
+}
+window.previewFirstOwnerProperty = previewFirstOwnerProperty;
+
+function scrollToFormSection(sectionId) {
+  setTimeout(() => {
+    const el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 300);
+}
+window.scrollToFormSection = scrollToFormSection;
 
 // ==========================================================================
 // 30. 6-STEP PERSONALIZED STAY DISCOVERY (1:1 with PersonalizedDiscoveryScreen.kt)
@@ -7269,5 +7493,698 @@ document.addEventListener("DOMContentLoaded", () => {
   renderRecentLocations();
   updateFilterBadgeCounts();
 });
+
+// =============================================================================
+// STYNO CONVERSATIONAL AI ASSISTANT (WEB IMPLEMENTATION - 1:1 WITH ANDROID)
+// =============================================================================
+
+let stynoAiRole = 'RESIDENT';
+let stynoAiStep = 1;
+let stynoAiState = {
+  role: 'RESIDENT',
+  step: 1,
+  location: null,
+  targetAudience: null,
+  purpose: null,
+  budgetMax: null,
+  budgetPeriod: 'MONTHLY',
+  amenities: []
+};
+let stynoAiMessages = [];
+let stynoSpeechRecognizer = null;
+let isStynoListening = false;
+let isStynoSpeaking = false;
+let isStynoAutoSpeechEnabled = true;
+
+function speakStynoAiResponse(text) {
+  if (!('speechSynthesis' in window) || !isStynoAutoSpeechEnabled || !text) return;
+  try {
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_~`[\](){}]/g, ' ').replace(/\p{Extended_Pictographic}/ug, '').trim();
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.pitch = 1.20; // Cute, soft, warm pitch
+    utterance.rate = 0.96;  // Gentle, conversational speed
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+      const softVoice = voices.find(v => {
+        const n = v.name.toLowerCase();
+        return n.includes('female') || n.includes('soft') || n.includes('natural') ||
+               n.includes('zira') || n.includes('samantha') || n.includes('heera') ||
+               n.includes('veena') || n.includes('kavya') || n.includes('en-in') || n.includes('hi-in');
+      }) || voices.find(v => v.lang.startsWith('en') || v.lang.startsWith('hi'));
+      if (softVoice) utterance.voice = softVoice;
+    }
+
+    utterance.onstart = () => {
+      isStynoSpeaking = true;
+      updateStynoSpeakingUI(true);
+    };
+    utterance.onend = () => {
+      isStynoSpeaking = false;
+      updateStynoSpeakingUI(false);
+    };
+    utterance.onerror = () => {
+      isStynoSpeaking = false;
+      updateStynoSpeakingUI(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn("Speech synthesis notice:", err);
+  }
+}
+window.speakStynoAiResponse = speakStynoAiResponse;
+
+function stopStynoAiSpeech() {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  isStynoSpeaking = false;
+  updateStynoSpeakingUI(false);
+}
+window.stopStynoAiSpeech = stopStynoAiSpeech;
+
+function toggleStynoAutoSpeech() {
+  isStynoAutoSpeechEnabled = !isStynoAutoSpeechEnabled;
+  if (!isStynoAutoSpeechEnabled) {
+    stopStynoAiSpeech();
+  }
+  const btn = document.getElementById('btnStynoAiVoiceToggle');
+  if (btn) {
+    btn.innerHTML = isStynoAutoSpeechEnabled 
+      ? '<span class="material-symbols-rounded">volume_up</span>'
+      : '<span class="material-symbols-rounded">volume_off</span>';
+    btn.style.color = isStynoAutoSpeechEnabled ? '#2563EB' : '#94A3B8';
+  }
+  showToast(isStynoAutoSpeechEnabled ? "Cute natural AI voice enabled" : "AI voice speech muted");
+}
+window.toggleStynoAutoSpeech = toggleStynoAutoSpeech;
+
+function updateStynoSpeakingUI(speaking) {
+  const speakingBanner = document.getElementById('stynoAiSpeakingBanner');
+  if (speakingBanner) {
+    speakingBanner.style.display = speaking ? 'flex' : 'none';
+  }
+}
+
+function openStynoAiModal(role = 'RESIDENT', initialPrompt = null) {
+  stynoAiRole = role;
+  const modal = document.getElementById('stynoAiModal');
+  const roleBadge = document.getElementById('stynoAiRoleBadge');
+  if (roleBadge) {
+    roleBadge.textContent = role === 'RESIDENT' ? 'Resident Guide' : 'Host Partner';
+    roleBadge.style.color = role === 'RESIDENT' ? '#2563EB' : '#059669';
+    roleBadge.style.background = role === 'RESIDENT' ? 'rgba(37,99,235,0.12)' : 'rgba(16,185,129,0.12)';
+  }
+
+  if (stynoAiMessages.length === 0) {
+    resetStynoAiConversation(role);
+  } else {
+    renderStynoAiMessages();
+  }
+
+  if (modal) modal.classList.add('active');
+
+  if (initialPrompt) {
+    setTimeout(() => {
+      sendStynoAiQuery(initialPrompt);
+    }, 200);
+  }
+}
+window.openStynoAiModal = openStynoAiModal;
+
+function resetStynoAiConversation(role = null) {
+  if (role) stynoAiRole = role;
+  stynoAiStep = 1;
+  stynoAiState = {
+    role: stynoAiRole,
+    step: 1,
+    location: null,
+    targetAudience: null,
+    purpose: null,
+    budgetMax: null,
+    budgetPeriod: 'MONTHLY',
+    amenities: []
+  };
+
+  const initialText = stynoAiRole === 'RESIDENT'
+    ? "Namaste! Main Styno AI Assistant hoon. Aapko kis location par room chahiye?"
+    : "Namaste Host! Main aapko property listing, room pricing, photo upload aur verification mein guide karunga. Aap kya karna chahte hain?";
+
+  const initialReplies = stynoAiRole === 'RESIDENT'
+    ? ["Bagaha", "Delhi NCR", "Noida", "Patna", "Kota", "Bangalore"]
+    : ["List New Property", "Upload Room Photos", "Set Room Pricing & Deposit", "Setup UPI / Bank Payment", "Open My Properties"];
+
+  stynoAiMessages = [{
+    id: 'msg-' + Date.now(),
+    text: initialText,
+    isUser: false,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    quickReplies: initialReplies,
+    matchedProperties: []
+  }];
+
+  renderStynoAiMessages();
+}
+window.resetStynoAiConversation = resetStynoAiConversation;
+
+function submitStynoAiInput() {
+  const input = document.getElementById('stynoAiTextInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  sendStynoAiQuery(text);
+}
+window.submitStynoAiInput = submitStynoAiInput;
+
+function sendStynoAiQuery(text) {
+  const userMsg = {
+    id: 'usr-' + Date.now(),
+    text: text,
+    isUser: true,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    quickReplies: [],
+    matchedProperties: []
+  };
+  stynoAiMessages.push(userMsg);
+  renderStynoAiMessages();
+
+  setTimeout(() => {
+    processStynoAiInput(text);
+  }, 250);
+}
+function postStynoAiBotMessage(botMsg) {
+  stynoAiMessages.push(botMsg);
+  renderStynoAiMessages();
+  speakStynoAiResponse(botMsg.text);
+}
+window.postStynoAiBotMessage = postStynoAiBotMessage;
+
+function processStynoAiInput(rawInput) {
+  const lower = rawInput.toLowerCase();
+  const allProps = (typeof StynoDB !== 'undefined' && StynoDB.getProperties) ? StynoDB.getProperties() : [];
+
+  const postBotMessage = postStynoAiBotMessage;
+
+  // Direct Shortcuts
+  if (lower.includes('booking') || lower.includes('meri booking')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Aapki bookings open ki ja rahi hain. Yahan aap apne active aur upcoming stays, digital passcodes aur check-in details dekh sakte hain.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Find Another Room", "Back to Home"],
+      action: { type: 'NAVIGATE', title: 'Open My Bookings', payload: 'BOOKINGS' }
+    });
+    return;
+  }
+
+  if (lower.includes('property list') || lower.includes('list karni') || lower.includes('add property')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Host portal open kiya ja raha hai. Aap apne verified Hostel, PG, Flat ya Room ko direct 0% brokerage ke saath publish kar sakte hain.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open Listing Wizard", "Host Dashboard"],
+      action: { type: 'NAVIGATE', title: 'List Property Now', payload: 'ADD_PROPERTY' }
+    });
+    return;
+  }
+
+  // Direct Q&A: What is Styno / Zero Brokerage
+  if (lower.includes('what is styno') || lower.includes('styno kya hai') || lower.includes('about styno') || lower.includes('app kya hai') || lower.includes('brokerage')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "STYNO ek 100% Zero Brokerage accommodation network hai. Yahan aap verified Hostels, PGs, Hotels, Flats, Single Rooms aur hourly Quick Stays direct owners se bina brokerage ke book kar sakte hain.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Find Hostels & PGs", "View Quick Stays", "Girls Safety Info"],
+      matchedProperties: []
+    });
+    return;
+  }
+
+  // Direct Q&A: Security Deposit & Refund Policy
+  if (lower.includes('deposit') || lower.includes('security deposit') || lower.includes('refund') || lower.includes('paisa wapas')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "STYNO par security deposit 100% transparent aur secure hota hai. Checkout hone ke 24 ghante ke andar bina kisi unnecessary deduction ke aapke UPI ya bank account mein return hota hai.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["0% Brokerage Advantage", "View Bookings", "Safety Verification"],
+      matchedProperties: []
+    });
+    return;
+  }
+
+  // Direct Q&A: Property Listing 10 Steps
+  if (lower.includes('how to list') || lower.includes('steps to list') || lower.includes('list kaise') || lower.includes('phase 1') || lower.includes('10 step')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Property list karne ke 10 structured steps hain: 1. Property Type, 2. PIN Code Location, 3. Media & Photos, 4. Room Types & Sharing, 5. Amenities, 6. Food/Canteen Menu, 7. Quick Stay transit slots, 8. Customer Preview, 9. Publish & Drafts, 10. Direct UPI Payout Setup.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open Listing Wizard", "Owner Dashboard", "Setup UPI Payout"],
+      action: { type: 'NAVIGATE', title: 'Open Listing Wizard', payload: 'ADD_PROPERTY' }
+    });
+    return;
+  }
+
+  // Direct Q&A: Cancellation Policy
+  if (lower.includes('cancel') || lower.includes('cancellation')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "STYNO par flexible cancellation policy milti hai. Check-in se 24 ghante pehle cancel karne par poora refund direct aapke payment mode par milta hai, bina kisi hidden fee ke.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open My Bookings", "Contact 24/7 Helpline"],
+      action: { type: 'NAVIGATE', title: 'View My Bookings', payload: 'BOOKINGS' }
+    });
+    return;
+  }
+
+  // Direct Q&A: Wi-Fi & Study Amenities
+  if (lower.includes('wifi') || lower.includes('wi-fi') || lower.includes('internet') || lower.includes('speed')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Sabhi verified student aur working hostels/PGs mein high-speed fiber Wi-Fi, power backup, study desks aur silent study zones available hain. Har listing card par Wi-Fi badge verify karein.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Find Study Stays", "Verified Hostels"],
+      matchedProperties: allProps.slice(0, 3)
+    });
+    return;
+  }
+
+  // Direct Q&A: Digital Passcode & Check-in
+  if (lower.includes('passcode') || lower.includes('check in kaise') || lower.includes('digital pass') || lower.includes('keyless')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Har confirmed booking par aapko app mein ek secure Digital Passcode milta hai. Property par biometric punch ya passcode dikha kar instant check-in karein bina kisi manual paperwork ke.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["View My Bookings", "Explore Verified Stays"],
+      matchedProperties: []
+    });
+    return;
+  }
+
+  // Direct Q&A: Girls Safety
+  if (lower.includes('girl safety') || lower.includes('girls safety') || lower.includes('mahila suraksha') || lower.includes('female warden')) {
+    const girlsStays = allProps.filter(p => p.genderSuitability === 'GIRLS_ONLY' || (p.name && p.name.toLowerCase().includes('girls'))).slice(0, 3);
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "STYNO Girls Hostels & PGs mein 24/7 dedicated female wardens, biometric access control, CCTV monitoring aur strict screening hoti hai. Yahan verified stays check karein:",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Noida Girls Stays", "Delhi Girls PG", "Safety Center"],
+      matchedProperties: girlsStays
+    });
+    return;
+  }
+
+  // Direct Q&A: Food & Meals
+  if (lower.includes('khana') || lower.includes('food') || lower.includes('mess') || lower.includes('canteen') || lower.includes('meals')) {
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Hostels aur PGs mein daily 3-time fresh meals (Breakfast, Lunch, Dinner) included hote hain. Property page par weekly live menu aur actual canteen photos available hain.",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Stays with Food Included", "Find Rooms"],
+      matchedProperties: []
+    });
+    return;
+  }
+
+  // Direct Q&A: Quick Stay
+  if (lower.includes('quick stay') || lower.includes('hourly') || lower.includes('transit') || lower.includes('layover')) {
+    const quickStays = allProps.filter(p => p.durationType === 'HOURLY').slice(0, 3);
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Quick Stay transit rooms aap 3h, 6h, 12h ya 24h ke flexible slots par book kar sakte hain. Short layovers aur exams ke liye best solution!",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Book 3 Hours Pod", "Book 6 Hours Stay"],
+      matchedProperties: quickStays.length > 0 ? quickStays : allProps.slice(0, 2)
+    });
+    return;
+  }
+
+  // Direct search matching if city / budget mentioned
+  const knownCities = ["bagaha", "delhi", "noida", "patna", "kota", "bengaluru", "bangalore", "pune", "gurugram", "gurgaon", "mumbai"];
+  const matchedCity = knownCities.find(c => lower.includes(c));
+  if (matchedCity || lower.includes('5000') || lower.includes('8000') || lower.includes('hostel') || lower.includes('pg')) {
+    let matched = allProps;
+    if (matchedCity) {
+      const cityMatches = matched.filter(p => (p.city && p.city.toLowerCase().includes(matchedCity)) || (p.address && p.address.toLowerCase().includes(matchedCity)));
+      if (cityMatches.length > 0) matched = cityMatches;
+    }
+    const capCity = matchedCity ? matchedCity.charAt(0).toUpperCase() + matchedCity.slice(1) : "Aapke liye";
+    postBotMessage({
+      id: 'bot-' + Date.now(),
+      text: `${capCity} mein ${matched.length} verified stays available hain. Instant booking aur 0% brokerage ke sath check karein:`,
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Lowest Price", "Girls Safety Verified", "Change Location"],
+      matchedProperties: matched.slice(0, 4)
+    });
+    return;
+  }
+
+  if (stynoAiRole === 'OWNER') {
+    processStynoAiOwnerFlow(rawInput, lower, allProps);
+    return;
+  }
+
+  // Resident Multi-Turn Flow
+  switch (stynoAiState.step) {
+    case 1:
+      stynoAiState.location = rawInput.replace('📍', '').trim();
+      stynoAiState.step = 2;
+      postBotMessage({
+        id: 'bot-' + Date.now(),
+        text: `Theek hai, ${stynoAiState.location} mein search karenge! Room kiske liye chahiye?`,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: ["Boys 👦", "Girls 👧", "Family 👨‍👩‍👧‍👦", "Student 🎓", "Working Professional 💼"],
+        matchedProperties: []
+      });
+      break;
+
+    case 2:
+      stynoAiState.targetAudience = rawInput;
+      stynoAiState.step = 3;
+      postBotMessage({
+        id: 'bot-' + Date.now(),
+        text: "Stay ka main purpose kya hai?",
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: ["College / Coaching 📚", "Job / Office 💼", "Exam / Interview 🎯", "Medical / Treatment 🏥", "Transit / Quick Travel ⚡"],
+        matchedProperties: []
+      });
+      break;
+
+    case 3:
+      stynoAiState.purpose = rawInput;
+      stynoAiState.step = 4;
+      postBotMessage({
+        id: 'bot-' + Date.now(),
+        text: "Aapka budget kitna hai? (Monthly, Daily ya Hourly transit)",
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: ["Under ₹5,000/mo", "₹5,000 - ₹8,000/mo", "₹8,000 - ₹12,000/mo", "Daily / Per Night 🏨", "Hourly Transit Pod ⚡"],
+        matchedProperties: []
+      });
+      break;
+
+    case 4:
+      let maxBudget = null;
+      if (lower.includes('5,000') || lower.includes('5000')) maxBudget = 5000;
+      else if (lower.includes('8,000') || lower.includes('8000')) maxBudget = 8000;
+      else if (lower.includes('12,000') || lower.includes('12000')) maxBudget = 12000;
+      stynoAiState.budgetMax = maxBudget;
+      stynoAiState.step = 5;
+
+      postBotMessage({
+        id: 'bot-' + Date.now(),
+        text: "Kaun si facilities aapke liye sabse zaroori hain?",
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: ["Food & Mess Included 🍲", "AC Room ❄️", "Attached Washroom 🚿", "High-Speed Wi-Fi 📶", "No Sharing / Private Room 🛏️", "Show Stays ✨"],
+        matchedProperties: []
+      });
+      break;
+
+    case 5:
+    default:
+      stynoAiState.step = 6;
+      let matched = allProps;
+
+      if (stynoAiState.location) {
+        const loc = stynoAiState.location.toLowerCase();
+        const cityMatch = matched.filter(p => (p.city && p.city.toLowerCase().includes(loc)) || (p.address && p.address.toLowerCase().includes(loc)));
+        if (cityMatch.length > 0) matched = cityMatch;
+      }
+
+      if (stynoAiState.targetAudience) {
+        const aud = stynoAiState.targetAudience.toLowerCase();
+        if (aud.includes('girl') || aud.includes('women')) {
+          matched = matched.filter(p => p.genderSuitability === 'GIRLS_ONLY' || (p.title && p.title.toLowerCase().includes('girls')));
+        } else if (aud.includes('boy')) {
+          matched = matched.filter(p => p.genderSuitability === 'BOYS_ONLY' || (p.title && p.title.toLowerCase().includes('boys')));
+        }
+      }
+
+      if (stynoAiState.budgetMax) {
+        matched = matched.filter(p => (p.startingPrice || p.price || 5000) <= stynoAiState.budgetMax * 1.25);
+      }
+
+      if (matched.length === 0) matched = allProps.slice(0, 4);
+
+      postBotMessage({
+        id: 'bot-' + Date.now(),
+        text: `🎉 Mujhe aapke requirements ke mutabiq ${matched.length} verified stays mile hain! Real photos, prices aur amenities check karein:`,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        quickReplies: ["Filter Lower Price", "Girls Safety Verified", "Change Location", "Reset Search"],
+        matchedProperties: matched.slice(0, 5)
+      });
+      break;
+  }
+}
+
+function processStynoAiOwnerFlow(rawInput, lower, allProps) {
+  if (lower.includes('photo') || lower.includes('upload') || lower.includes('video')) {
+    postStynoAiBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Room photos aur videos upload karne ke liye Listing Wizard ka Step 2 (Media & Details) open karein:",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open Listing Wizard", "Host Dashboard"],
+      action: { type: 'NAVIGATE', title: 'Open Photo Upload', payload: 'ADD_PROPERTY' }
+    });
+  } else if (lower.includes('price') || lower.includes('rent') || lower.includes('deposit')) {
+    postStynoAiBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Room pricing, sharing rates aur security deposit set karne ke liye Step 4 (Pricing) par chalein:",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open Pricing Step", "Quick Stay Slots"],
+      action: { type: 'NAVIGATE', title: 'Set Pricing', payload: 'ADD_PROPERTY' }
+    });
+  } else if (lower.includes('payment') || lower.includes('upi') || lower.includes('bank')) {
+    postStynoAiBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Apna Host Payout UPI ID aur Bank Account details setup karne ke liye Payment Tab par chalein:",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["Open Payment Tab", "Host Dashboard"],
+      action: { type: 'NAVIGATE', title: 'Setup Payment', payload: 'OWNER_PAYMENT' }
+    });
+  } else {
+    postStynoAiBotMessage({
+      id: 'bot-' + Date.now(),
+      text: "Host Assistant aapko property create karne, photos upload karne, room price set karne ya payouts link karne mein guide karega:",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      quickReplies: ["List New Property", "Upload Photos", "Set Room Pricing", "Setup Payment"],
+      action: { type: 'NAVIGATE', title: 'List Property Now', payload: 'ADD_PROPERTY' }
+    });
+  }
+}
+
+function renderStynoAiMessages() {
+  const container = document.getElementById('stynoAiMessagesContainer');
+  if (!container) return;
+
+  container.innerHTML = stynoAiMessages.map(msg => {
+    if (msg.isUser) {
+      return `
+        <div style="align-self: flex-end; max-width: 80%; display: flex; flex-direction: column; align-items: flex-end;">
+          <div style="background: #2563EB; color: white; padding: 0.65rem 1rem; border-radius: 16px 16px 2px 16px; font-size: 0.9rem; line-height: 1.4;">
+            ${escapeHtml(msg.text)}
+          </div>
+          <span style="font-size: 0.7rem; color: #94A3B8; margin-top: 3px;">${msg.timestamp}</span>
+        </div>
+      `;
+    } else {
+      let cardsHtml = '';
+      if (msg.matchedProperties && msg.matchedProperties.length > 0) {
+        cardsHtml = `
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; width: 100%;">
+            ${msg.matchedProperties.map(p => `
+              <div onclick="selectStynoAiProperty('${p.id}')" style="background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 0.6rem; display: flex; gap: 0.65rem; align-items: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <img src="${(p.images && p.images[0]) || (p.photos && p.photos[0]) || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=200&q=80'}" alt="${escapeHtml(p.title || p.name)}" style="width: 68px; height: 68px; border-radius: 8px; object-fit: cover; flex-shrink: 0;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="font-size: 0.85rem; color: #0F2B5C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.title || p.name)}</strong>
+                    <span style="color: #F59E0B; font-size: 0.75rem; font-weight: 700;">★ ${p.rating || '4.8'}</span>
+                  </div>
+                  <div style="font-size: 0.75rem; color: #64748B;">${escapeHtml(p.area || p.city || 'Verified Location')}</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <span style="color: #2563EB; font-weight: 800; font-size: 0.85rem;">₹${(p.startingPrice || p.price || 5000).toLocaleString('en-IN')}/mo</span>
+                    <button type="button" class="btn btn-sm btn-primary" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 6px;">View & Book</button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      let quickRepliesHtml = '';
+      if (msg.quickReplies && msg.quickReplies.length > 0) {
+        quickRepliesHtml = `
+          <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem;">
+            ${msg.quickReplies.map(r => `
+              <button type="button" onclick="sendStynoAiQuery('${escapeHtml(r)}')" style="background: white; border: 1px solid rgba(37,99,235,0.3); color: #2563EB; border-radius: 18px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease;">
+                ${escapeHtml(r)}
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      let actionBtnHtml = '';
+      if (msg.action) {
+        actionBtnHtml = `
+          <div style="margin-top: 0.6rem;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="handleStynoAiAction('${msg.action.type}', '${msg.action.payload}')" style="border-radius: 8px; font-weight: 700;">
+              ${escapeHtml(msg.action.title)}
+            </button>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="align-self: flex-start; max-width: 90%; display: flex; gap: 0.6rem;">
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(37,99,235,0.12); display: flex; align-items: center; justify-content: center; color: #2563EB; flex-shrink: 0; margin-top: 4px;">
+            <span class="material-symbols-rounded" style="font-size: 16px;">auto_awesome</span>
+          </div>
+          <div style="flex: 1;">
+            <div style="background: #F1F5F9; color: #1E293B; padding: 0.75rem 1rem; border-radius: 2px 16px 16px 16px; font-size: 0.9rem; line-height: 1.45; border: 1px solid #E2E8F0;">
+              ${escapeHtml(msg.text)}
+              ${actionBtnHtml}
+            </div>
+            ${cardsHtml}
+            ${quickRepliesHtml}
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 3px;">
+              <span style="font-size: 0.7rem; color: #94A3B8;">${msg.timestamp}</span>
+              <button type="button" onclick="speakStynoAiResponse('${escapeHtml(msg.text).replace(/'/g, "\\'")}')" title="Play Voice" style="background: none; border: none; cursor: pointer; color: #2563EB; padding: 2px 4px; display: flex; align-items: center; gap: 2px; font-size: 0.75rem;">
+                <span class="material-symbols-rounded" style="font-size: 14px;">volume_up</span> Play
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function selectStynoAiProperty(propId) {
+  closeModal('stynoAiModal');
+  if (typeof openPropertyDetailModal === 'function') {
+    openPropertyDetailModal(propId);
+  } else if (typeof viewPropertyDetails === 'function') {
+    viewPropertyDetails(propId);
+  }
+}
+window.selectStynoAiProperty = selectStynoAiProperty;
+
+function handleStynoAiAction(type, payload) {
+  closeModal('stynoAiModal');
+  if (payload === 'BOOKINGS') {
+    if (typeof switchView === 'function') switchView('BOOKINGS');
+  } else if (payload === 'ADD_PROPERTY') {
+    if (typeof openAddPropertyModal === 'function') openAddPropertyModal();
+  } else if (payload === 'OWNER_PAYMENT') {
+    if (typeof selectOwnerSubTab === 'function') selectOwnerSubTab('PAYMENT');
+  }
+}
+window.handleStynoAiAction = handleStynoAiAction;
+
+function toggleStynoVoiceRecording() {
+  if (isStynoListening) {
+    stopStynoVoiceRecording();
+  } else {
+    startStynoVoiceRecording();
+  }
+}
+window.toggleStynoVoiceRecording = toggleStynoVoiceRecording;
+
+function startStynoVoiceRecording() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("Voice recognition is supported in modern browsers (Chrome, Edge, Safari)");
+    return;
+  }
+
+  try {
+    stynoSpeechRecognizer = new SpeechRecognition();
+    stynoSpeechRecognizer.lang = 'hi-IN'; // Supports Hindi + Indian English
+    stynoSpeechRecognizer.interimResults = false;
+    stynoSpeechRecognizer.maxAlternatives = 1;
+
+    stynoSpeechRecognizer.onstart = () => {
+      isStynoListening = true;
+      const banner = document.getElementById('stynoAiVoiceBanner');
+      if (banner) banner.style.display = 'flex';
+      const micBtn = document.getElementById('btnStynoVoiceInput');
+      if (micBtn) {
+        micBtn.style.color = '#EF4444';
+        micBtn.style.borderColor = '#EF4444';
+      }
+    };
+
+    let lastVoiceTranscriptTimestamp = 0;
+    stynoSpeechRecognizer.onresult = (event) => {
+      const now = Date.now();
+      if (now - lastVoiceTranscriptTimestamp < 900) return;
+      const transcript = (event.results && event.results[0] && event.results[0][0]) ? event.results[0][0].transcript : '';
+      stopStynoVoiceRecording();
+      if (transcript && transcript.trim()) {
+        lastVoiceTranscriptTimestamp = now;
+        sendStynoAiQuery(transcript.trim());
+      }
+    };
+
+    stynoSpeechRecognizer.onerror = (event) => {
+      stopStynoVoiceRecording();
+      console.warn("Speech recognition notice:", event.error);
+    };
+
+    stynoSpeechRecognizer.onend = () => {
+      stopStynoVoiceRecording();
+    };
+
+    stynoSpeechRecognizer.start();
+  } catch (err) {
+    console.warn("Could not start voice recognition:", err);
+    stopStynoVoiceRecording();
+  }
+}
+
+function stopStynoVoiceRecording() {
+  isStynoListening = false;
+  if (stynoSpeechRecognizer) {
+    try { stynoSpeechRecognizer.stop(); } catch(e) {}
+    stynoSpeechRecognizer = null;
+  }
+  const banner = document.getElementById('stynoAiVoiceBanner');
+  if (banner) banner.style.display = 'none';
+  const micBtn = document.getElementById('btnStynoVoiceInput');
+  if (micBtn) {
+    micBtn.style.color = '#2563EB';
+    micBtn.style.borderColor = '#CBD5E1';
+  }
+}
+window.stopStynoVoiceRecording = stopStynoVoiceRecording;
+
 
 

@@ -6,4 +6,3 @@
         android:drawable="@drawable/styno_logo"
         android:gravity="center" />
 </layer-list>
-

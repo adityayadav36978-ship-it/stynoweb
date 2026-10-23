@@ -6,8 +6,11 @@
   <title>STYNO - Find Your Stay &bull; 0% Brokerage | Hotels, Hostels, PGs, Rooms & Flats</title>
   <meta name="description" content="STYNO is India's 0% brokerage accommodation network. Discover verified Hotels, Hostels, PGs, Independent Rooms, Flats, and Quick Stay transit pods with direct owner booking.">
   
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230F2B5C'/><path d='M16 6L6 14V26H26V14L16 6Z' fill='%232563EB'/><path d='M13 18C13 16.34 14.34 15 16 15C17.66 15 19 16.34 19 18V26H13V18Z' fill='white'/><circle cx='16' cy='11' r='2.5' fill='%23F59E0B'/></svg>">
+  <!-- Real Original STYNO Logo Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/styno_logo.jpg">
+  <link rel="apple-touch-icon" href="assets/styno_logo.jpg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563EB">
   
   <!-- Google Fonts: Plus Jakarta Sans (Exact match to Android App Typography) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,6 +29,7 @@
   
   <!-- Firebase App & Firestore SDKs for live real-time sync with mobile app -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Google Identity Services (GIS) for Real Google Login -->
@@ -118,7 +122,7 @@
         </button>
 
         <!-- Role Switcher (Owner Dashboard vs Guest Mode) -->
-        <button class="btn btn-owner-toggle" id="ownerToggleBtn" onclick="openWelcomeEntryModal()">
+        <button class="btn btn-owner-toggle" id="ownerToggleBtn" onclick="toggleUserRole()" title="Toggle Owner Dashboard / Guest View">
           <span class="material-symbols-rounded" id="ownerToggleIcon">switch_account</span>
           <span id="ownerToggleText">Host / Guest Portal</span>
           <span class="role-pill-badge" id="ownerRoleBadge">0% Fee</span>
@@ -162,6 +166,113 @@
     <!-- ----------------------------------------------------------------------- -->
     <section class="app-view active" id="viewHome">
       
+      <!-- Styno Role Gateway: USER LOGIN and OWNER LOGIN Clearly Separated -->
+      <section class="styno-role-gateway-section" id="homeRoleGatewaySection">
+        <div class="container">
+          <div class="role-gateway-header">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <img src="assets/styno_logo.jpg" alt="STYNO Logo" style="height: 48px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <div style="text-align: left;">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span style="font-size: 1.4rem; font-weight: 900; color: #0F2B5C; letter-spacing: 0.05em;">STYNO</span>
+                  <span class="badge badge-emerald" style="font-size: 0.65rem; font-weight: 800;">STAYS</span>
+                </div>
+                <p style="margin: 0; font-size: 0.85rem; font-weight: 700; color: #64748B;">Find Your Stay &bull; 0% Brokerage</p>
+              </div>
+            </div>
+
+            <!-- Hero Stay Banner Image -->
+            <div style="position: relative; max-width: 760px; height: 110px; margin: 0 auto 1rem; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(15,43,92,0.1);">
+              <img src="assets/img_hostel_modern.jpg" alt="Verified Stays" style="width: 100%; height: 100%; object-fit: cover;">
+              <div style="position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, rgba(15,43,92,0.85) 100%); display: flex; align-items: flex-end; padding: 10px 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-emerald" style="font-size: 0.7rem; font-weight: 800;">0% BROKERAGE</span>
+                  <span style="color: white; font-size: 0.85rem; font-weight: 700;">Hotels &bull; Hostels &bull; PGs &bull; Rooms &bull; Flats</span>
+                </div>
+              </div>
+            </div>
+
+            <h2 class="gateway-title" style="margin-top: 0.25rem;">Welcome to STYNO</h2>
+            <p class="gateway-subtitle">Choose your section below. Both portals use verified accounts with complete data isolation.</p>
+          </div>
+          
+          <div class="role-gateway-grid" id="homeRoleGatewayGrid">
+            <!-- 1. USER SECTION & USER LOGIN -->
+            <div class="role-gateway-card role-card-user" id="roleCardUser" onclick="startLoginForRole('GUEST')">
+              <div class="role-card-badge-row">
+                <span class="role-section-pill pill-user">USER SECTION</span>
+                <span class="role-perk-pill">0% Brokerage</span>
+              </div>
+              <div class="role-card-body">
+                <div class="role-card-square-img-wrap">
+                  <img src="assets/img_pg_room.jpg" alt="User Section" class="role-card-square-img">
+                </div>
+                <div class="role-card-text">
+                  <h3 class="role-card-title">Guest &amp; Stay Seeker</h3>
+                  <p class="role-card-subtitle" style="font-size: 0.85rem; font-weight: 700; color: #1E293B; margin: 0 0 0.25rem;">Find &amp; Book Verified Stays</p>
+                  <p class="role-card-desc">Browse Hostels, Hotels, PGs, Rooms &amp; Flats with 0% broker fees and instant booking.</p>
+                </div>
+              </div>
+              <div class="role-card-perks">
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> Hostel, Hotel, PG, Flat, Room &amp; Quick Stay</div>
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> Step-by-step personalized requirements match</div>
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> Direct booking with verified hosts</div>
+              </div>
+              <div class="role-card-action">
+                <button type="button" class="btn btn-primary btn-role-login" id="btnUserLoginGateway" onclick="event.stopPropagation(); startLoginForRole('GUEST')">
+                  <span>Continue as User</span>
+                  <span class="material-symbols-rounded">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. OWNER SECTION & OWNER LOGIN -->
+            <div class="role-gateway-card role-card-owner" id="roleCardOwner" onclick="startLoginForRole('OWNER')">
+              <div class="role-card-badge-row">
+                <span class="role-section-pill pill-owner">OWNER SECTION</span>
+                <span class="role-perk-pill pill-host">Host Portal</span>
+              </div>
+              <div class="role-card-body">
+                <div class="role-card-square-img-wrap">
+                  <img src="assets/img_apartment_flat.jpg" alt="Owner Section" class="role-card-square-img">
+                </div>
+                <div class="role-card-text">
+                  <h3 class="role-card-title">Property Host &amp; Owner</h3>
+                  <p class="role-card-subtitle" style="font-size: 0.85rem; font-weight: 700; color: #1E293B; margin: 0 0 0.25rem;">Host Management &amp; Payouts</p>
+                  <p class="role-card-desc">List rooms via the 10-step wizard, set up hourly Quick Stays, receive reservations &amp; direct UPI payouts.</p>
+                </div>
+              </div>
+              <div class="role-card-perks">
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> 10-phase listing wizard &amp; Quick Stays</div>
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> Manage reservations &amp; check-in approvals</div>
+                <div class="role-perk-item"><span class="material-symbols-rounded">verified</span> Direct UPI payout setup &amp; 0% commission</div>
+              </div>
+              <div class="role-card-action">
+                <button type="button" class="btn btn-emerald btn-role-login" id="btnOwnerLoginGateway" onclick="event.stopPropagation(); startLoginForRole('OWNER')">
+                  <span>Continue as Owner</span>
+                  <span class="material-symbols-rounded">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Authenticated Session Banner (Shown when user is logged in) -->
+          <div class="role-active-session-banner" id="homeActiveSessionBanner" style="display: none;">
+            <div class="active-session-left">
+              <span class="material-symbols-rounded session-icon" id="homeActiveSessionIcon">check_circle</span>
+              <div>
+                <div class="session-role-tag" id="homeActiveSessionTag">USER SECTION &bull; ACTIVE SESSION</div>
+                <div class="session-user-name" id="homeActiveSessionName">Signed In User</div>
+              </div>
+            </div>
+            <div class="active-session-right">
+              <button type="button" class="btn btn-sm btn-emerald" id="btnHomeGoToOwnerDashboard" onclick="switchToOwnerDashboard()" style="display: none;">Owner Dashboard</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" onclick="logoutUser()">Log Out</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Main Search Area: "Where to stay?" (Unified, Clean, High-Contrast) -->
       <section class="styno-main-search-section">
         <div class="container">
@@ -238,6 +349,38 @@
                   <span>Search</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Styno Conversational AI Assistant Banner (Exact parity with Android HomeScreen.kt) -->
+      <section class="styno-ai-assistant-banner" id="stynoAiHomeBanner" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+        <div class="container">
+          <div class="ai-hero-card" onclick="openStynoAiModal('RESIDENT')" style="background: linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(16,185,129,0.08) 100%); border: 1.5px solid rgba(37,99,235,0.25); border-radius: 16px; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; cursor: pointer; transition: all 0.2s ease;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #2563EB; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; box-shadow: 0 4px 10px rgba(37,99,235,0.3);">
+                  <span class="material-symbols-rounded">auto_awesome</span>
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-weight: 800; font-size: 1.05rem; color: #0F2B5C;">Styno AI Room Assistant</span>
+                    <span style="background: rgba(16,185,129,0.15); color: #059669; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.4rem; border-radius: 4px;">VOICE + TEXT</span>
+                  </div>
+                  <p style="margin: 0; font-size: 0.85rem; color: #4B5563;">Boliye ya likhiye: "Bagaha mein room chahiye", "₹5,000 PG", "Girls hostel safety"</p>
+                </div>
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT')" style="border-radius: 10px; padding: 0.5rem 1rem; font-weight: 700;">
+                <span class="material-symbols-rounded" style="font-size: 1.1rem; margin-right: 0.35rem;">chat</span> Ask AI
+              </button>
+            </div>
+            <div class="ai-quick-pills" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 2px;">
+              <button type="button" class="pill-chip" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT', 'Find a room in Bagaha')" style="background: white; border: 1px solid rgba(37,99,235,0.25); border-radius: 20px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #2563EB; white-space: nowrap; cursor: pointer;">Find a room in Bagaha</button>
+              <button type="button" class="pill-chip" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT', '₹5,000 PG for Students')" style="background: white; border: 1px solid rgba(37,99,235,0.25); border-radius: 20px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #2563EB; white-space: nowrap; cursor: pointer;">₹5,000 PG for Students 🎓</button>
+              <button type="button" class="pill-chip" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT', 'Verified Girls Hostel')" style="background: white; border: 1px solid rgba(37,99,235,0.25); border-radius: 20px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #2563EB; white-space: nowrap; cursor: pointer;">Verified Girls Hostel 🛡️</button>
+              <button type="button" class="pill-chip" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT', 'Family Flat in Delhi NCR')" style="background: white; border: 1px solid rgba(37,99,235,0.25); border-radius: 20px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #2563EB; white-space: nowrap; cursor: pointer;">Family Flat 🏡</button>
+              <button type="button" class="pill-chip" onclick="event.stopPropagation(); openStynoAiModal('RESIDENT', 'Quick Stay Transit Pod')" style="background: white; border: 1px solid rgba(37,99,235,0.25); border-radius: 20px; padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 600; color: #2563EB; white-space: nowrap; cursor: pointer;">Quick Stay ⚡</button>
             </div>
           </div>
         </div>
@@ -867,12 +1010,103 @@
           </div>
 
           <div class="owner-header-actions">
+            <button class="btn btn-outline" onclick="openStynoAiModal('OWNER')" style="border-color: #059669; color: #059669; font-weight: 700;">
+              <span class="material-symbols-rounded">auto_awesome</span> Host AI Guide
+            </button>
             <button class="btn btn-outline" onclick="switchToGuestMode()">
               <span class="material-symbols-rounded">person</span> Guest View
             </button>
             <button class="btn btn-primary" onclick="openAddPropertyModal()">
               <span class="material-symbols-rounded">add</span> Add New Stay
             </button>
+          </div>
+        </div>
+
+        <!-- Items 1–10 Quick Access Card (Exact 1:1 match to OwnerDashboardScreen.kt) -->
+        <div class="owner-phase-tools-card" style="margin-bottom: 1.25rem; background: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(5, 150, 105, 0.12); display: flex; align-items: center; justify-content: center; color: #059669;">
+                <span class="material-symbols-rounded" style="font-size: 20px;">apartment</span>
+              </div>
+              <div>
+                <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: #1E293B;">Owner Listing &amp; Management Tools</h3>
+                <p style="font-size: 0.75rem; color: #64748B; margin: 0;">Direct access to original Owner Phases 1–10</p>
+              </div>
+            </div>
+            <span class="badge badge-emerald" style="font-size: 0.75rem; font-weight: 700;">Items 1–10</span>
+          </div>
+          <div class="owner-phase-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.6rem;">
+            <div class="owner-phase-item" onclick="openWizardAtStep(1)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">apartment</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">1. Property Type Selection</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Hostel, PG, Hotel, Flat, Single Room</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(2)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">place</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">2. Basic Info &amp; Location</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Name, address, city, area &amp; landmark</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(3)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">photo_library</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">3. Property Details &amp; Media</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Photos, videos, elevator, floor &amp; slots</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(4)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">bed</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">4. Room Types &amp; Pricing</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Single/Twin/Triple, AC &amp; non-AC pricing</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(5)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">check_circle</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">5. Amenities &amp; Facilities</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Wi-Fi, RO Water, Biometric security</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="selectOwnerSubTab('CANTEEN')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">restaurant_menu</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">6. Food &amp; Canteen Services</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Daily 3-time meals &amp; canteen photo hub</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="selectOwnerSubTab('QUICK_STAY')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">bolt</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">7. Category &amp; Quick Stay Slots</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Hourly transit options (3h, 6h, 12h, 24h)</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(8)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">visibility</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">8. Customer Stay Preview</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Live interactive resident listing view</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="openWizardAtStep(9)" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">publish</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">9. Publish Listing &amp; Drafts</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Save drafts and publish live to STYNO</div>
+              </div>
+            </div>
+            <div class="owner-phase-item" onclick="selectOwnerSubTab('PAYMENT')" style="display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; background: #F8FAFC; border: 1px solid #F1F5F9; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+              <span class="material-symbols-rounded" style="color: #059669; font-size: 1.25rem;">payment</span>
+              <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.8rem; color: #0F172A; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">10. Payment Setup &amp; Settlements</div>
+                <div style="font-size: 0.7rem; color: #64748B; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Host UPI ID, bank IFSC &amp; 0% fee</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1173,9 +1407,9 @@
       </div>
       <span class="b-nav-label">Wishlist</span>
     </button>
-    <button class="bottom-nav-item" id="bNavProfile" onclick="switchView('PROFILE')">
-      <span class="material-symbols-rounded">person</span>
-      <span class="b-nav-label">Profile</span>
+    <button class="bottom-nav-item" id="bNavProfile" onclick="handleBottomNavProfileClick()">
+      <span class="material-symbols-rounded" id="bNavProfileIcon">person</span>
+      <span class="b-nav-label" id="bNavProfileLabel">Profile</span>
     </button>
   </nav>
 
@@ -1252,23 +1486,96 @@
   <!-- MODALS & DIALOGS -->
   <!-- ========================================================================= -->
 
+  <!-- Styno Conversational AI Assistant Modal (Exact parity with Android StynoConversationalAiSheet.kt) -->
+  <div class="styno-modal-overlay" id="stynoAiModal" onclick="closeOnBackdrop(event, 'stynoAiModal')">
+    <div class="styno-modal-card modal-md" style="max-height: 85vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 20px;">
+      <div class="modal-header" style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; padding: 0.85rem 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 38px; height: 38px; border-radius: 50%; background: #2563EB; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(37,99,235,0.3);">
+            <span class="material-symbols-rounded">auto_awesome</span>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <h2 style="font-size: 1.15rem; font-weight: 800; color: #0F2B5C; margin: 0;">Styno AI Assistant</h2>
+              <span id="stynoAiRoleBadge" style="background: rgba(37,99,235,0.12); color: #2563EB; font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 4px;">Resident Guide</span>
+            </div>
+            <p style="font-size: 0.75rem; color: #64748B; margin: 0;">Hindi &amp; English Voice Assistant &bull; Verified Stays</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.25rem;">
+          <button type="button" id="btnStynoAiVoiceToggle" class="icon-close-btn" onclick="toggleStynoAutoSpeech()" title="Toggle Voice Speech" style="background: none; border: none; cursor: pointer; color: #2563EB; padding: 6px; border-radius: 50%;"><span class="material-symbols-rounded">volume_up</span></button>
+          <button class="icon-close-btn" onclick="resetStynoAiConversation()" title="Reset Conversation" style="background: none; border: none; cursor: pointer; color: #64748B; padding: 6px; border-radius: 50%;"><span class="material-symbols-rounded">refresh</span></button>
+          <button class="icon-close-btn" onclick="closeModal('stynoAiModal')" title="Close"><span class="material-symbols-rounded">close</span></button>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="stynoAiMessagesContainer" style="flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; background: #FFFFFF; min-height: 280px; max-height: 480px;">
+        <!-- Populated dynamically via renderStynoAiMessages() -->
+      </div>
+
+      <!-- Speaking Banner (Active TTS Indicator with Stop Control) -->
+      <div id="stynoAiSpeakingBanner" style="display: none; background: #ECFDF5; border-top: 1px solid #A7F3D0; padding: 0.5rem 1.25rem; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="material-symbols-rounded" style="color: #059669; font-size: 1.15rem;">volume_up</span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: #065F46;">Speaking in soft natural voice...</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="stopStynoAiSpeech()" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-color: #EF4444; color: #EF4444; font-weight: 700;">Stop Voice</button>
+      </div>
+
+      <!-- Listening Banner (Voice recognition indicator) -->
+      <div id="stynoAiVoiceBanner" style="display: none; background: #EFF6FF; border-top: 1px solid #BFDBFE; padding: 0.5rem 1.25rem; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="recording-pulse" style="width: 10px; height: 10px; border-radius: 50%; background: #EF4444; display: inline-block;"></span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: #1D4ED8;">Listening... Speak in Hindi or English</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="stopStynoVoiceRecording()" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Done</button>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="modal-footer" style="padding: 0.75rem 1.25rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; align-items: center; gap: 0.5rem;">
+        <button type="button" id="btnStynoVoiceInput" onclick="toggleStynoVoiceRecording()" class="btn btn-outline" style="border-radius: 50%; width: 42px; height: 42px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #2563EB; border-color: #CBD5E1;" title="Voice Input">
+          <span class="material-symbols-rounded">mic</span>
+        </button>
+        <input type="text" id="stynoAiTextInput" placeholder="Poochiye: 'Bagaha mein PG', '₹5,000 budget'..." style="flex: 1; border: 1.5px solid #CBD5E1; border-radius: 24px; padding: 0.65rem 1rem; font-size: 0.9rem; outline: none;" onkeydown="if(event.key === 'Enter') submitStynoAiInput();">
+        <button type="button" onclick="submitStynoAiInput()" class="btn btn-primary" style="border-radius: 50%; width: 42px; height: 42px; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Send">
+          <span class="material-symbols-rounded">send</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 0. Welcome & Role Selection Modal (1:1 with WelcomeEntryScreen.kt) -->
   <div class="styno-modal-overlay" id="welcomeEntryModal" onclick="closeOnBackdrop(event, 'welcomeEntryModal')">
     <div class="styno-modal-card modal-md">
-      <div class="modal-header" style="border-bottom: none; padding-bottom: 0.5rem;">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0.25rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <img src="assets/styno_logo.jpg" alt="STYNO Logo" style="height: 38px; border-radius: 8px;">
+          <img src="assets/styno_logo.jpg" alt="STYNO Logo" style="height: 42px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
           <div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-deep); margin: 0;">Welcome to STYNO</h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Select your account portal to proceed</p>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-deep); margin: 0;">Welcome to STYNO</h2>
+              <span class="badge badge-emerald" style="font-size: 0.65rem;">STAYS</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Find Your Stay &bull; 0% Brokerage</p>
           </div>
         </div>
         <button class="icon-close-btn" onclick="closeModal('welcomeEntryModal')"><span class="material-symbols-rounded">close</span></button>
       </div>
 
-      <div class="modal-body" style="padding: 1rem 1.5rem 1.5rem;">
+      <div class="modal-body" style="padding: 0.75rem 1.5rem 1.5rem;">
+        <!-- High-Quality Stay Hero Banner -->
+        <div style="position: relative; width: 100%; height: 110px; border-radius: 14px; overflow: hidden; margin-bottom: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+          <img src="assets/img_hostel_modern.jpg" alt="Verified Stays" style="width: 100%; height: 100%; object-fit: cover;">
+          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, rgba(15,43,92,0.85) 100%); display: flex; align-items: flex-end; padding: 10px 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-emerald" style="font-size: 0.7rem; font-weight: 800;">0% BROKERAGE</span>
+              <span style="color: white; font-size: 0.8rem; font-weight: 700;">Hotels &bull; Hostels &bull; PGs &bull; Rooms &bull; Flats</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Account Status Pill -->
-        <div id="welcomeAccountStatusPill" class="welcome-account-pill">
+        <div id="welcomeAccountStatusPill" class="welcome-account-pill" style="margin-bottom: 1rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span class="material-symbols-rounded text-emerald" style="font-size: 1.2rem;">check_circle</span>
             <span id="welcomeAccountLabel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">Account: Guest</span>
@@ -1277,47 +1584,55 @@
         </div>
 
         <div class="welcome-role-cards-grid">
-          <!-- 1. USER CARD -->
+          <!-- 1. USER SECTION CARD -->
           <div class="welcome-role-card role-card-user" onclick="selectRoleFromWelcome('GUEST')">
-            <div class="role-card-header">
-              <div class="role-icon-box user-icon-box">
-                <span class="material-symbols-rounded">person</span>
+            <div class="role-card-badge-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="role-section-pill pill-user">USER SECTION</span>
+              <span class="role-perk-pill">0% Brokerage</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 0.5rem;">
+              <div style="width: 72px; height: 72px; min-width: 72px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                <img src="assets/img_pg_room.jpg" alt="User Stays" style="width: 100%; height: 100%; object-fit: cover;">
               </div>
               <div>
-                <span class="role-tag user-tag">USER</span>
-                <h3>Guest &amp; Stay Seeker</h3>
+                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--primary-vibrant);">Guest &amp; Stay Seeker</h3>
+                <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Find &amp; Book Verified Stays</p>
               </div>
             </div>
-            <p class="role-card-desc">Find verified Hostels, Hotels, PGs, Rooms &amp; Flats with 0% brokerage and instant digital check-in.</p>
+            <p class="role-card-desc">Browse Hostels, Hotels, PGs, Rooms &amp; Flats with 100% verified amenities, genuine pricing, and zero broker fees.</p>
             <ul class="role-perks-list">
               <li><span class="material-symbols-rounded perk-check">check</span> 6-Step personalized requirement matching</li>
               <li><span class="material-symbols-rounded perk-check">check</span> Direct connection with verified hosts</li>
               <li><span class="material-symbols-rounded perk-check">check</span> Check-in passcodes &amp; transparent pricing</li>
             </ul>
-            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+            <button class="btn btn-primary" style="width: 100%; margin-top: 0.75rem;" onclick="event.stopPropagation(); selectRoleFromWelcome('GUEST')">
               Continue as User <span class="material-symbols-rounded">arrow_forward</span>
             </button>
           </div>
 
-          <!-- 2. OWNER CARD -->
+          <!-- 2. OWNER SECTION CARD -->
           <div class="welcome-role-card role-card-owner" onclick="selectRoleFromWelcome('OWNER')">
-            <div class="role-card-header">
-              <div class="role-icon-box owner-icon-box">
-                <span class="material-symbols-rounded">apartment</span>
+            <div class="role-card-badge-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span class="role-section-pill pill-owner">OWNER SECTION</span>
+              <span class="role-perk-pill pill-host">Host Portal</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 0.5rem;">
+              <div style="width: 72px; height: 72px; min-width: 72px; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                <img src="assets/img_apartment_flat.jpg" alt="Property Host" style="width: 100%; height: 100%; object-fit: cover;">
               </div>
               <div>
-                <span class="role-tag owner-tag">OWNER</span>
-                <h3>Property Host Portal</h3>
+                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--emerald-vibrant, #059669);">Property Host &amp; Owner</h3>
+                <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Host Management &amp; Payouts</p>
               </div>
             </div>
-            <p class="role-card-desc">List your stays, publish hourly transit rooms, manage guest reservations, and receive 100% direct UPI payouts.</p>
+            <p class="role-card-desc">List your stays via 10-step wizard, set up hourly Quick Stays, receive reservations, and configure direct UPI payouts.</p>
             <ul class="role-perks-list">
               <li><span class="material-symbols-rounded perk-check">check</span> Zero commission &amp; direct guest bookings</li>
               <li><span class="material-symbols-rounded perk-check">check</span> Manage rooms, pricing &amp; daily food menus</li>
               <li><span class="material-symbols-rounded perk-check">check</span> Instant digital guest check-in verification</li>
             </ul>
-            <button class="btn btn-emerald" style="width: 100%; margin-top: 1rem;">
-              Open Owner Dashboard <span class="material-symbols-rounded">arrow_forward</span>
+            <button class="btn btn-emerald" style="width: 100%; margin-top: 0.75rem;" onclick="event.stopPropagation(); selectRoleFromWelcome('OWNER')">
+              Continue as Owner <span class="material-symbols-rounded">arrow_forward</span>
             </button>
           </div>
         </div>
@@ -2365,6 +2680,29 @@
     </div>
   </div>
 
+  <!-- 5.5. Owner Food Menu Management Modal -->
+  <div class="styno-modal-overlay" id="ownerMenuModal" onclick="closeOnBackdrop(event, 'ownerMenuModal')">
+    <div class="styno-modal-card modal-lg">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <div class="owner-icon-badge" style="background: #DCFCE7; color: #166534;">
+            <span class="material-symbols-rounded">restaurant_menu</span>
+          </div>
+          <div>
+            <h2 id="ownerMenuModalTitle" style="font-size: 1.25rem; font-weight: 700; color: #0F2B5C; margin: 0;">Food Menu Management</h2>
+            <p id="ownerMenuModalSubtitle" style="font-size: 0.8rem; color: #64748B; margin: 0.2rem 0 0;">Add, edit and manage food items for this stay</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('ownerMenuModal')">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="ownerMenuModalBody">
+        <!-- Dynamically rendered via JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- 6. Safety SOS Emergency Modal (1:1 with SafetySosDialog.kt) -->
   <div class="styno-modal-overlay" id="safetySosModal" onclick="closeOnBackdrop(event, 'safetySosModal')">
     <div class="styno-modal-card modal-sm text-center">
@@ -2499,7 +2837,7 @@
           <form onsubmit="handleEmailSignIn(event)">
             <div class="form-group">
               <label for="signInEmail">Email Address *</label>
-              <input type="email" id="signInEmail" placeholder="e.g. aditya@example.com" value="adityayadav36978@gmail.com" required autocomplete="email">
+              <input type="email" id="signInEmail" placeholder="e.g. name@example.com" required autocomplete="email">
             </div>
             <div class="form-group">
               <div style="display: flex; justify-content: space-between;">
@@ -2507,7 +2845,7 @@
                 <button type="button" class="btn-text-link" onclick="switchAuthMode('FORGOT_PASSWORD')">Forgot?</button>
               </div>
               <div class="password-input-wrap">
-                <input type="password" id="signInPassword" placeholder="Enter your password" value="StynoPass@2026" required autocomplete="current-password">
+                <input type="password" id="signInPassword" placeholder="Enter your account password" required autocomplete="current-password">
                 <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signInPassword', this)">
                   <span class="material-symbols-rounded">visibility</span>
                 </button>
@@ -2543,13 +2881,24 @@
                 <option value="OWNER">Property Owner / Host (Listing My Accommodations)</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="signUpPassword">Create Password *</label>
-              <div class="password-input-wrap">
-                <input type="password" id="signUpPassword" placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password">
-                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signUpPassword', this)">
-                  <span class="material-symbols-rounded">visibility</span>
-                </button>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="signUpPassword">Create Password *</label>
+                <div class="password-input-wrap">
+                  <input type="password" id="signUpPassword" placeholder="Min. 6 chars" required minlength="6" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signUpPassword', this)">
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="signUpConfirmPassword">Confirm Password *</label>
+                <div class="password-input-wrap">
+                  <input type="password" id="signUpConfirmPassword" placeholder="Re-enter password" required minlength="6" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signUpConfirmPassword', this)">
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
               </div>
             </div>
             <button type="submit" class="btn btn-primary" id="btnEmailSignUpSubmit" style="width: 100%; margin-top: 0.5rem;">
@@ -3029,5 +3378,16 @@
   <script src="location.js"></script>
   <!-- Application JS Logic -->
   <script src="app.js"></script>
+
+  <!-- Service Worker Registration for PWA Support -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('STYNO PWA Service Worker Registered', reg.scope))
+          .catch((err) => console.warn('Service worker registration note:', err));
+      });
+    }
+  </script>
 </body>
 </html>

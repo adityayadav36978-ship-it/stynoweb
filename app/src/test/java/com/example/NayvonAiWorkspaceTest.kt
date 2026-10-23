@@ -32,7 +32,7 @@ class NayvonAiWorkspaceTest {
     @Test
     fun testNayvonBrandResource() {
         val appName = context.getString(R.string.app_name)
-        assertEquals("Styno", appName)
+        assertEquals("STYNO", appName)
     }
 
     @Test

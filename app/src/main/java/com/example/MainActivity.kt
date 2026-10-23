@@ -152,6 +152,7 @@ fun StynoApp(
     val complaintTargetProperty by viewModel.complaintTargetProperty.collectAsStateWithLifecycle()
     val selectedComplaint by viewModel.selectedComplaint.collectAsStateWithLifecycle()
     val showAiSupportSheet by viewModel.showAiSupportSheet.collectAsStateWithLifecycle()
+    val showConversationalAiSheet by viewModel.showConversationalAiSheet.collectAsStateWithLifecycle()
     val showComparisonSheet by viewModel.showComparisonSheet.collectAsStateWithLifecycle()
     val comparisonProperties by viewModel.comparisonProperties.collectAsStateWithLifecycle()
     val showKycDialog by viewModel.showKycDialog.collectAsStateWithLifecycle()
@@ -245,7 +246,14 @@ fun StynoApp(
                     Screen.AI_WORKSPACE -> AiWorkspaceScreen(viewModel = viewModel)
                     Screen.ONBOARDING -> OnboardingFlowScreen(
                         viewModel = viewModel,
-                        onFinished = { viewModel.navigateTo(Screen.HOME) }
+                        authViewModel = authViewModel,
+                        onFinished = {
+                            if (viewModel.userRole.value == UserRole.OWNER || viewModel.targetAuthRole.value == UserRole.OWNER) {
+                                viewModel.navigateTo(Screen.OWNER_DASHBOARD)
+                            } else {
+                                viewModel.navigateTo(Screen.HOME)
+                            }
+                        }
                     )
                     Screen.AUTH -> AuthenticationScreen(
                         authViewModel = authViewModel,
@@ -262,7 +270,7 @@ fun StynoApp(
                             if (hasPendingWishlist) {
                                 viewModel.navigateTo(Screen.SAVED)
                             } else {
-                                if (viewModel.userRole.value == UserRole.OWNER) {
+                                if (viewModel.userRole.value == UserRole.OWNER || viewModel.targetAuthRole.value == UserRole.OWNER) {
                                     viewModel.navigateTo(Screen.OWNER_DASHBOARD)
                                 } else {
                                     viewModel.navigateTo(Screen.HOME)
@@ -275,12 +283,24 @@ fun StynoApp(
                     )
                     Screen.LOCATION_ONBOARDING -> LocationOnboardingScreen(
                         viewModel = viewModel,
-                        onLocationConfirmed = { viewModel.navigateTo(Screen.HOME) }
+                        onLocationConfirmed = {
+                            if (viewModel.userRole.value == UserRole.OWNER) {
+                                viewModel.navigateTo(Screen.OWNER_DASHBOARD)
+                            } else {
+                                viewModel.navigateTo(Screen.HOME)
+                            }
+                        }
                     )
                     Screen.LOCATION_PICKER -> LocationSelectionScreen(
                         viewModel = viewModel,
                         locationViewModel = locationViewModel,
-                        onLocationConfirmed = { viewModel.navigateTo(Screen.HOME) },
+                        onLocationConfirmed = {
+                            if (viewModel.userRole.value == UserRole.OWNER) {
+                                viewModel.navigateTo(Screen.OWNER_DASHBOARD)
+                            } else {
+                                viewModel.navigateTo(Screen.HOME)
+                            }
+                        },
                         canGoBack = true
                     )
                     Screen.CUSTOMER_INTENT -> CustomerIntentScreen(
@@ -292,7 +312,10 @@ fun StynoApp(
                     Screen.SEARCH -> SearchScreen(viewModel = viewModel)
                     Screen.BOOKINGS -> MyBookingsScreen(viewModel = viewModel)
                     Screen.SAVED -> SavedScreen(viewModel = viewModel)
-                    Screen.PROFILE -> ProfileScreen(viewModel = viewModel)
+                    Screen.PROFILE -> ProfileScreen(
+                        viewModel = viewModel,
+                        authViewModel = authViewModel
+                    )
                     Screen.PROPERTY_DETAIL -> PropertyDetailScreen(viewModel = viewModel)
                     Screen.BOOKING_FLOW -> BookingFlowScreen(viewModel = viewModel)
                     Screen.BOOKING_CONFIRMATION -> BookingConfirmationScreen(viewModel = viewModel)
@@ -427,6 +450,13 @@ fun StynoApp(
         AiSupportAssistantSheet(
             viewModel = viewModel,
             onDismiss = { viewModel.setShowAiSupportSheet(false) }
+        )
+    }
+
+    if (showConversationalAiSheet) {
+        com.example.ui.components.StynoConversationalAiSheet(
+            viewModel = viewModel,
+            onDismiss = { viewModel.setShowConversationalAiSheet(false) }
         )
     }
 

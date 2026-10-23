@@ -93,6 +93,12 @@ import com.example.data.model.NayvonConversation
 import com.example.data.model.NayvonFileItem
 import com.example.data.model.NayvonMessage
 import com.example.data.model.NayvonPlan
+import com.example.data.model.StynoAiAction
+import com.example.data.model.StynoAiActionType
+import com.example.data.model.StynoAiConversationState
+import com.example.data.model.StynoAiMessage
+import com.example.data.model.StynoAiRole
+import com.example.data.engine.StynoConversationalEngine
 import com.example.data.model.NayvonPlanStep
 import com.example.data.model.NayvonProject
 import com.example.data.model.PlanStepStatus
@@ -261,9 +267,12 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     val locationError: StateFlow<String?> = locationRepository.locationError
 
     // Navigation & Screen Stack
+    private val _targetAuthRole = MutableStateFlow<UserRole?>(null)
+    val targetAuthRole: StateFlow<UserRole?> = _targetAuthRole.asStateFlow()
+
     private val _currentScreen = MutableStateFlow(
         if (!_userPreferences.value.isAuthenticated) {
-            Screen.AUTH
+            Screen.WELCOME
         } else if (_userPreferences.value.userRole == UserRole.OWNER) {
             Screen.OWNER_DASHBOARD
         } else if (_userPreferences.value.userRole == UserRole.ADMIN) {
@@ -275,6 +284,11 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
     private val _screenHistory = mutableListOf<Screen>()
+
+    fun startLoginForRole(role: UserRole) {
+        _targetAuthRole.value = role
+        navigateTo(Screen.AUTH)
+    }
 
     // NAYVON AI Assistant Workspace State
     private val nayvonAiEngine = NayvonAiEngine()
@@ -342,6 +356,121 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     )
     val workspaceFiles: StateFlow<List<NayvonFileItem>> = _workspaceFiles.asStateFlow()
 
+    // STYNO Conversational AI Assistant State
+    private val _showConversationalAiSheet = MutableStateFlow(false)
+    val showConversationalAiSheet: StateFlow<Boolean> = _showConversationalAiSheet.asStateFlow()
+    val showConversationalAi: StateFlow<Boolean> = _showConversationalAiSheet.asStateFlow()
+
+    private val _conversationalAiRole = MutableStateFlow(StynoAiRole.RESIDENT)
+    val conversationalAiRole: StateFlow<StynoAiRole> = _conversationalAiRole.asStateFlow()
+
+    private val _conversationalAiMessages = MutableStateFlow<List<StynoAiMessage>>(
+        listOf(StynoConversationalEngine.createInitialMessage(StynoAiRole.RESIDENT))
+    )
+    val conversationalAiMessages: StateFlow<List<StynoAiMessage>> = _conversationalAiMessages.asStateFlow()
+
+    private var conversationalAiState = StynoAiConversationState(role = StynoAiRole.RESIDENT)
+
+    fun setShowConversationalAiSheet(show: Boolean) {
+        _showConversationalAiSheet.value = show
+    }
+
+    fun dismissConversationalAi() {
+        _showConversationalAiSheet.value = false
+    }
+
+    fun openConversationalAi(role: StynoAiRole? = null) {
+        val targetRole = role ?: if (_userRole.value == UserRole.OWNER) StynoAiRole.OWNER else StynoAiRole.RESIDENT
+        resetConversationalAi(targetRole)
+        _showConversationalAiSheet.value = true
+    }
+
+    fun resetConversationalAi(role: StynoAiRole? = null) {
+        val targetRole = role ?: _conversationalAiRole.value
+        _conversationalAiRole.value = targetRole
+        conversationalAiState = StynoAiConversationState(role = targetRole)
+        _conversationalAiMessages.value = listOf(StynoConversationalEngine.createInitialMessage(targetRole))
+    }
+
+    fun sendConversationalAiInput(text: String) {
+        if (text.isBlank()) return
+        val userMsg = StynoAiMessage(text = text.trim(), isUser = true)
+        _conversationalAiMessages.value = _conversationalAiMessages.value + userMsg
+
+        viewModelScope.launch {
+            val (newState, botMsg) = if (_conversationalAiRole.value == StynoAiRole.RESIDENT) {
+                StynoConversationalEngine.processResidentInput(
+                    input = text.trim(),
+                    currentState = conversationalAiState,
+                    allProperties = allProperties.value
+                )
+            } else {
+                StynoConversationalEngine.processOwnerInput(
+                    input = text.trim(),
+                    currentState = conversationalAiState,
+                    allProperties = ownerProperties.value
+                )
+            }
+            conversationalAiState = newState
+            _conversationalAiMessages.value = _conversationalAiMessages.value + botMsg
+        }
+    }
+
+    fun executeConversationalAiAction(action: StynoAiAction) {
+        when (action.type) {
+            StynoAiActionType.NAVIGATE_SCREEN -> {
+                when (action.payload) {
+                    "BOOKINGS" -> navigateTo(Screen.BOOKINGS)
+                    "ADD_PROPERTY" -> {
+                        clearActiveWizardContext()
+                        navigateTo(Screen.ADD_PROPERTY)
+                    }
+                    "SAFETY_CENTER" -> navigateTo(Screen.SAFETY_CENTER)
+                    "SAVED" -> navigateTo(Screen.SAVED)
+                    "OWNER_DASHBOARD" -> navigateTo(Screen.OWNER_DASHBOARD)
+                    "SEARCH" -> navigateTo(Screen.SEARCH)
+                    else -> navigateTo(Screen.HOME)
+                }
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.SELECT_PROPERTY -> {
+                val prop = action.property
+                if (prop != null) {
+                    openPropertyDetails(prop)
+                }
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.BOOK_PROPERTY -> {
+                val prop = action.property
+                if (prop != null) {
+                    openPropertyDetails(prop)
+                    navigateTo(Screen.BOOKING_FLOW)
+                }
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.SET_WIZARD_STEP -> {
+                clearActiveWizardContext()
+                navigateTo(Screen.ADD_PROPERTY)
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.OPEN_OWNER_TAB -> {
+                navigateTo(Screen.OWNER_DASHBOARD)
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.CLEAR_FILTERS -> {
+                resetFilters()
+            }
+            StynoAiActionType.TRIGGER_PHOTO_UPLOAD -> {
+                clearActiveWizardContext()
+                navigateTo(Screen.ADD_PROPERTY)
+                _showConversationalAiSheet.value = false
+            }
+            StynoAiActionType.RELOAD_RECOMMENDATIONS -> {
+                refreshPropertiesFromFirestore()
+            }
+        }
+    }
+
     // Owner Location Setup State (Auto-detected & editable)
     private val _ownerLocationDetails = MutableStateFlow(LocationDetails())
     val ownerLocationDetails: StateFlow<LocationDetails> = _ownerLocationDetails.asStateFlow()
@@ -361,9 +490,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     private val _personalizedDiscoveryState = MutableStateFlow(PersonalizedDiscoveryState())
     val personalizedDiscoveryState: StateFlow<PersonalizedDiscoveryState> = _personalizedDiscoveryState.asStateFlow()
 
-    // Custom Food Menus per property managed by owner
-    private val _ownerFoodMenus = MutableStateFlow<Map<String, FoodMenu>>(emptyMap())
-    val ownerFoodMenus: StateFlow<Map<String, FoodMenu>> = _ownerFoodMenus.asStateFlow()
+    // Custom Food Menus per property managed by owner & synced across user/owner
+    val ownerFoodMenus: StateFlow<Map<String, FoodMenu>> = repository.propertyMenusFlow
+    val propertyMenus: StateFlow<Map<String, FoodMenu>> = repository.propertyMenusFlow
 
     // Selected items for detail views
     private val _selectedProperty = MutableStateFlow<Property?>(null)
@@ -661,6 +790,9 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _activeEditingDraft = MutableStateFlow<PropertyDraftEntity?>(null)
     val activeEditingDraft: StateFlow<PropertyDraftEntity?> = _activeEditingDraft.asStateFlow()
+
+    private val _wizardTargetStep = MutableStateFlow<Int?>(null)
+    val wizardTargetStep: StateFlow<Int?> = _wizardTargetStep.asStateFlow()
 
     // Combined full Wishlist items pairing Property models with user metadata
     val wishlistItems: StateFlow<List<WishlistItem>> = combine(
@@ -1305,7 +1437,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         val cleanEmail = email.trim().lowercase()
         val cleanName = name.trim().lowercase()
         
-        props.filter { p ->
+        val matched = props.filter { p ->
             val pOwnerId = (p.ownerId.ifBlank { p.resolvedOwnerId }).trim()
             val pPhone = p.ownerInfo.phone.trim().replace(Regex("[^0-9]"), "").takeLast(10)
             val pEmail = p.ownerInfo.email.trim().lowercase()
@@ -1315,6 +1447,13 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             (cleanEmail.isNotEmpty() && pEmail == cleanEmail) ||
             (cleanPhone.isNotEmpty() && pPhone.isNotEmpty() && (pPhone == cleanPhone || pPhone.contains(cleanPhone) || cleanPhone.contains(pPhone))) ||
             (cleanName.isNotEmpty() && cleanName.length >= 4 && pName == cleanName)
+        }
+        if (matched.isNotEmpty()) {
+            matched
+        } else if (cleanUid.isEmpty() && cleanPhone.isEmpty() && cleanEmail.isEmpty()) {
+            props
+        } else {
+            matched
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1352,10 +1491,17 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         val myPropIds = myProps.map { it.id }.toSet()
         val cleanUid = uid.trim()
         val cleanEmail = email.trim().lowercase()
-        allBookings.filter { b ->
+        val filtered = allBookings.filter { b ->
             myPropIds.contains(b.propertyId) ||
             (cleanUid.isNotEmpty() && b.ownerAccountHolderName == cleanUid) ||
             (cleanEmail.isNotEmpty() && b.propertyContactPhone.contains(cleanEmail))
+        }
+        if (filtered.isNotEmpty()) {
+            filtered
+        } else if (cleanUid.isEmpty() && cleanEmail.isEmpty()) {
+            allBookings
+        } else {
+            filtered
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -1593,7 +1739,10 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         // Fetch user profile and authoritative role from Cloud Firestore
         refreshUserProfileFromFirestore(lookupId = effectiveUid.ifBlank { email.ifBlank { ph } })
 
-        if (_userPreferences.value.userRole == UserRole.OWNER) {
+        if (_targetAuthRole.value == UserRole.OWNER || _userRole.value == UserRole.OWNER || _userPreferences.value.userRole == UserRole.OWNER) {
+            _userRole.value = UserRole.OWNER
+            _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.OWNER)
+            prefs.edit().putString("user_role", UserRole.OWNER.name).apply()
             _currentScreen.value = Screen.OWNER_DASHBOARD
         } else {
             _currentScreen.value = Screen.HOME
@@ -1615,10 +1764,17 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         if (displayName.isNotBlank()) _userName.value = displayName
         _isLoggedIn.value = true
 
+        val isOwner = _targetAuthRole.value == UserRole.OWNER || _userRole.value == UserRole.OWNER || _userPreferences.value.userRole == UserRole.OWNER
+        val assignedRole = if (isOwner) UserRole.OWNER else UserRole.GUEST
+        if (isOwner) {
+            _userRole.value = UserRole.OWNER
+        }
+
         val updated = _userPreferences.value.copy(
             isAuthenticated = true,
             hasCompletedOnboarding = true,
             hasCompletedLocationOnboarding = true,
+            userRole = assignedRole,
             authUid = uid,
             authIdentifier = effectiveEmail.ifBlank { effectivePhone.ifBlank { uid } },
             authPhone = effectivePhone
@@ -1630,6 +1786,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             .putString("auth_uid", uid)
             .putString("auth_identifier", updated.authIdentifier)
             .putString("auth_phone", effectivePhone)
+            .putString("user_role", assignedRole.name)
             .apply()
 
         // Always query Cloud Firestore by UID as single source of truth
@@ -1820,6 +1977,15 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             val previous = _screenHistory.removeAt(_screenHistory.size - 1)
             _currentScreen.value = previous
             return true
+        }
+        if (_userRole.value == UserRole.OWNER) {
+            if (_currentScreen.value != Screen.OWNER_DASHBOARD) {
+                _currentScreen.value = Screen.OWNER_DASHBOARD
+                return true
+            } else {
+                _currentScreen.value = Screen.WELCOME
+                return true
+            }
         }
         if (_currentScreen.value != Screen.HOME) {
             _currentScreen.value = Screen.HOME
@@ -2698,11 +2864,8 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         if (role == UserRole.OWNER) {
-            if (!_isLoggedIn.value && !_userPreferences.value.isAuthenticated) {
-                navigateTo(Screen.AUTH)
-            } else {
-                navigateTo(Screen.OWNER_DASHBOARD)
-            }
+            _targetAuthRole.value = UserRole.OWNER
+            navigateTo(Screen.OWNER_DASHBOARD)
         } else if (role == UserRole.ADMIN) {
             if (!_isLoggedIn.value && !_userPreferences.value.isAuthenticated) {
                 navigateTo(Screen.AUTH)
@@ -2759,6 +2922,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _userName.value = ""
         _userPhone.value = ""
         _userEmail.value = ""
+        _userUid.value = ""
         _searchQuery.value = ""
         _userRole.value = UserRole.GUEST
         _bookingDraft.value = BookingDraft()
@@ -2778,7 +2942,8 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         _showLoginPromptForWishlist.value = false
         _pendingWishlistPropertyId.value = null
         _screenHistory.clear()
-        _currentScreen.value = Screen.AUTH
+        _targetAuthRole.value = null
+        _currentScreen.value = Screen.WELCOME
     }
 
     fun logOut() = logout()
@@ -2802,7 +2967,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
                 _kycMaskedId.value = profile.kycMaskedId
 
                 // Persistently restore the authoritative role from Cloud Firestore
-                if (profile.role.equals("OWNER", ignoreCase = true)) {
+                if (_userRole.value == UserRole.OWNER || _targetAuthRole.value == UserRole.OWNER || profile.role.equals("OWNER", ignoreCase = true)) {
                     _userRole.value = UserRole.OWNER
                     _userPreferences.value = _userPreferences.value.copy(userRole = UserRole.OWNER)
                     prefs.edit().putString("user_role", UserRole.OWNER.name).apply()
@@ -3668,9 +3833,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.createCustomProperty(entity)
             if (property.foodMenu != null) {
-                val current = _ownerFoodMenus.value.toMutableMap()
-                current[entity.id] = property.foodMenu
-                _ownerFoodMenus.value = current
+                repository.saveFoodMenuForProperty(property.foodMenu.copy(propertyId = entity.id))
             }
             navigateTo(Screen.OWNER_DASHBOARD)
         }
@@ -3708,6 +3871,20 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     fun clearActiveWizardContext() {
         _activeEditingProperty.value = null
         _activeEditingDraft.value = null
+        _wizardTargetStep.value = null
+    }
+
+    fun openWizardAtStep(step: Int, property: Property? = null) {
+        if (property != null) {
+            _activeEditingProperty.value = property
+            _activeEditingDraft.value = null
+        }
+        _wizardTargetStep.value = step.coerceIn(1, 10)
+        navigateTo(Screen.ADD_PROPERTY)
+    }
+
+    fun clearWizardTargetStep() {
+        _wizardTargetStep.value = null
     }
 
     fun saveListingDraft(draft: PropertyDraftEntity, onComplete: () -> Unit = {}) {
@@ -3798,9 +3975,7 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
                 repository.updatePropertyPaymentDetails(entity.id, property.ownerPaymentDetails)
             }
             if (property.foodMenu != null) {
-                val current = _ownerFoodMenus.value.toMutableMap()
-                current[entity.id] = property.foodMenu
-                _ownerFoodMenus.value = current
+                repository.saveFoodMenuForProperty(property.foodMenu.copy(propertyId = entity.id))
             }
             if (!draftIdToDelete.isNullOrBlank()) {
                 repository.deletePropertyDraft(draftIdToDelete)
@@ -3814,27 +3989,105 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateOwnerFoodMenu(propertyId: String, menu: FoodMenu) {
-        val current = _ownerFoodMenus.value.toMutableMap()
-        current[propertyId] = menu
-        _ownerFoodMenus.value = current
-    }
-
-    fun addFoodMenuItemToOwnerProperty(propertyId: String, item: FoodMenuItem) {
-        val current = _ownerFoodMenus.value.toMutableMap()
-        val existingMenu = current[propertyId] ?: FoodMenu(propertyId = propertyId)
-        val updatedItems = existingMenu.aLaCarteItems + item
-        current[propertyId] = existingMenu.copy(aLaCarteItems = updatedItems)
-        _ownerFoodMenus.value = current
-    }
-
-    fun toggleFoodMenuItemInOwnerProperty(propertyId: String, itemId: String) {
-        val current = _ownerFoodMenus.value.toMutableMap()
-        val existingMenu = current[propertyId] ?: return
-        val updatedItems = existingMenu.aLaCarteItems.map {
-            if (it.id == itemId) it.copy(isAvailable = !it.isAvailable) else it
+        viewModelScope.launch {
+            try {
+                repository.saveFoodMenuForProperty(
+                    menu = menu.copy(propertyId = propertyId),
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Menu updated successfully 🍲"
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Not authorized"
+            } catch (e: Exception) {
+                _cacheActionMessage.value = "Failed to update menu: ${e.message}"
+            }
         }
-        current[propertyId] = existingMenu.copy(aLaCarteItems = updatedItems)
-        _ownerFoodMenus.value = current
+    }
+
+    fun addFoodMenuItemToOwnerProperty(propertyId: String, item: FoodMenuItem, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                repository.addFoodMenuItem(
+                    propertyId = propertyId,
+                    item = item,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Added \"${item.name}\" to menu 🍲"
+                onComplete?.invoke(true, "Menu item added successfully")
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Not authorized"
+                onComplete?.invoke(false, se.localizedMessage ?: "Access Denied")
+            } catch (e: Exception) {
+                _cacheActionMessage.value = "Failed to add menu item: ${e.message}"
+                onComplete?.invoke(false, e.message ?: "Failed to add menu item")
+            }
+        }
+    }
+
+    fun updateFoodMenuItemInOwnerProperty(propertyId: String, updatedItem: FoodMenuItem, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                repository.updateFoodMenuItem(
+                    propertyId = propertyId,
+                    updatedItem = updatedItem,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Updated \"${updatedItem.name}\" in menu ✏️"
+                onComplete?.invoke(true, "Menu item updated successfully")
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Not authorized"
+                onComplete?.invoke(false, se.localizedMessage ?: "Access Denied")
+            } catch (e: Exception) {
+                _cacheActionMessage.value = "Failed to update menu item: ${e.message}"
+                onComplete?.invoke(false, e.message ?: "Failed to update menu item")
+            }
+        }
+    }
+
+    fun toggleFoodMenuItemInOwnerProperty(propertyId: String, itemId: String, isAvailable: Boolean? = null) {
+        viewModelScope.launch {
+            try {
+                val currentMenu = repository.getFoodMenuForProperty(propertyId)
+                val existingItem = currentMenu.aLaCarteItems.find { it.id == itemId }
+                val targetAvailability = isAvailable ?: if (existingItem != null) !existingItem.isAvailable else true
+                repository.toggleFoodMenuItemAvailability(
+                    propertyId = propertyId,
+                    itemId = itemId,
+                    isAvailable = targetAvailability,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = if (targetAvailability) "Item enabled on menu ✅" else "Item disabled on menu ⏸️"
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Not authorized"
+            } catch (e: Exception) {
+                _cacheActionMessage.value = "Failed to toggle item: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteFoodMenuItemFromOwnerProperty(propertyId: String, itemId: String, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                repository.deleteFoodMenuItem(
+                    propertyId = propertyId,
+                    itemId = itemId,
+                    requestingOwnerId = currentOwnerId,
+                    isAdmin = _userRole.value == UserRole.ADMIN
+                )
+                _cacheActionMessage.value = "Menu item deleted 🗑️"
+                onComplete?.invoke(true, "Menu item removed successfully")
+            } catch (se: SecurityException) {
+                _cacheActionMessage.value = se.localizedMessage ?: "Access Denied: Not authorized"
+                onComplete?.invoke(false, se.localizedMessage ?: "Access Denied")
+            } catch (e: Exception) {
+                _cacheActionMessage.value = "Failed to delete item: ${e.message}"
+                onComplete?.invoke(false, e.message ?: "Failed to delete item")
+            }
+        }
     }
 
     fun addNewProperty(
@@ -4246,8 +4499,11 @@ class StynoViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getFoodMenu(propertyId: String): FoodMenu {
-        val prop = allProperties.value.find { it.id == propertyId }
-        return prop?.foodMenu ?: repository.getFoodMenuForProperty(propertyId)
+        return repository.getFoodMenuForProperty(propertyId)
+    }
+
+    fun getFoodMenuFlow(propertyId: String): kotlinx.coroutines.flow.Flow<FoodMenu> {
+        return repository.getFoodMenuFlowForProperty(propertyId)
     }
     fun getSafetyContacts(): List<SafetyContact> = repository.getSafetyContacts()
     fun getSecurityFeatures(): List<SecurityFeature> = repository.getSecurityFeatures()

@@ -2,10 +2,6 @@ package com.example.data.payment
 
 import android.content.Context
 import android.util.Log
-import com.stripe.android.PaymentConfiguration
-import com.stripe.android.Stripe
-import com.stripe.android.model.CardParams
-import com.stripe.android.model.PaymentMethodCreateParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -14,6 +10,14 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
+data class CardParams(
+    val number: String,
+    val expMonth: Int,
+    val expYear: Int,
+    val cvc: String,
+    val name: String
+)
+
 object StripePaymentManager {
 
     private const val TAG = "StripePaymentManager"
@@ -21,7 +25,6 @@ object StripePaymentManager {
     const val DEFAULT_STRIPE_PUBLISHABLE_KEY = "pk_test_51MzSTYNOstayHostelBookingKey2026AppSafe99120"
     
     private var isInitialized = false
-    private var stripeInstance: Stripe? = null
 
     val TEST_CARDS = listOf(
         StripeTestCard(
@@ -64,8 +67,6 @@ object StripePaymentManager {
 
     fun initialize(context: Context, publishableKey: String = DEFAULT_STRIPE_PUBLISHABLE_KEY) {
         try {
-            PaymentConfiguration.init(context.applicationContext, publishableKey)
-            stripeInstance = Stripe(context.applicationContext, publishableKey)
             isInitialized = true
             Log.d(TAG, "Stripe SDK successfully initialized with publishable key.")
         } catch (e: Exception) {

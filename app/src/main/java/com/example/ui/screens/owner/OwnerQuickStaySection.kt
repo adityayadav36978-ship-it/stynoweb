@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.testTag
 import com.example.data.model.Property
 import com.example.data.model.QuickStayConfig
 import com.example.data.model.QuickStayOption
@@ -53,7 +54,8 @@ private val DEFAULT_RULES = listOf(
 fun OwnerQuickStaySection(
     properties: List<Property>,
     onSaveConfig: (propertyId: String, config: QuickStayConfig) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToAddProperty: () -> Unit = {}
 ) {
     if (properties.isEmpty()) {
         Card(
@@ -83,10 +85,22 @@ fun OwnerQuickStaySection(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Please add a property listing first before configuring Quick Stay hourly options.",
+                    text = "Please add a property listing first before configuring Quick Stay hourly options. You can offer hourly transit slots (1h, 2h, 3h, 6h, 12h, 24h) for instant bookings.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onNavigateToAddProperty,
+                    colors = ButtonDefaults.buttonColors(containerColor = StynoBluePrimary),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("quickstay_empty_add_property_button")
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("List Property with Quick Stay", fontWeight = FontWeight.Bold)
+                }
             }
         }
         return

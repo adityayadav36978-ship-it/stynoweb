@@ -9,10 +9,14 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +24,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -104,7 +109,8 @@ data class Animated3DCategory(
     val badge: String,
     val icon: ImageVector,
     val gradientColors: List<Color>,
-    val accentColor: Color
+    val accentColor: Color,
+    val imageRes: Int = 0
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -137,58 +143,64 @@ fun QuickCategorySection(
 ) {
     val categories = listOf(
         Animated3DCategory(
-            type = PropertyType.HOSTEL,
-            title = "Hostel",
-            subtitle = "Boys, Girls & Co-Ed",
-            badge = "From ₹5,499/mo",
-            icon = Icons.Default.Diversity3,
-            gradientColors = listOf(Color(0xFF1E3A8A), Color(0xFF3B82F6)),
-            accentColor = Color(0xFF60A5FA)
-        ),
-        Animated3DCategory(
             type = PropertyType.HOTEL,
-            title = "Hotel",
+            title = "Hotels",
             subtitle = "Nightly & Luxury Stay",
             badge = "Instant 24/7",
             icon = Icons.Default.Hotel,
             gradientColors = listOf(Color(0xFF7C2D12), Color(0xFFEA580C)),
-            accentColor = Color(0xFFFB923C)
+            accentColor = Color(0xFFFB923C),
+            imageRes = R.drawable.img_hotel_suite
+        ),
+        Animated3DCategory(
+            type = PropertyType.HOSTEL,
+            title = "Hostels",
+            subtitle = "Boys, Girls & Co-Ed",
+            badge = "From ₹5,499/mo",
+            icon = Icons.Default.Diversity3,
+            gradientColors = listOf(Color(0xFF1E3A8A), Color(0xFF3B82F6)),
+            accentColor = Color(0xFF60A5FA),
+            imageRes = R.drawable.img_hostel_modern
         ),
         Animated3DCategory(
             type = PropertyType.PG,
-            title = "PG",
+            title = "PGs",
             subtitle = "Homely Food & Wi-Fi",
             badge = "Zero Brokerage",
             icon = Icons.Default.Home,
             gradientColors = listOf(Color(0xFF065F46), Color(0xFF10B981)),
-            accentColor = Color(0xFF34D399)
-        ),
-        Animated3DCategory(
-            type = PropertyType.ROOM,
-            title = "Room",
-            subtitle = "Single & Shared Private",
-            badge = "Deposit Free",
-            icon = Icons.Default.MeetingRoom,
-            gradientColors = listOf(Color(0xFF581C87), Color(0xFF8B5CF6)),
-            accentColor = Color(0xFFA78BFA)
-        ),
-        Animated3DCategory(
-            type = PropertyType.FLAT,
-            title = "Flat",
-            subtitle = "1, 2, 3, 4 BHK Gated",
-            badge = "Furnished",
-            icon = Icons.Default.Apartment,
-            gradientColors = listOf(Color(0xFF0F172A), Color(0xFF334155)),
-            accentColor = Color(0xFF38BDF8)
+            accentColor = Color(0xFF34D399),
+            imageRes = R.drawable.img_pg_room
         ),
         Animated3DCategory(
             type = PropertyType.QUICK_STAY,
-            title = "Quick Stay",
+            title = "Quick Stays",
             subtitle = "3h, 6h, 12h Slots",
             badge = "From ₹299/slot",
             icon = Icons.Default.Bolt,
             gradientColors = listOf(Color(0xFF78350F), Color(0xFFF59E0B)),
-            accentColor = Color(0xFFFBBF24)
+            accentColor = Color(0xFFFBBF24),
+            imageRes = R.drawable.img_quick_stay
+        ),
+        Animated3DCategory(
+            type = PropertyType.FLAT,
+            title = "Flats",
+            subtitle = "1, 2, 3, 4 BHK Gated",
+            badge = "Furnished",
+            icon = Icons.Default.Apartment,
+            gradientColors = listOf(Color(0xFF0F172A), Color(0xFF334155)),
+            accentColor = Color(0xFF38BDF8),
+            imageRes = R.drawable.img_apartment_flat
+        ),
+        Animated3DCategory(
+            type = PropertyType.ROOM,
+            title = "Rooms",
+            subtitle = "Single & Shared Private",
+            badge = "Deposit Free",
+            icon = Icons.Default.MeetingRoom,
+            gradientColors = listOf(Color(0xFF581C87), Color(0xFF8B5CF6)),
+            accentColor = Color(0xFFA78BFA),
+            imageRes = R.drawable.img_single_room
         )
     )
 
@@ -338,11 +350,60 @@ fun QuickCategorySection(
                             .padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // Square Image Card (1:1 with Cover Crop)
+                        Card(
+                            shape = RoundedCornerShape(14.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp),
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Image(
+                                    painter = painterResource(id = cat.imageRes),
+                                    contentDescription = cat.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    Color.Transparent,
+                                                    Color.Black.copy(alpha = 0.4f)
+                                                )
+                                            )
+                                        )
+                                )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = cat.accentColor,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(5.dp)
+                                        .size(20.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = cat.icon,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .padding(3.dp)
+                                            .fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         // Badge Tag
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = if (isSelected) cat.accentColor else Color(0xFF0F172A).copy(alpha = 0.08f),
-                            modifier = Modifier.padding(bottom = 6.dp)
+                            modifier = Modifier.padding(bottom = 4.dp)
                         ) {
                             Text(
                                 text = cat.badge,
@@ -352,29 +413,6 @@ fun QuickCategorySection(
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        // 3D Illuminated Icon Box with Shadow
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .shadow(
-                                    elevation = if (isSelected) 6.dp else 2.dp,
-                                    shape = RoundedCornerShape(14.dp),
-                                    spotColor = cat.accentColor
-                                )
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Brush.linearGradient(cat.gradientColors)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = cat.icon,
-                                contentDescription = cat.title,
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
 
                         // Title
                         Text(

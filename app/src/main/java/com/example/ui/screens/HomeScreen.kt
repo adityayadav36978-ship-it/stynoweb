@@ -245,7 +245,7 @@ fun HomeScreen(
                     .testTag("home_screen_vertical_scroll_container"),
                 contentPadding = PaddingValues(bottom = 90.dp)
             ) {
-                // Search & Discovery Header Hero Card is the first scrollable item in LazyColumn
+                // Search & Discovery Header Hero Card is the primary scrollable item in LazyColumn
                 item(key = "home_search_hero_card") {
                     HomeSearchHeroCard(
                         userCoordinates = userCoordinates,
@@ -269,6 +269,131 @@ fun HomeScreen(
                         isMapViewMode = false,
                         onSetMapViewMode = { isMapViewMode = it }
                     )
+                }
+
+                // 0. Styno Conversational AI Assistant Hero Banner
+                item(key = "styno_conversational_ai_hero_banner") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { viewModel.openConversationalAi(com.example.data.model.StynoAiRole.RESIDENT) }
+                            .testTag("home_styno_ai_banner_card"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, StynoBluePrimary.copy(alpha = 0.25f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = StynoBluePrimary,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Styno AI Room Assistant",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = StynoEmerald.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "VOICE + TEXT",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = StynoEmerald,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Find stays in Hindi & English • 'Bagaha mein PG', '₹5,000 budget'",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = { viewModel.openConversationalAi(com.example.data.model.StynoAiRole.RESIDENT) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = StynoBluePrimary),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.testTag("btn_open_home_ai")
+                                ) {
+                                    Text("Ask AI", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Quick query pills
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    "Find a room in Bagaha",
+                                    "₹5,000 PG for Students",
+                                    "Verified Girls Hostel 🛡️",
+                                    "Working Professional Flat 💼",
+                                    "Transit Quick Stay ⚡"
+                                ).forEach { prompt ->
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .clickable {
+                                                viewModel.openConversationalAi(com.example.data.model.StynoAiRole.RESIDENT)
+                                                viewModel.sendConversationalAiInput(prompt)
+                                            }
+                                            .testTag("ai_prompt_chip_${prompt.take(6)}")
+                                    ) {
+                                        Text(
+                                            text = prompt,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (allProperties.isEmpty() && isFetchingFirestore) {

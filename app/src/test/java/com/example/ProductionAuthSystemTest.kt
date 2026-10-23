@@ -303,5 +303,129 @@ class ProductionAuthSystemTest {
         assertTrue("Must specify storage rules_version", storageContent.contains("rules_version = '2'"))
         assertTrue("Must protect users storage", storageContent.contains("match /users/{userId}"))
     }
+
+    // MARK: - 9. Deep Audit Verification Tests (TESTS A - I)
+
+    @Test
+    fun testCaseA_NewValidUserSignUpSuccess() {
+        val email = "new_user_${System.currentTimeMillis()}@styno.com"
+        val password = "ValidPassword123"
+        val displayName = "New Styno Member"
+
+        val result = com.example.data.util.StynoAuthService.registerEmailUser(email, password, displayName)
+        assertTrue("Registration must succeed for valid credentials", result is com.example.data.util.StynoAuthService.AuthResultState.Success)
+        val success = result as com.example.data.util.StynoAuthService.AuthResultState.Success
+        assertEquals(email.lowercase(), success.account.email)
+        assertTrue("Session token must be generated", success.sessionToken.isNotBlank())
+    }
+
+    @Test
+    fun testCaseB_ExistingUserCorrectEmailAndPasswordSuccess() {
+        val result = com.example.data.util.StynoAuthService.authenticateEmailUser(
+            email = "adityayadav36978@gmail.com",
+            password = "StynoPass@2026"
+        )
+        assertTrue("Authentication must succeed with correct password", result is com.example.data.util.StynoAuthService.AuthResultState.Success)
+        val success = result as com.example.data.util.StynoAuthService.AuthResultState.Success
+        assertEquals("adityayadav36978@gmail.com", success.account.email)
+    }
+
+    @Test
+    fun testCaseC_ExistingUserCorrectEmailAndWrongPasswordMustFail() {
+        val result = com.example.data.util.StynoAuthService.authenticateEmailUser(
+            email = "adityayadav36978@gmail.com",
+            password = "WrongPassword999!"
+        )
+        assertTrue("Authentication with incorrect password MUST FAIL", result is com.example.data.util.StynoAuthService.AuthResultState.Error)
+        val error = result as com.example.data.util.StynoAuthService.AuthResultState.Error
+        assertEquals("Incorrect password. Please verify and try again.", error.message)
+    }
+
+    @Test
+    fun testCaseD_UnknownEmailAndPasswordMustFail() {
+        val result = com.example.data.util.StynoAuthService.authenticateEmailUser(
+            email = "nonexistent_account_${System.currentTimeMillis()}@styno.com",
+            password = "AnyPassword123"
+        )
+        assertTrue("Authentication for non-existent email MUST FAIL", result is com.example.data.util.StynoAuthService.AuthResultState.Error)
+        val error = result as com.example.data.util.StynoAuthService.AuthResultState.Error
+        assertTrue("Must indicate no account found", error.message.contains("No account found"))
+    }
+
+    @Test
+    fun testCaseE_GoogleAccountClaimsIntegrity() {
+        val user = AuthUser(
+            uid = "styno_google_prod_101",
+            email = "traveler.google@gmail.com",
+            displayName = "Google Traveler",
+            photoUrl = "https://lh3.googleusercontent.com/avatar.jpg",
+            isEmailVerified = true,
+            providerId = "google.com"
+        )
+        assertTrue("Must identify as Google user", user.isGoogleUser)
+        assertEquals("google.com", user.providerId)
+    }
+
+    @Test
+    fun testCaseF_GoogleOAuthCancelledDoesNotAuthenticate() {
+        val viewModel = AuthViewModel(firebaseAuth = null)
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+
+        var errorCallbackFired = false
+        var successFired = false
+
+        viewModel.signInWithGoogle(
+            context = activity,
+            onSuccess = { successFired = true },
+            onError = { errorCallbackFired = true }
+        )
+
+        assertFalse("Success MUST NOT fire if Google sign-in is not authenticated", successFired)
+        assertNull("Current user must remain null", viewModel.currentUser.value)
+    }
+
+    @Test
+    fun testCaseH_LoginAndLogoutSessionLifecycle() {
+        val session = com.example.data.security.StynoSecurityEngine.createSession(
+            userId = "usr_test_logout_01",
+            role = com.example.data.security.StynoSecurityEngine.UserRole.GUEST,
+            email = "logout_test@styno.com"
+        )
+        assertTrue("New session must be valid", session.isValid)
+
+        // Invalidate session
+        com.example.data.security.StynoSecurityEngine.invalidateSession(session.token)
+        val validation = com.example.data.security.StynoSecurityEngine.validateSession(session.token)
+        assertTrue("Session must be revoked/invalidated upon logout", validation is com.example.data.security.StynoSecurityEngine.SessionValidationResult.Revoked)
+    }
+
+    @Test
+    fun testCaseI_UserSwitchingStrictDataIsolation() {
+        // User A
+        val userAEmail = "user_a@styno.com"
+        val userBEmail = "user_b@styno.com"
+
+        val sessionA = com.example.data.security.StynoSecurityEngine.createSession(
+            userId = "usr_A",
+            role = com.example.data.security.StynoSecurityEngine.UserRole.GUEST,
+            email = userAEmail
+        )
+        assertEquals("usr_A", sessionA.userId)
+
+        // Logout User A
+        com.example.data.security.StynoSecurityEngine.terminateAllUserSessions("usr_A")
+        val valA = com.example.data.security.StynoSecurityEngine.validateSession(sessionA.token)
+        assertTrue("User A session must be revoked", valA is com.example.data.security.StynoSecurityEngine.SessionValidationResult.Revoked)
+
+        // Login User B
+        val sessionB = com.example.data.security.StynoSecurityEngine.createSession(
+            userId = "usr_B",
+            role = com.example.data.security.StynoSecurityEngine.UserRole.GUEST,
+            email = userBEmail
+        )
+        assertTrue("User B session must be valid", sessionB.isValid)
+        assertEquals("usr_B", sessionB.userId)
+        assertFalse("User B token must not equal User A token", sessionB.token == sessionA.token)
+    }
 }
 

@@ -70,3 +70,17 @@ data class FoodMenu(
     val offersRoomService: Boolean = true,
     val offersPropertyDelivery: Boolean = true
 )
+
+object FoodCategories {
+    const val ALL = "All"
+    const val BREAKFAST = "Breakfast"
+    const val LUNCH = "Lunch"
+    const val DINNER = "Dinner"
+    const val SNACKS = "Snacks"
+    const val BEVERAGES = "Beverages"
+    const val DESSERT = "Dessert"
+    const val MAIN_COURSE = "Main Course"
+
+    val DEFAULT_FILTER_LIST = listOf(ALL, BREAKFAST, LUNCH, DINNER, SNACKS, BEVERAGES, DESSERT)
+    val OWNER_CATEGORIES = listOf(BREAKFAST, LUNCH, DINNER, SNACKS, BEVERAGES, DESSERT, MAIN_COURSE)
+}

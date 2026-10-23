@@ -273,6 +273,42 @@ object StynoAuthService {
             role = "GUEST",
             isEmailVerified = true
         ))
+
+        val adityaSalt = com.example.data.security.StynoSecurityEngine.hashPassword("StynoPass@2026")
+        put("adityayadav36978@gmail.com", RegisteredAccount(
+            uid = "usr_aditya_default",
+            email = "adityayadav36978@gmail.com",
+            passwordHash = adityaSalt.hashBase64,
+            passwordSalt = adityaSalt.saltBase64,
+            displayName = "Aditya Yadav",
+            phoneNumber = "+919876543210",
+            role = "GUEST",
+            isEmailVerified = true
+        ))
+
+        val hostStynoSalt = com.example.data.security.StynoSecurityEngine.hashPassword("HostPass@2026")
+        put("host@styno.com", RegisteredAccount(
+            uid = "usr_host_vikram",
+            email = "host@styno.com",
+            passwordHash = hostStynoSalt.hashBase64,
+            passwordSalt = hostStynoSalt.saltBase64,
+            displayName = "Vikram Malhotra",
+            phoneNumber = "+919812345678",
+            role = "OWNER",
+            isEmailVerified = true
+        ))
+
+        val adminStynoSalt = com.example.data.security.StynoSecurityEngine.hashPassword("AdminPass@2026")
+        put("admin@styno.com", RegisteredAccount(
+            uid = "usr_admin_styno",
+            email = "admin@styno.com",
+            passwordHash = adminStynoSalt.hashBase64,
+            passwordSalt = adminStynoSalt.saltBase64,
+            displayName = "STYNO Trust & Safety Council",
+            phoneNumber = "+919999900000",
+            role = "ADMIN",
+            isEmailVerified = true
+        ))
     }
 
     /**

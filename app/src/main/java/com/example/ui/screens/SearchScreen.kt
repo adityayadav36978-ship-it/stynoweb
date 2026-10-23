@@ -38,6 +38,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bolt
@@ -123,6 +124,7 @@ import com.example.ui.components.SearchQuerySuggestionsView
 import com.example.ui.components.SearchSuggestion
 import com.example.ui.theme.StynoAccent
 import com.example.ui.theme.StynoBluePrimary
+import com.example.ui.theme.StynoIndigo
 import com.example.ui.theme.StynoEmerald
 import com.example.ui.viewmodel.SortOption
 import com.example.ui.viewmodel.StynoViewModel
@@ -472,30 +474,59 @@ fun SearchScreen(
         },
         floatingActionButton = {
             if (!isMapView) {
-                FloatingActionButton(
-                    onClick = { isMapView = true },
-                    modifier = Modifier
-                        .padding(bottom = 76.dp)
-                        .testTag("floating_map_toggle_fab"),
-                    containerColor = StynoBluePrimary,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(24.dp)
+                Row(
+                    modifier = Modifier.padding(bottom = 76.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    FloatingActionButton(
+                        onClick = { viewModel.setShowAiSupportSheet(true) },
+                        containerColor = StynoIndigo,
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.testTag("floating_ai_filter_fab")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Map,
-                            contentDescription = "Show Map",
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Explore on Map",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Ask STYNO AI",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Ask AI",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    FloatingActionButton(
+                        onClick = { isMapView = true },
+                        modifier = Modifier.testTag("floating_map_toggle_fab"),
+                        containerColor = StynoBluePrimary,
+                        contentColor = Color.White,
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = "Show Map",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Explore on Map",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }

@@ -3,6 +3,8 @@ package com.example.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
+import coil.compose.AsyncImage
+import com.example.ui.screens.owner.VegNonVegBadge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,6 +64,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -140,7 +144,12 @@ fun PropertyDetailScreen(
     val isSaved = savedIds.contains(property.id)
     val propertyReviewsMap by viewModel.propertyReviews.collectAsStateWithLifecycle()
     val reviews = propertyReviewsMap[property.id] ?: remember(property.id) { viewModel.getReviews(property.id) }
-    val foodMenu = remember(property.id) { viewModel.getFoodMenu(property.id) }
+    val allPropertyMenus by viewModel.propertyMenus.collectAsStateWithLifecycle()
+    val foodMenu = allPropertyMenus[property.id] ?: remember(property.id) { viewModel.getFoodMenu(property.id) }
+
+    var foodViewMode by remember { mutableStateOf("MENU") } // "MENU" or "SCHEDULE"
+    var selectedMenuCategory by remember { mutableStateOf("All") }
+    var vegOnlyFilter by remember { mutableStateOf(false) }
 
     var selectedRoomOption by remember { mutableStateOf(property.roomOptions.firstOrNull()) }
     var activeCalculation by remember { mutableStateOf<DynamicPriceCalculation?>(null) }
@@ -944,8 +953,9 @@ fun PropertyDetailScreen(
                 }
             }
 
-            // 5. Daily Canteen Food Menu Section (if applicable)
-            if (property.hasCanteenMenu) {
+            // 5. Food & Canteen Menu Section (User Side)
+            val hasFoodService = property.hasCanteenMenu || property.hasFoodService || foodMenu.aLaCarteItems.isNotEmpty()
+            if (hasFoodService) {
                 item {
                     Spacer(modifier = Modifier.height(18.dp))
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -963,55 +973,308 @@ fun PropertyDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Daily Canteen Food Menu",
+                                    text = "Food & Mess Service",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFFFEF3C7)
+                                color = Color(0xFFDCFCE7),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC))
                             ) {
                                 Text(
                                     text = "FSSAI 4.9 ★ Hygiene",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF92400E)
+                                    color = Color(0xFF166534)
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        // Toggle between "Food Menu" and "Daily Meal Schedule"
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(4.dp)
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text(
-                                    text = "TODAY'S FRESH MEAL SCHEDULE (${foodMenu.todayDate})",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            val isMenuSelected = foodViewMode == "MENU"
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isMenuSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                                    .clickable { foodViewMode = "MENU" }
+                                    .padding(vertical = 8.dp)
+                                    .testTag("user_food_menu_tab"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.RestaurantMenu,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp),
+                                        tint = if (isMenuSelected) StynoAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "Menu (${foodMenu.aLaCarteItems.size})",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isMenuSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isMenuSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
 
-                                foodMenu.meals.forEach { meal ->
-                                    MealRow("${meal.mealType} (${meal.timing})", meal.items.joinToString(", "))
+                            val isScheduleSelected = foodViewMode == "SCHEDULE"
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isScheduleSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                                    .clickable { foodViewMode = "SCHEDULE" }
+                                    .padding(vertical = 8.dp)
+                                    .testTag("user_food_schedule_tab"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Fastfood,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp),
+                                        tint = if (isScheduleSelected) StynoAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "Daily Schedule",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isScheduleSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isScheduleSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        if (foodViewMode == "MENU") {
+                            // Category Filter Row
+                            val userMenuCategories = listOf("All", "Breakfast", "Lunch", "Dinner", "Snacks", "Beverages")
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(userMenuCategories) { cat ->
+                                    val isCatSelected = selectedMenuCategory.equals(cat, ignoreCase = true)
+                                    val count = if (cat == "All") foodMenu.aLaCarteItems.size else foodMenu.aLaCarteItems.count { it.category.equals(cat, ignoreCase = true) }
+                                    FilterChip(
+                                        selected = isCatSelected,
+                                        onClick = { selectedMenuCategory = cat },
+                                        label = {
+                                            Text(
+                                                text = if (count > 0) "$cat ($count)" else cat,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
                                 }
 
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "✨ Hygiene Score: ${foodMenu.hygieneScore} / 5.0 • FSSAI Certified Kitchen",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                    color = StynoAccent
-                                )
+                                item {
+                                    FilterChip(
+                                        selected = vegOnlyFilter,
+                                        onClick = { vegOnlyFilter = !vegOnlyFilter },
+                                        label = { Text("🌱 Veg Only", fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0xFFDCFCE7),
+                                            selectedLabelColor = Color(0xFF166534)
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Filtered Food Items List
+                            val displayedItems = foodMenu.aLaCarteItems.filter { item ->
+                                val matchesCategory = selectedMenuCategory == "All" || item.category.equals(selectedMenuCategory, ignoreCase = true)
+                                val matchesVeg = !vegOnlyFilter || item.isVeg
+                                matchesCategory && matchesVeg
+                            }
+
+                            if (displayedItems.isEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("🍲", fontSize = 28.sp)
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = if (selectedMenuCategory == "All") "No items listed on menu currently" else "No items under \"$selectedMenuCategory\"",
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp
+                                        )
+                                        Text(
+                                            text = "Check the daily schedule or contact property manager for custom meal requests.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    displayedItems.forEach { item ->
+                                        Card(
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (item.isAvailable) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                            ),
+                                            border = androidx.compose.foundation.BorderStroke(
+                                                1.dp,
+                                                if (item.isAvailable) MaterialTheme.colorScheme.outline.copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .testTag("user_food_item_${item.id}")
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // Left: Veg/Non-Veg Badge & Details
+                                                VegNonVegBadge(isVeg = item.isVeg)
+                                                Spacer(modifier = Modifier.width(10.dp))
+
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = item.name,
+                                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                                fontWeight = FontWeight.Bold,
+                                                                textDecoration = if (!item.isAvailable) androidx.compose.ui.text.style.TextDecoration.LineThrough else androidx.compose.ui.text.style.TextDecoration.None
+                                                            ),
+                                                            color = if (item.isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                        )
+
+                                                        Text(
+                                                            text = "₹${item.price.toInt()}",
+                                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+                                                            color = if (item.isAvailable) Color(0xFF16A34A) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+
+                                                    if (item.description.isNotBlank()) {
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text(
+                                                            text = item.description,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            maxLines = 2,
+                                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                        )
+                                                    }
+
+                                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                                    Row(
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                                        ) {
+                                                            Text(
+                                                                text = "${item.category} • ${item.availabilityTiming}",
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                                fontSize = 9.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+
+                                                        Surface(
+                                                            shape = RoundedCornerShape(4.dp),
+                                                            color = if (item.isAvailable) Color(0xFFDCFCE7) else Color(0xFFFEE2E2)
+                                                        ) {
+                                                            Text(
+                                                                text = if (item.isAvailable) "✓ Available" else "Unavailable / Sold Out",
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                                fontSize = 9.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = if (item.isAvailable) Color(0xFF166534) else Color(0xFF991B1B)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                // Right: Food Photo Thumbnail
+                                                if (item.photoUrl.isNotBlank()) {
+                                                    Spacer(modifier = Modifier.width(10.dp))
+                                                    AsyncImage(
+                                                        model = item.photoUrl,
+                                                        contentDescription = item.name,
+                                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .size(54.dp)
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // Meal Schedule view (Preserved)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(
+                                        text = "TODAY'S FRESH MEAL SCHEDULE (${foodMenu.todayDate})",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    foodMenu.meals.forEach { meal ->
+                                        MealRow("${meal.mealType} (${meal.timing})", meal.items.joinToString(", "))
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "✨ Hygiene Score: ${foodMenu.hygieneScore} / 5.0 • FSSAI Certified Kitchen",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = StynoAccent
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            } else if (!property.hasFoodService) {
+            } else {
                 item {
                     Spacer(modifier = Modifier.height(18.dp))
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {

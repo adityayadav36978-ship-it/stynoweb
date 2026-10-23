@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import coil.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Call
@@ -240,7 +241,16 @@ fun MyBookingsScreen(
 
                             // Property & Room details
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (imageResId != 0) {
+                                if (booking.propertyImage.startsWith("http://") || booking.propertyImage.startsWith("https://")) {
+                                    AsyncImage(
+                                        model = booking.propertyImage,
+                                        contentDescription = booking.propertyName,
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(10.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else if (imageResId != 0) {
                                     Image(
                                         painter = painterResource(id = imageResId),
                                         contentDescription = booking.propertyName,

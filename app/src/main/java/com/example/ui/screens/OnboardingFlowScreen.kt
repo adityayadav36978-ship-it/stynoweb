@@ -138,6 +138,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import com.example.ui.viewmodel.AuthViewModel
+import com.example.data.util.StynoAuthService
 import com.example.data.model.GlobalLocationCatalog
 import com.example.data.model.GlobalLocationItem
 import com.example.data.model.LocationCategory
@@ -168,6 +171,7 @@ enum class OnboardingStep(val stepNumber: Int, val title: String) {
 @Composable
 fun OnboardingFlowScreen(
     viewModel: StynoViewModel,
+    authViewModel: AuthViewModel? = null,
     initialStep: OnboardingStep = OnboardingStep.AUTH,
     isEditingPreferencesOnly: Boolean = false,
     onFinished: () -> Unit = { viewModel.navigateTo(Screen.HOME) },
@@ -540,11 +544,31 @@ fun OnboardingFlowScreen(
                                 Spacer(modifier = Modifier.height(18.dp))
 
                                 // Google Sign-In Button
+                                val context = LocalContext.current
                                 OutlinedButton(
                                     onClick = {
-                                        val googleEmail = "google_user@styno.com"
-                                        viewModel.setAuthenticated(identifier = googleEmail, phone = "")
-                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                        if (authViewModel != null) {
+                                            isAuthenticating = true
+                                            authError = null
+                                            authViewModel.signInWithGoogle(
+                                                context = context,
+                                                onSuccess = { user ->
+                                                    isAuthenticating = false
+                                                    viewModel.setAuthenticated(
+                                                        identifier = user.email ?: user.uid,
+                                                        phone = user.phoneNumber ?: "",
+                                                        name = user.displayName ?: ""
+                                                    )
+                                                    currentStep = OnboardingStep.ACCOUNT_TYPE
+                                                },
+                                                onError = { err ->
+                                                    isAuthenticating = false
+                                                    authError = err
+                                                }
+                                            )
+                                        } else {
+                                            authError = "Google OAuth is not configured on this device."
+                                        }
                                     },
                                     shape = RoundedCornerShape(12.dp),
                                     modifier = Modifier
@@ -776,15 +800,88 @@ fun OnboardingFlowScreen(
                                             }
                                         }
 
-                                        isAuthenticating = true
-                                        authError = null
-                                        viewModel.setAuthenticated(
-                                            identifier = trimmedEmail,
-                                            phone = ""
-                                        )
-                                        isAuthenticating = false
-                                        // Move to account type step
-                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                        if (authMode == "SIGN_IN") {
+                                            isAuthenticating = true
+                                            authError = null
+                                            if (authViewModel != null) {
+                                                authViewModel.signInWithEmail(
+                                                    email = trimmedEmail,
+                                                    password = authPassword,
+                                                    onSuccess = {
+                                                        isAuthenticating = false
+                                                        val user = authViewModel.currentUser.value
+                                                        viewModel.setAuthenticated(
+                                                            identifier = user?.email ?: trimmedEmail,
+                                                            phone = user?.phoneNumber ?: "",
+                                                            name = user?.displayName ?: ""
+                                                        )
+                                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                                    },
+                                                    onError = { err ->
+                                                        isAuthenticating = false
+                                                        authError = err
+                                                    }
+                                                )
+                                            } else {
+                                                when (val res = StynoAuthService.authenticateEmailUser(trimmedEmail, authPassword)) {
+                                                    is StynoAuthService.AuthResultState.Success -> {
+                                                        isAuthenticating = false
+                                                        val acc = res.account
+                                                        viewModel.setAuthenticated(
+                                                            identifier = acc.email,
+                                                            phone = acc.phoneNumber ?: "",
+                                                            name = acc.displayName
+                                                        )
+                                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                                    }
+                                                    is StynoAuthService.AuthResultState.Error -> {
+                                                        isAuthenticating = false
+                                                        authError = res.message
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            isAuthenticating = true
+                                            authError = null
+                                            if (authViewModel != null) {
+                                                authViewModel.signUpWithEmail(
+                                                    email = trimmedEmail,
+                                                    password = authPassword,
+                                                    displayName = authFullName.trim(),
+                                                    onSuccess = {
+                                                        isAuthenticating = false
+                                                        val user = authViewModel.currentUser.value
+                                                        viewModel.setAuthenticated(
+                                                            identifier = user?.email ?: trimmedEmail,
+                                                            phone = user?.phoneNumber ?: "",
+                                                            name = user?.displayName ?: authFullName.trim()
+                                                        )
+                                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                                    },
+                                                    onError = { err ->
+                                                        isAuthenticating = false
+                                                        authError = err
+                                                    }
+                                                )
+                                            } else {
+                                                when (val res = StynoAuthService.registerEmailUser(trimmedEmail, authPassword, authFullName.trim())) {
+                                                    is StynoAuthService.AuthResultState.Success -> {
+                                                        isAuthenticating = false
+                                                        val acc = res.account
+                                                        viewModel.setAuthenticated(
+                                                            identifier = acc.email,
+                                                            phone = acc.phoneNumber ?: "",
+                                                            name = acc.displayName
+                                                        )
+                                                        currentStep = OnboardingStep.ACCOUNT_TYPE
+                                                    }
+                                                    is StynoAuthService.AuthResultState.Error -> {
+                                                        isAuthenticating = false
+                                                        authError = res.message
+                                                    }
+                                                }
+                                            }
+                                        }
                                     },
                                     shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier

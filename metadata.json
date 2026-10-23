@@ -1,7 +1,6 @@
 {
-  "name": "Styno",
-  "description": "Styno - India's 0% brokerage accommodation marketplace for verified hostels, PGs, co-living spaces, and student rentals.",
+  "name": "STYNO",
+  "description": "STYNO — Find & Book Stays across India with dedicated User & Owner platforms, seamless stay discovery, and property management.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
-
